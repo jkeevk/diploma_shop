@@ -1,0 +1,38 @@
+# примеры API-запросов
+
+@baseUrl = http://localhost:8000/api
+
+# получение товаров
+GET {{baseUrl}}/products/
+Content-Type: application/json
+
+###
+
+# создание товара
+POST {{baseUrl}}/products/
+Content-Type: application/json
+
+{
+  "name": "Какой то товар",
+  "description": "Возможно важный",
+  "price": 1000
+}
+
+###
+
+# обновление товара
+PATCH {{baseUrl}}/products/1/
+Content-Type: application/json
+
+{
+  "description": "Информация более важная"
+}
+
+###
+
+# удаление товара
+DELETE {{baseUrl}}/products/1/
+Content-Type: application/json
+
+
+###
