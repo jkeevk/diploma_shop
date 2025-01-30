@@ -1,0 +1,234 @@
+[
+	{
+		"shop": "Apple"
+	},
+	{
+		"categories": [
+			{
+				"id": 1,
+				"name": "Телефоны"
+			},
+			{
+				"id": 2,
+				"name": "Зарядные устройства"
+			},
+			{
+				"id": 3,
+				"name": "Аксессуары"
+			},
+			{
+				"id": 4,
+				"name": "Ноутбуки"
+			},
+			{
+				"id": 5,
+				"name": "Часы"
+			},
+			{
+				"id": 6,
+				"name": "Наушники"
+			}
+		]
+	},
+	{
+		"goods": [
+			{
+				"id": 4216292,
+				"category": 1,
+				"model": "apple/iphone/xs-max",
+				"name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+				"price": 110000,
+				"price_rrc": 116990,
+				"quantity": 14,
+				"parameters": {
+					"Диагональ (дюйм)": "6.5",
+					"Разрешение (пикс)": "2688x1242",
+					"Встроенная память (Гб)": "512",
+					"Цвет": "золотистый"
+				}
+			},
+			{
+				"id": 4216293,
+				"category": 1,
+				"model": "apple/iphone/14-pro",
+				"name": "Смартфон Apple iPhone 14 Pro 256GB (фиолетовый)",
+				"price": 129999,
+				"price_rrc": 139990,
+				"quantity": 25,
+				"parameters": {
+					"Диагональ (дюйм)": "6.1",
+					"Разрешение (пикс)": "2532x1170",
+					"Встроенная память (Гб)": "256",
+					"Цвет": "фиолетовый"
+				}
+			},
+			{
+				"id": 4216294,
+				"category": 2,
+				"model": "apple/iphone/charger",
+				"name": "Зарядное устройство Apple 20W USB-C",
+				"price": 1999,
+				"price_rrc": 2499,
+				"quantity": 100,
+				"parameters": {
+					"Мощность (Вт)": "20",
+					"Тип подключения": "USB-C",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216295,
+				"category": 3,
+				"model": "apple/iphone/case",
+				"name": "Чехол Apple для iPhone 14 (синий)",
+				"price": 2999,
+				"price_rrc": 3499,
+				"quantity": 50,
+				"parameters": {
+					"Материал": "силикон",
+					"Цвет": "синий"
+				}
+			},
+			{
+				"id": 4216296,
+				"category": 4,
+				"model": "apple/macbook/pro",
+				"name": "Ноутбук Apple MacBook Pro 14\" M1 Pro 16GB 512GB",
+				"price": 179999,
+				"price_rrc": 199999,
+				"quantity": 30,
+				"parameters": {
+					"Процессор": "Apple M1 Pro",
+					"Оперативная память (Гб)": "16",
+					"Объем накопителя (ГБ)": "512",
+					"Диагональ (дюйм)": "14"
+				}
+			},
+			{
+				"id": 4216297,
+				"category": 5,
+				"model": "apple/watch/series-8",
+				"name": "Apple Watch Series 8 (GPS, 41 мм)",
+				"price": 31999,
+				"price_rrc": 35999,
+				"quantity": 40,
+				"parameters": {
+					"Цвет": "серебристый",
+					"Диагональ экрана": "41 мм",
+					"Тип экрана": "OLED"
+				}
+			},
+			{
+				"id": 4216298,
+				"category": 6,
+				"model": "apple/airpods/pro",
+				"name": "Apple AirPods Pro 2-го поколения",
+				"price": 25999,
+				"price_rrc": 27999,
+				"quantity": 70,
+				"parameters": {
+					"Тип наушников": "вставные",
+					"Шумоподавление": "активное",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216299,
+				"category": 4,
+				"model": "apple/macbook/air",
+				"name": "Ноутбук Apple MacBook Air M2 13.6\"",
+				"price": 124999,
+				"price_rrc": 134999,
+				"quantity": 20,
+				"parameters": {
+					"Процессор": "Apple M2",
+					"Оперативная память (Гб)": "8",
+					"Объем накопителя (ГБ)": "256",
+					"Диагональ (дюйм)": "13.6"
+				}
+			},
+			{
+				"id": 4216300,
+				"category": 3,
+				"model": "apple/iphone/stand",
+				"name": "Подставка для телефона Apple (белая)",
+				"price": 1499,
+				"price_rrc": 1999,
+				"quantity": 80,
+				"parameters": {
+					"Материал": "алюминий",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216301,
+				"category": 2,
+				"model": "apple/iphone/cable",
+				"name": "Кабель USB-C - Lightning Apple 1 м",
+				"price": 1499,
+				"price_rrc": 1799,
+				"quantity": 150,
+				"parameters": {
+					"Тип подключения": "USB-C",
+					"Длина кабеля (м)": "1"
+				}
+			},
+			{
+				"id": 4216302,
+				"category": 5,
+				"model": "apple/watch/series-7",
+				"name": "Apple Watch Series 7 (GPS, 45 мм)",
+				"price": 34999,
+				"price_rrc": 38999,
+				"quantity": 35,
+				"parameters": {
+					"Цвет": "зеленый",
+					"Диагональ экрана": "45 мм",
+					"Тип экрана": "OLED"
+				}
+			},
+			{
+				"id": 4216303,
+				"category": 6,
+				"model": "apple/airpods/2nd-gen",
+				"name": "Apple AirPods 2-го поколения",
+				"price": 12999,
+				"price_rrc": 14999,
+				"quantity": 200,
+				"parameters": {
+					"Тип наушников": "вставные",
+					"Шумоподавление": "нет",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216304,
+				"category": 4,
+				"model": "apple/macbook/pro-16",
+				"name": "Ноутбук Apple MacBook Pro 16\" M1 Max 32GB 1TB",
+				"price": 299999,
+				"price_rrc": 329999,
+				"quantity": 15,
+				"parameters": {
+					"Процессор": "Apple M1 Max",
+					"Оперативная память (Гб)": "32",
+					"Объем накопителя (ГБ)": "1TB",
+					"Диагональ (дюйм)": "16"
+				}
+			},
+			{
+				"id": 4216305,
+				"category": 3,
+				"model": "apple/iphone/sleeve",
+				"name": "Чехол Apple Sleeve для MacBook Pro 16\"",
+				"price": 7999,
+				"price_rrc": 8999,
+				"quantity": 50,
+				"parameters": {
+					"Материал": "кожа",
+					"Цвет": "черный"
+				}
+			}
+		]
+	}
+]
