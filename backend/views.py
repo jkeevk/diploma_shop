@@ -18,6 +18,6 @@ class ProductViewSet(ModelViewSet):
     ]
     search_fields = [
         "name",
-        "description",
+        "category",
     ]
     pagination_class = LimitOffsetPagination
