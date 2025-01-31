@@ -17,14 +17,17 @@ class CategoryAdmin(admin.ModelAdmin):
     filter_horizontal = ('shops',)
 
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category')
-    search_fields = ('name',)
+    list_display = ('name', 'category', 'model')
+    search_fields = ('name', 'model', 'category__name')
     list_filter = ('category',)
+    list_editable = ('model',)
 
 class ProductInfoAdmin(admin.ModelAdmin):
-    list_display = ('name', 'product', 'shop', 'price', 'quantity', 'price_rrc')
-    search_fields = ('name', 'product__name', 'shop__name')
+    list_display = ('product', 'shop', 'description', 'price', 'quantity', 'price_rrc')
+    search_fields = ('product__name', 'shop__name', 'description')
     list_filter = ('product', 'shop')
+    list_editable = ('description', 'price', 'quantity', 'price_rrc')
+    raw_id_fields = ('product', 'shop')
 
 class ParameterAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -34,22 +37,31 @@ class ProductParameterAdmin(admin.ModelAdmin):
     list_display = ('product_info', 'parameter', 'value')
     search_fields = ('value', 'parameter__name')
     list_filter = ('parameter',)
+    raw_id_fields = ('product_info', 'parameter')
+
+    def product_info(self, obj):
+        return f"{obj.product_info.product.name} ({obj.product_info.shop.name})"
+    product_info.short_description = 'Product Info'
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('user', 'status', 'dt')
+    list_display = ('id', 'user', 'status', 'dt')
     search_fields = ('user__name', 'status')
     list_filter = ('status',)
     ordering = ('-dt',)
+    raw_id_fields = ('user',)
 
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('order', 'product', 'shop', 'quantity')
     search_fields = ('order__id', 'product__name', 'shop__name')
     list_filter = ('order',)
+    raw_id_fields = ('order', 'product', 'shop')
 
 class ContactAdmin(admin.ModelAdmin):
-    list_display = ('type', 'user', 'value')
-    search_fields = ('user__name', 'type')
+    list_display = ('type', 'user', 'value', 'city', 'street', 'house')
+    search_fields = ('user__name', 'type', 'city', 'street')
     list_filter = ('type',)
+    list_editable = ('city', 'street', 'house')
+    raw_id_fields = ('user',)
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Shop, ShopAdmin)
