@@ -3,6 +3,7 @@ import os
 from django.core.management.base import BaseCommand
 from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter
 
+
 class Command(BaseCommand):
     """
     Команда для загрузки или обновления данных о товарах в базу данных из JSON файла.
@@ -27,13 +28,24 @@ class Command(BaseCommand):
             return
 
         # Открываем и загружаем данные из файла
-        with open(json_file, 'r', encoding='utf-8') as f:
-            products_data = json.load(f)
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                products_data = json.load(f)
+        except json.JSONDecodeError:
+            self.stdout.write(self.style.ERROR(f"Файл {json_file} содержит некорректный JSON."))
+            return
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Ошибка при чтении файла: {e}"))
+            return
 
         # Извлекаем данные о магазине, категориях и товарах
-        shop_data = products_data[0].get('shop')
-        categories_data = products_data[1].get('categories')
-        goods_data = products_data[2].get('goods')
+        try:
+            shop_data = products_data[0].get('shop')
+            categories_data = products_data[1].get('categories')
+            goods_data = products_data[2].get('goods')
+        except (IndexError, AttributeError):
+            self.stdout.write(self.style.ERROR('Некорректная структура JSON файла.'))
+            return
 
         # Проверка на наличие всех обязательных данных
         if not shop_data or not categories_data or not goods_data:
@@ -42,68 +54,94 @@ class Command(BaseCommand):
 
         # Обрабатываем магазин
         shop, created = Shop.objects.get_or_create(name=shop_data)
+        if created:
+            self.stdout.write(self.style.SUCCESS(f"Создан магазин '{shop.name}'"))
+        else:
+            self.stdout.write(self.style.SUCCESS(f"Найден магазин '{shop.name}'"))
 
         # Обрабатываем категории
         categories = {}
         for category_data in categories_data:
-            category, created = Category.objects.get_or_create(name=category_data['name'])
-            categories[category_data['id']] = category
+            try:
+                category, created = Category.objects.get_or_create(name=category_data['name'])
+                categories[category_data['id']] = category
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f"Создана категория '{category.name}'"))
+                else:
+                    self.stdout.write(self.style.SUCCESS(f"Найдена категория '{category.name}'"))
+            except KeyError:
+                self.stdout.write(self.style.ERROR(f"Отсутствует поле 'name' в данных категории: {category_data}"))
+                continue
 
         # Обрабатываем товары
         for good_data in goods_data:
-            product_name = good_data.get('name')
-            category_id = good_data.get('category')
+            try:
+                product_name = good_data['name']
+                category_id = good_data['category']
+                product_model = good_data.get('model', '')  # Получаем значение поля model
+                description = good_data.get('description', '')  # Получаем значение поля description
+            except KeyError as e:
+                self.stdout.write(self.style.ERROR(f"Отсутствует обязательное поле {e} в данных товара: {good_data}"))
+                continue
 
             # Проверка на наличие категории
             category = categories.get(category_id)
             if not category:
-                self.stdout.write(self.style.ERROR(f"Категория с ID {category_id} не найдена для товара {product_name}."))
+                self.stdout.write(self.style.ERROR(f"Категория с ID {category_id} не найдена для товара '{product_name}'."))
                 continue
 
             # Обновляем или создаем продукт
             product, created = Product.objects.update_or_create(
                 name=product_name,
-                defaults={'category': category}
+                defaults={
+                    'category': category,
+                    'model': product_model  # Добавляем поле model
+                }
             )
-
-            # Логируем успешное создание или обновление товара
             if created:
                 self.stdout.write(self.style.SUCCESS(f"Создан товар '{product_name}'"))
             else:
                 self.stdout.write(self.style.SUCCESS(f"Обновлен товар '{product_name}'"))
 
             # Создаем или обновляем информацию о продукте в магазине
-            product_info, created = ProductInfo.objects.update_or_create(
-                product=product,
-                shop=shop,
-                defaults={
-                    'name': good_data['name'],
-                    'quantity': good_data['quantity'],
-                    'price': good_data['price'],
-                    'price_rrc': good_data['price_rrc']
-                }
-            )
-
-            # Логируем информацию о продукте
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"Создана информация о товаре '{product_name}' в магазине '{shop.name}'"))
-            else:
-                self.stdout.write(self.style.SUCCESS(f"Обновлена информация о товаре '{product_name}' в магазине '{shop.name}'"))
+            try:
+                product_info, created = ProductInfo.objects.update_or_create(
+                    product=product,
+                    shop=shop,
+                    defaults={
+                        'description': description,  # Добавляем поле description
+                        'quantity': good_data.get('quantity', 0),
+                        'price': good_data['price'],
+                        'price_rrc': good_data['price_rrc']
+                    }
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f"Создана информация о товаре '{product_name}' в магазине '{shop.name}'"))
+                else:
+                    self.stdout.write(self.style.SUCCESS(f"Обновлена информация о товаре '{product_name}' в магазине '{shop.name}'"))
+            except KeyError as e:
+                self.stdout.write(self.style.ERROR(f"Отсутствует обязательное поле {e} в данных товара: {good_data}"))
+                continue
 
             # Обрабатываем параметры товара
             parameters_data = good_data.get('parameters', {})
             for param_name, param_value in parameters_data.items():
-                # Создаем или обновляем параметр
-                parameter, created = Parameter.objects.update_or_create(
-                    name=param_name,
-                    defaults={}
-                )
+                try:
+                    # Создаем или обновляем параметр
+                    parameter, created = Parameter.objects.update_or_create(
+                        name=param_name,
+                        defaults={}
+                    )
 
-                # Создаем или обновляем связь параметра с продуктом
-                ProductParameter.objects.update_or_create(
-                    product_info=product_info,
-                    parameter=parameter,
-                    defaults={'value': param_value}
-                )
+                    # Создаем или обновляем связь параметра с продуктом
+                    ProductParameter.objects.update_or_create(
+                        product_info=product_info,
+                        parameter=parameter,
+                        defaults={'value': param_value}
+                    )
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Ошибка при обработке параметра '{param_name}': {e}"))
+                    continue
 
         self.stdout.write(self.style.SUCCESS('Данные успешно загружены или обновлены в базе данных.'))
+        
