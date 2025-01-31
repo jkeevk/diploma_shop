@@ -44,7 +44,7 @@ class ProductSerializer(serializers.ModelSerializer):
         price = validated_data.pop('price', None)
         price_rrc = validated_data.pop('price_rrc', None)
         quantity = validated_data.pop('quantity', None)
-        description = validated_data.pop('description', '')  # Новое поле
+        description = validated_data.pop('description', '')
         parameters_data = validated_data.pop('parameters', {})
         shop_name = validated_data.pop('shop_name', 'Default Shop')
 
@@ -106,7 +106,7 @@ class ProductSerializer(serializers.ModelSerializer):
             product_info.price = validated_data.get('price', product_info.price)
             product_info.price_rrc = validated_data.get('price_rrc', product_info.price_rrc)
             product_info.quantity = validated_data.get('quantity', product_info.quantity)
-            product_info.description = validated_data.get('description', product_info.description)  # Новое поле
+            product_info.description = validated_data.get('description', product_info.description)
             if shop_name:
                 product_info.shop = shop
             product_info.save()
@@ -137,7 +137,7 @@ class ProductSerializer(serializers.ModelSerializer):
             representation['price'] = product_info.price
             representation['price_rrc'] = product_info.price_rrc
             representation['quantity'] = product_info.quantity
-            representation['description'] = product_info.description  # Новое поле
+            representation['description'] = product_info.description
             representation['shop_name'] = product_info.shop.name
 
             # Добавляем параметры продукта
@@ -147,7 +147,7 @@ class ProductSerializer(serializers.ModelSerializer):
             representation['price'] = 0.0
             representation['price_rrc'] = 0.0
             representation['quantity'] = 0
-            representation['description'] = ''  # Новое поле
+            representation['description'] = ''
             representation['parameters'] = {}
             representation['shop_name'] = "Default Shop"
 
