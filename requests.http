@@ -2,8 +2,14 @@
 
 @baseUrl = http://localhost:8000/api
 
-# получение товаров
+# получение всех товаров
 GET {{baseUrl}}/products/
+Content-Type: application/json
+
+###
+
+# получение конекретного товара
+GET {{baseUrl}}/products/2
 Content-Type: application/json
 
 ###
@@ -13,19 +19,35 @@ POST {{baseUrl}}/products/
 Content-Type: application/json
 
 {
-  "name": "Какой то товар",
-  "description": "Возможно важный",
-  "price": 1000
+    "category": 1,
+    "model": "apple/iphone/xs-max",
+    "name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+    "price": 1100200,
+    "price_rrc": 1126990,
+    "quantity": 14,
+    "description": "Познакомьтесь с iPhone XS 512 ГБ в золотом цвете в Apple Store — элегантный дизайн, высокая производительность и потрясающий Super Retina дисплей. Премиум-смартфон для тех, кто ценит лучшее!",
+    "parameters": {
+        "Диагональ (дюйм)": "6.5",
+        "Разрешение (пикс)": "2688x1242",
+        "Встроенная память (Гб)": "512",
+        "Цвет": "золотистый"
+    },
+    "shop_name": "Apple"
 }
 
 ###
 
-# обновление товара
-PATCH {{baseUrl}}/products/1/
+# обновление характеристик товара
+PATCH {{baseUrl}}/products/15/
 Content-Type: application/json
 
 {
-  "description": "Информация более важная"
+  "price": 110000,
+  "price_rrc": 120000,
+  "description": "Откройте для себя iPhone 15 в Apple Store — стильный дизайн, мощная производительность и передовые функции, такие как чип A17 и улучшенная камера. Поднимите свой мобильный опыт на новый уровень!",
+  "parameters": {
+    "Встроенная память (Гб)": "512"
+  }
 }
 
 ###
