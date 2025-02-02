@@ -1,35 +1,68 @@
 from rest_framework import serializers
-from .models import Product, ProductInfo, ProductParameter, Parameter, Category, Shop
+from .models import (
+    Product,
+    ProductInfo,
+    ProductParameter,
+    Parameter,
+    Category,
+    Shop,
+    User,
+    Contact,
+)
+from django.contrib.auth.hashers import make_password
+
+
+class RegisterAccountSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["name", "email", "password"]
+
+    def validate_password(self, value):
+        return make_password(value)
+
+    def create(self, validated_data):
+        user = User.objects.create(**validated_data)
+        return user
 
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parameter
-        fields = ['name']
+        fields = ["name"]
 
 
 class ProductParameterSerializer(serializers.ModelSerializer):
-    parameter = serializers.SlugRelatedField(slug_field='name', queryset=Parameter.objects.all())
+    parameter = serializers.SlugRelatedField(
+        slug_field="name", queryset=Parameter.objects.all()
+    )
 
     class Meta:
         model = ProductParameter
-        fields = ['parameter', 'value']
+        fields = ["parameter", "value"]
+
 
 class ProductInfoSerializer(serializers.ModelSerializer):
     parameters = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductInfo
-        fields = ['id', 'shop', 'quantity', 'price', 'price_rrc', 'parameters']
+        fields = ["id", "shop", "quantity", "price", "price_rrc", "parameters"]
 
     def get_parameters(self, obj):
         # Получаем все параметры для данного ProductInfo
         parameters = obj.product_parameters.all()
         return {param.parameter.name: param.value for param in parameters}
 
+
 class ProductSerializer(serializers.ModelSerializer):
-    price = serializers.DecimalField(max_digits=10, decimal_places=2, write_only=True, required=False)
-    price_rrc = serializers.DecimalField(max_digits=10, decimal_places=2, write_only=True, required=False)
+    price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, write_only=True, required=False
+    )
+    price_rrc = serializers.DecimalField(
+        max_digits=10, decimal_places=2, write_only=True, required=False
+    )
     quantity = serializers.IntegerField(write_only=True, required=False)
     description = serializers.CharField(write_only=True, required=False)
     parameters = serializers.JSONField(write_only=True, required=False)
@@ -37,16 +70,27 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'category', 'model', 'price', 'price_rrc', 'quantity', 'description', 'parameters', 'shop_name']
+        fields = [
+            "id",
+            "name",
+            "category",
+            "model",
+            "price",
+            "price_rrc",
+            "quantity",
+            "description",
+            "parameters",
+            "shop_name",
+        ]
 
     def create(self, validated_data):
         # Извлекаем данные для ProductInfo и ProductParameter
-        price = validated_data.pop('price', None)
-        price_rrc = validated_data.pop('price_rrc', None)
-        quantity = validated_data.pop('quantity', None)
-        description = validated_data.pop('description', '')
-        parameters_data = validated_data.pop('parameters', {})
-        shop_name = validated_data.pop('shop_name', 'Default Shop')
+        price = validated_data.pop("price", None)
+        price_rrc = validated_data.pop("price_rrc", None)
+        quantity = validated_data.pop("quantity", None)
+        description = validated_data.pop("description", "")
+        parameters_data = validated_data.pop("parameters", {})
+        shop_name = validated_data.pop("shop_name", "Default Shop")
 
         # Создаем объект Product
         product = Product.objects.create(**validated_data)
@@ -61,33 +105,35 @@ class ProductSerializer(serializers.ModelSerializer):
             description=description,
             price=price if price is not None else 0,
             price_rrc=price_rrc if price_rrc is not None else 0,
-            quantity=quantity if quantity is not None else 0
+            quantity=quantity if quantity is not None else 0,
         )
 
         # Создаем параметры продукта
         for param_name, param_value in parameters_data.items():
             parameter, _ = Parameter.objects.get_or_create(name=param_name)
             ProductParameter.objects.create(
-                product_info=product_info,
-                parameter=parameter,
-                value=param_value
+                product_info=product_info, parameter=parameter, value=param_value
             )
 
         return product
 
     def update(self, instance, validated_data):
         # Обновляем поля Product, если они переданы
-        instance.name = validated_data.get('name', instance.name)
-        instance.category_id = validated_data.get('category', instance.category_id)
-        instance.model = validated_data.get('model', instance.model)
+        instance.name = validated_data.get("name", instance.name)
+        instance.category_id = validated_data.get("category", instance.category_id)
+        instance.model = validated_data.get("model", instance.model)
         instance.save()
 
         # Получаем или создаем магазин, если передан shop_name
-        shop_name = validated_data.get('shop_name')
+        shop_name = validated_data.get("shop_name")
         if shop_name:
             shop, _ = Shop.objects.get_or_create(name=shop_name)
         else:
-            shop = instance.product_infos.first().shop if instance.product_infos.first() else None
+            shop = (
+                instance.product_infos.first().shop
+                if instance.product_infos.first()
+                else None
+            )
 
         # Получаем или создаем ProductInfo
         product_info = instance.product_infos.first()
@@ -95,31 +141,37 @@ class ProductSerializer(serializers.ModelSerializer):
             product_info = ProductInfo.objects.create(
                 product=instance,
                 shop=shop,
-                description='',
+                description="",
                 price=0,
                 price_rrc=0,
-                quantity=0
+                quantity=0,
             )
 
         # Обновляем поля ProductInfo, если они переданы
         if product_info:
-            product_info.price = validated_data.get('price', product_info.price)
-            product_info.price_rrc = validated_data.get('price_rrc', product_info.price_rrc)
-            product_info.quantity = validated_data.get('quantity', product_info.quantity)
-            product_info.description = validated_data.get('description', product_info.description)
+            product_info.price = validated_data.get("price", product_info.price)
+            product_info.price_rrc = validated_data.get(
+                "price_rrc", product_info.price_rrc
+            )
+            product_info.quantity = validated_data.get(
+                "quantity", product_info.quantity
+            )
+            product_info.description = validated_data.get(
+                "description", product_info.description
+            )
             if shop_name:
                 product_info.shop = shop
             product_info.save()
 
         # Обновляем параметры продукта, если они переданы
-        parameters_data = validated_data.get('parameters')
+        parameters_data = validated_data.get("parameters")
         if parameters_data and product_info:
             for param_name, param_value in parameters_data.items():
                 parameter, _ = Parameter.objects.get_or_create(name=param_name)
                 product_parameter, created = ProductParameter.objects.get_or_create(
                     product_info=product_info,
                     parameter=parameter,
-                    defaults={'value': param_value}
+                    defaults={"value": param_value},
                 )
                 if not created:
                     product_parameter.value = param_value
@@ -134,21 +186,69 @@ class ProductSerializer(serializers.ModelSerializer):
         product_info = instance.product_infos.first()
 
         if product_info:
-            representation['price'] = product_info.price
-            representation['price_rrc'] = product_info.price_rrc
-            representation['quantity'] = product_info.quantity
-            representation['description'] = product_info.description
-            representation['shop_name'] = product_info.shop.name
+            representation["price"] = product_info.price
+            representation["price_rrc"] = product_info.price_rrc
+            representation["quantity"] = product_info.quantity
+            representation["description"] = product_info.description
+            representation["shop_name"] = product_info.shop.name
 
             # Добавляем параметры продукта
             parameters = product_info.product_parameters.all()
-            representation['parameters'] = {param.parameter.name: param.value for param in parameters}
+            representation["parameters"] = {
+                param.parameter.name: param.value for param in parameters
+            }
         else:
-            representation['price'] = 0.0
-            representation['price_rrc'] = 0.0
-            representation['quantity'] = 0
-            representation['description'] = ''
-            representation['parameters'] = {}
-            representation['shop_name'] = "Default Shop"
+            representation["price"] = 0.0
+            representation["price_rrc"] = 0.0
+            representation["quantity"] = 0
+            representation["description"] = ""
+            representation["parameters"] = {}
+            representation["shop_name"] = "Default Shop"
 
         return representation
+
+
+class ShopSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = "__all__"
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = "__all__"
+
+
+class ContactSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), write_only=True
+    )
+
+    class Meta:
+        model = Contact
+        fields = [
+            "user",
+            "type",
+            "value",
+            "city",
+            "street",
+            "house",
+            "structure",
+            "building",
+            "apartment",
+            "phone",
+        ]
+
+    def create(self, validated_data):
+        user = validated_data.get("user")
+        contact = Contact.objects.create(**validated_data)
+        return contact
+
+
+class UserSerializer(serializers.ModelSerializer):
+    contacts = ContactSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "name", "email", "contacts"]
