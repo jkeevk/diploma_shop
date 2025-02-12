@@ -136,3 +136,6 @@ class OrderSendMailSerializer(serializers.Serializer):
     user_email = serializers.EmailField()
     user_name = serializers.CharField()
     order_details = serializers.CharField()
+
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
