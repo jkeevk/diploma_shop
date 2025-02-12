@@ -108,3 +108,25 @@ Content-Type: application/json
     "order_details": 
         "Заказ номер 1 сформирован"
     }
+
+###
+
+# команды на обновление товаров поставщиков через консоль
+curl -X POST -F "file=@/Users/sergeyigumnov/Desktop/VS Code/Netology/diploma_shop/data/shop1.json" http://localhost:8000/api/partner/update
+# вручную
+python manage.py load_products data/shop1.json
+
+###
+
+# обновление товаров поставщиков
+POST {{baseUrl}}/partner/update
+Content-Type: multipart/form-data; boundary=MyBoundary
+
+--MyBoundary
+Content-Disposition: form-data; name="file"; filename="shop1.json"
+Content-Type: application/json
+
+< /Users/sergeyigumnov/Desktop/VS Code/Netology/diploma_shop/data/shop1.json
+--MyBoundary--
+
+###
