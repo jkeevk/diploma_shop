@@ -131,3 +131,8 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+
+class OrderSendMailSerializer(serializers.Serializer):
+    user_email = serializers.EmailField()
+    user_name = serializers.CharField()
+    order_details = serializers.CharField()
