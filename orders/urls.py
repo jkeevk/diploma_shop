@@ -10,7 +10,8 @@ from backend.views import (
     CategoryViewSet, 
     ShopViewSet, 
     ContactViewSet,
-    OrderSendMailView
+    OrderSendMailView,
+    PartnerUpdateView
 )
 
 router = DefaultRouter()
@@ -27,6 +28,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/', include(user_router.urls)),
     path('api/order/', OrderSendMailView.as_view(), name='order'),
+    path('api/partner/update', PartnerUpdateView.as_view(), name='partner-update'),
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
