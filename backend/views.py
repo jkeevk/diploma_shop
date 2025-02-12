@@ -7,6 +7,7 @@ from .serializers import (
     UserSerializer,
     ContactSerializer,
     OrderSendMailSerializer,
+    FileUploadSerializer
 )
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
@@ -14,6 +15,27 @@ from rest_framework import status
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from orders.settings import EMAIL_HOST_USER
+from django.core.management import call_command
+import os
+
+
+class PartnerUpdate(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = FileUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        uploaded_file = request.FILES['file']
+        file_path = os.path.join('data', uploaded_file.name)
+
+        try:
+            # Вызываем management command
+            call_command('load_products', file_path)
+            return Response({'message': 'Data loaded successfully'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
