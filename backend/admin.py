@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, Contact
+from django.contrib.auth.admin import UserAdmin
 
 class UserAdmin(admin.ModelAdmin):
     list_display = ('name', 'email')
@@ -63,7 +64,23 @@ class ContactAdmin(admin.ModelAdmin):
     list_editable = ('city', 'street', 'house')
     raw_id_fields = ('user',)
 
-admin.site.register(User, UserAdmin)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'is_customer', 'is_supplier')
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal info', {'fields': ('email', 'name')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+        ('Custom fields', {'fields': ('is_customer', 'is_supplier')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'is_customer', 'is_supplier'),
+        }),
+    )
+
+admin.site.register(User, CustomUserAdmin)
 admin.site.register(Shop, ShopAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Product, ProductAdmin)
