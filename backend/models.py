@@ -13,7 +13,8 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=150, unique=True, blank=True, null=True
     )
-
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
     groups = models.ManyToManyField(
         "auth.Group",
         related_name="custom_user_set",
@@ -36,8 +37,7 @@ class User(AbstractUser):
         ordering = ("-email",)
 
     def __str__(self):
-        return f"{self.username if self.username else 'Без имени'} ({self.email})"
-
+        return self.email
 
 class Shop(models.Model):
     name = models.CharField(max_length=100)
