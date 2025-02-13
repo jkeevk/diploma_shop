@@ -1,5 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
-from .models import Product, Shop, Category, User, Contact
+from .models import Product, Shop, Category, User, Contact, Order
 from .serializers import (
     ProductSerializer,
     ShopSerializer,
@@ -7,8 +7,11 @@ from .serializers import (
     UserSerializer,
     ContactSerializer,
     OrderSendMailSerializer,
-    FileUploadSerializer
+    FileUploadSerializer,
+    LoginSerializer,
+    OrderSerializer
 )
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework import status
@@ -17,9 +20,12 @@ from rest_framework.views import APIView
 from orders.settings import EMAIL_HOST_USER
 from django.core.management import call_command
 import os
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 
-class PartnerUpdate(APIView):
+
+class PartnerUpdateView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = FileUploadSerializer(data=request.data)
         if not serializer.is_valid():
@@ -102,8 +108,27 @@ class ContactViewSet(ModelViewSet):
 class ShopViewSet(ModelViewSet):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response(
+                {
+                    "Status": "error",
+                    "Message": "Authentication required.",
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not request.user.is_supplier:
+            return Response(
+                {
+                    "Status": "error",
+                    "Message": "Only suppliers can create shops.",
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             name = serializer.validated_data.get("name")
@@ -171,3 +196,33 @@ class OrderSendMailView(APIView):
                 return Response({'error': str(e)}, status=400)
 
         return Response(serializer.errors, status=400)
+    
+class LoginAccountView(APIView):
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        if email and password:
+            user = authenticate(request=request, email=email, password=password)
+            if user:
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'Status': 'success',
+                    'Message': 'User logged in successfully.',
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'Status': 'error',
+                    'Message': 'Invalid email or password.',
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                'Status': 'error',
+                'Message': 'Email and password are required.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
