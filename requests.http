@@ -81,33 +81,18 @@ Content-Type: application/json
 GET {{baseUrl}}/users/1/contacts/3
 Content-Type: application/json
 
-###
-
-# регистрация пользователя
-POST {{baseUrl}}/users/
-Content-Type: application/json
-
-{
-    "username": "John Doe!",
-    "email": "john@example.com",
-    "password": "StrongPassword123"
-}
 
 ###
 
 # отправка письма пользователю
-POST {{baseUrl}}/order/
+POST {{baseUrl}}/confirm/
 Content-Type: application/json
+
 {
-    "user_email": 
-        "jkeevk@yandex.ru"
-    ,
-    "user_name": 
-        "Сергей"
-    ,
-    "order_details": 
-        "Заказ номер 1 сформирован"
-    }
+  "user_email": "jkeevk@yandex.ru",
+  "user_name": "Сергей",
+  "order_details": "Заказ номер 1 сформирован"
+}
 
 ###
 
@@ -128,5 +113,30 @@ Content-Type: application/json
 
 < /Users/sergeyigumnov/Desktop/VS Code/Netology/diploma_shop/data/shop1.json
 --MyBoundary--
+
+###
+
+# регистрация пользователя
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "username": "hello",
+    "email": "hello@example.com",
+    "password": "hello12",
+    "is_customer": true,
+    "is_supplier": false
+}
+
+###
+
+# аутентификация
+POST {{baseUrl}}/user/login HTTP/1.1
+Content-Type: application/json
+
+{
+    "email": "hello@example.com",
+    "password": "hello12"
+}
 
 ###
