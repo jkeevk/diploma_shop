@@ -8,8 +8,11 @@ from .models import (
     Shop,
     User,
     Contact,
+    Order
 )
 
+from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -139,3 +142,30 @@ class OrderSendMailSerializer(serializers.Serializer):
 
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email = data.get('email')
+        password = data.get('password')
+
+        if email and password:
+            user = authenticate(request=self.context.get('request'), email=email, password=password)
+            if not user:
+                raise serializers.ValidationError("Unable to log in with provided credentials.")
+        else:
+            raise serializers.ValidationError("Must include 'email' and 'password'.")
+
+        data['user'] = user
+        return data
+    
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = "__all__"
+
+    def create(self, validated_data):
+        order = Order.objects.create(**validated_data)
+        return order
