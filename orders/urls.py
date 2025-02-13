@@ -11,7 +11,9 @@ from backend.views import (
     ShopViewSet, 
     ContactViewSet,
     OrderSendMailView,
-    PartnerUpdateView
+    PartnerUpdateView,
+    LoginAccountView,
+    OrderViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +21,7 @@ router.register(r'products', ProductViewSet, basename='product')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'users', UserViewSet)
 router.register(r'shops', ShopViewSet)
+router.register(r'orders', OrderViewSet)
 
 user_router = NestedDefaultRouter(router, r'users', lookup='user')
 user_router.register(r'contacts', ContactViewSet, basename='user-contacts')
@@ -27,8 +30,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/', include(user_router.urls)),
-    path('api/order/', OrderSendMailView.as_view(), name='order'),
+    path('api/confirm/', OrderSendMailView.as_view(), name='order'),
     path('api/partner/update', PartnerUpdateView.as_view(), name='partner-update'),
+    path('api/user/login', LoginAccountView.as_view(), name='user-login'),
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
