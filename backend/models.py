@@ -9,27 +9,11 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
     is_customer = models.BooleanField(default=False, verbose_name="Заказчик")
     is_supplier = models.BooleanField(default=False, verbose_name="Поставщик")
+    confirmation_token = models.CharField(max_length=255, blank=True, null=True)
+    username = models.CharField(max_length=150, unique=True, blank=True, null=True)
 
-    username = models.CharField(
-        max_length=150, unique=True, blank=True, null=True
-    )
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
-    groups = models.ManyToManyField(
-        "auth.Group",
-        related_name="custom_user_set",
-        blank=True,
-        help_text="The groups this user belongs to.",
-        verbose_name="группы",
-    )
-
-    user_permissions = models.ManyToManyField(
-        "auth.Permission",
-        related_name="custom_user_set",
-        blank=True,
-        help_text="Specific permissions for this user.",
-        verbose_name="разрешения пользователя",
-    )
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     class Meta:
         verbose_name = "Пользователь"
@@ -38,6 +22,7 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
 
 class Shop(models.Model):
     name = models.CharField(max_length=100)
