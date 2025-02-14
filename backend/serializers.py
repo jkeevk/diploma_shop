@@ -8,11 +8,13 @@ from .models import (
     Shop,
     User,
     Contact,
-    Order
+    Order,
 )
-
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
+from django.core.validators import EmailValidator
 from django.contrib.auth import authenticate
-from django.contrib.auth.hashers import make_password
+
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,7 +37,7 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductInfo
-        fields = ["id", "shop", "quantity", "price", "price_rrc", "parameters"]
+        fields = ["shop", "quantity", "price", "price_rrc", "parameters"]
 
     def get_parameters(self, obj):
         parameters = obj.product_parameters.all()
@@ -43,68 +45,12 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    category = serializers.StringRelatedField()
+    product_infos = ProductInfoSerializer(many=True)
+
     class Meta:
         model = Product
-        fields = ["id", "name", "category", "model"]
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        product_info = instance.product_infos.first()
-
-        if product_info:
-            representation["price"] = product_info.price
-            representation["price_rrc"] = product_info.price_rrc
-            representation["quantity"] = product_info.quantity
-            representation["description"] = product_info.description
-            representation["shop_name"] = product_info.shop.name
-
-            parameters = product_info.product_parameters.all()
-            representation["parameters"] = {
-                param.parameter.name: param.value for param in parameters
-            }
-        else:
-            representation["price"] = 0.0
-            representation["price_rrc"] = 0.0
-            representation["quantity"] = 0
-            representation["description"] = ""
-            representation["parameters"] = {}
-            representation["shop_name"] = "Default Shop"
-
-        return representation
-
-    def create(self, validated_data):
-        product = Product.objects.create(**validated_data)
-        shop, _ = Shop.objects.get_or_create(name="Default Shop")
-        ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="",
-            price=0,
-            price_rrc=0,
-            quantity=0,
-        )
-
-        return product
-
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get("name", instance.name)
-        instance.category_id = validated_data.get("category", instance.category_id)
-        instance.model = validated_data.get("model", instance.model)
-        instance.save()
-
-        product_info = instance.product_infos.first()
-        if not product_info:
-            shop, _ = Shop.objects.get_or_create(name="Default Shop")
-            product_info = ProductInfo.objects.create(
-                product=instance,
-                shop=shop,
-                description="",
-                price=0,
-                price_rrc=0,
-                quantity=0,
-            )
-
-        return instance
+        fields = ["id", "name", "model", "category", "product_infos"]
 
 
 class ShopSerializer(serializers.ModelSerializer):
@@ -125,42 +71,105 @@ class ContactSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(validators=[EmailValidator()])
+
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "is_customer", "is_supplier")
+        fields = ["username", "email", "password", "is_customer", "is_supplier"]
         extra_kwargs = {"password": {"write_only": True}}
 
+    def validate(self, data):
+        is_customer = data.get("is_customer", False)
+        is_supplier = data.get("is_supplier", False)
+
+        if is_customer and is_supplier:
+            raise serializers.ValidationError(
+                "Пользователь не может быть одновременно и продавцом, и покупателем."
+            )
+        if not is_customer and not is_supplier:
+            raise serializers.ValidationError(
+                "Пользователь должен быть либо продавцом, либо покупателем."
+            )
+
+        return data
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Этот логин уже занят.")
+        if len(value) < 3:
+            raise serializers.ValidationError("Логин должен быть не менее 3 символов.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "Пользователь с таким email уже существует."
+            )
+        return value
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(
+                f"Пароль не прошел валидацию: {', '.join(e.messages)}"
+            )
+        return value
+
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+            is_customer=validated_data["is_customer"],
+            is_supplier=validated_data["is_supplier"],
+            is_active=False,
+        )
         return user
+
+
+class UserSerializer(serializers.ModelSerializer):
+    contacts = ContactSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "is_customer", "is_supplier", "contacts"]
+
 
 class OrderSendMailSerializer(serializers.Serializer):
     user_email = serializers.EmailField()
     user_name = serializers.CharField()
     order_details = serializers.CharField()
 
+
 class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
 
     def validate(self, data):
-        email = data.get('email')
-        password = data.get('password')
+        email = data.get("email")
+        password = data.get("password")
 
         if email and password:
-            user = authenticate(request=self.context.get('request'), email=email, password=password)
+            user = authenticate(
+                request=self.context.get("request"), email=email, password=password
+            )
             if not user:
-                raise serializers.ValidationError("Unable to log in with provided credentials.")
+                raise serializers.ValidationError(
+                    "Unable to log in with provided credentials."
+                )
         else:
             raise serializers.ValidationError("Must include 'email' and 'password'.")
 
-        data['user'] = user
+        data["user"] = user
         return data
-    
+
+
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
