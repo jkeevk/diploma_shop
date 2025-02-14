@@ -1,28 +1,48 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import ListAPIView
+
 from .models import Product, Shop, Category, User, Contact, Order
 from .serializers import (
     ProductSerializer,
     ShopSerializer,
     CategorySerializer,
-    UserSerializer,
+    UserRegistrationSerializer,
     ContactSerializer,
     OrderSendMailSerializer,
     FileUploadSerializer,
-    LoginSerializer,
-    OrderSerializer
+    OrderSerializer,
+    UserSerializer,
 )
-from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.mail import send_mail
 from rest_framework.views import APIView
-from orders.settings import EMAIL_HOST_USER
 from django.core.management import call_command
 import os
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
 
+import uuid
+from django.urls import reverse
+from django.core.mail import send_mail
+from orders.settings import EMAIL_HOST_USER, BACKEND_URL
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+
+
+def index(request):
+    urls = [
+        {"url": "/admin/", "description": "Админ-панель"},
+        {"url": "/accounts/login/", "description": "Вход в систему"},
+        {"url": "user/register/", "description": "Регистрация нового пользователя"},
+        {"url": "password_reset/", "description": "Сброс пароля"},
+        {"url": "products", "description": "Список товаров"},
+        {"url": "orders", "description": "Список заказов"},
+        {"url": "users", "description": "Пользователи"},
+        {"url": "partner/update/", "description": "Обновление партнера"},
+        {"url": "categories/", "description": "Список категорий"},
+        {"url": "shops/", "description": "Список магазинов"},
+    ]
+    return render(request, "index.html", {"urls": urls})
 
 
 class PartnerUpdateView(APIView):
@@ -30,18 +50,24 @@ class PartnerUpdateView(APIView):
         serializer = FileUploadSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        if 'file' not in request.FILES:
-            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+        if "file" not in request.FILES:
+            return Response(
+                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        uploaded_file = request.FILES['file']
-        file_path = os.path.join('data', uploaded_file.name)
+        uploaded_file = request.FILES["file"]
+        file_path = os.path.join("data", uploaded_file.name)
 
         try:
-            # Вызываем management command
-            call_command('load_products', file_path)
-            return Response({'message': 'Data loaded successfully'}, status=status.HTTP_200_OK)
+            call_command("load_products", file_path)
+            return Response(
+                {"message": "Data loaded successfully"}, status=status.HTTP_200_OK
+            )
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
@@ -74,23 +100,15 @@ class ProductViewSet(ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-class CategoryViewSet(ModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-
-class ContactViewSet(ModelViewSet):
-    queryset = Contact.objects.all()
-    serializer_class = ContactSerializer
-
     def get_queryset(self):
-        user_id = self.kwargs["user_pk"]
-        return Contact.objects.filter(user_id=user_id)
+        user_pk = self.kwargs.get("user_pk")
+        if user_pk:
+            return Product.objects.filter(user_id=user_pk)
+        return Product.objects.all()
 
     def perform_create(self, serializer):
         try:
-            serializer.save(user_id=self.kwargs["user_pk"])
+            serializer.save(user=self.request.user)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -105,55 +123,11 @@ class ContactViewSet(ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ShopViewSet(ModelViewSet):
-    queryset = Shop.objects.all()
-    serializer_class = ShopSerializer
-    permission_classes = [IsAuthenticated]
+class RegisterView(APIView):
+    serializer_class = UserRegistrationSerializer
 
-    def create(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return Response(
-                {
-                    "Status": "error",
-                    "Message": "Authentication required.",
-                },
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        if not request.user.is_supplier:
-            return Response(
-                {
-                    "Status": "error",
-                    "Message": "Only suppliers can create shops.",
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            name = serializer.validated_data.get("name")
-            if Shop.objects.filter(name=name).exists():
-                return Response(
-                    {
-                        "Status": "error",
-                        "Message": "Shop with this name already exists.",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            self.perform_create(serializer)
-            return Response(
-                {"Status": "success", "Message": "Shop created successfully."},
-                status=status.HTTP_201_CREATED,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data.get("email")
             if User.objects.filter(email=email).exists():
@@ -164,23 +138,58 @@ class UserViewSet(ModelViewSet):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            self.perform_create(serializer)
+
+            user = serializer.save()
+            self.send_confirmation_email(user)
             return Response(
-                {"Status": "success", "Message": "User created successfully."},
+                {
+                    "Status": "success",
+                    "Message": "User created successfully. Please check your email to confirm registration.",
+                },
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def send_confirmation_email(self, user):
+        token = uuid.uuid4().hex
+        user.confirmation_token = token
+        user.save()
+
+        confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
+        full_url = f"{BACKEND_URL}{confirmation_url}"
+        subject = "Confirm your registration"
+        message = f"Please click the link to confirm your registration: {full_url}"
+        send_mail(subject, message, EMAIL_HOST_USER, [user.email])
+
+
+class ConfirmRegistrationView(APIView):
+    def get(self, request, token, *args, **kwargs):
+        user = get_object_or_404(User, confirmation_token=token)
+
+        user.is_active = True
+        user.confirmation_token = None
+        user.save()
+
+        return Response(
+            {
+                "Status": "success",
+                "Message": "Your account has been successfully activated.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class OrderSendMailView(APIView):
     def post(self, request):
         serializer = OrderSendMailSerializer(data=request.data)
         if serializer.is_valid():
-            user_email = serializer.validated_data['user_email']
-            user_name = serializer.validated_data['user_name']
-            order_details = serializer.validated_data['order_details']
+            user_email = serializer.validated_data["user_email"]
+            user_name = serializer.validated_data["user_name"]
+            order_details = serializer.validated_data["order_details"]
 
-            print(f"Отправка письма на: {user_email} от {user_name} с деталями: {order_details}")  # Для отладки
+            print(
+                f"Отправка письма на: {user_email} от {user_name} с деталями: {order_details}"
+            )  # Для отладки
 
             try:
                 send_mail(
@@ -190,39 +199,34 @@ class OrderSendMailView(APIView):
                     [user_email],
                     fail_silently=False,
                 )
-                return Response({'status': 'Письмо отправлено'})
+                return Response({"status": "Письмо отправлено"})
             except Exception as e:
                 print(f"Ошибка при отправке письма: {e}")
-                return Response({'error': str(e)}, status=400)
+                return Response({"error": str(e)}, status=400)
 
         return Response(serializer.errors, status=400)
-    
-class LoginAccountView(APIView):
-    def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
-        password = request.data.get('password')
 
-        if email and password:
-            user = authenticate(request=request, email=email, password=password)
-            if user:
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'Status': 'success',
-                    'Message': 'User logged in successfully.',
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    'Status': 'error',
-                    'Message': 'Invalid email or password.',
-                }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({
-                'Status': 'error',
-                'Message': 'Email and password are required.',
-            }, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderViewSet(ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+
+
+class CategoryViewSet(ListAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class ShopViewSet(ListAPIView):
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
+
+
+class ContactViewSet(ModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+
+
+class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
