@@ -1,38 +1,71 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
 from django.conf.urls.static import static
 from django.conf import settings
 from rest_framework_nested.routers import NestedDefaultRouter
 from rest_framework.routers import DefaultRouter
 from backend.views import (
-    ProductViewSet, 
-    UserViewSet, 
-    CategoryViewSet, 
-    ShopViewSet, 
+    index,
+    UserViewSet,
+    ProductViewSet,
+    RegisterView,
+    ConfirmRegistrationView,
+    CategoryViewSet,
+    ShopViewSet,
     ContactViewSet,
     OrderSendMailView,
     PartnerUpdateView,
-    LoginAccountView,
-    OrderViewSet
+    OrderViewSet,
 )
 
+
 router = DefaultRouter()
-router.register(r'products', ProductViewSet, basename='product')
-router.register(r'categories', CategoryViewSet, basename='category')
-router.register(r'users', UserViewSet)
-router.register(r'shops', ShopViewSet)
-router.register(r'orders', OrderViewSet)
+router.register(r"products", ProductViewSet, basename="product")
+router.register(r"orders", OrderViewSet)
+router.register(r"users", UserViewSet, basename="user")
 
-user_router = NestedDefaultRouter(router, r'users', lookup='user')
-user_router.register(r'contacts', ContactViewSet, basename='user-contacts')
+user_router = NestedDefaultRouter(router, r"users", lookup="user")
+user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    path('api/', include(user_router.urls)),
-    path('api/confirm/', OrderSendMailView.as_view(), name='order'),
-    path('api/partner/update', PartnerUpdateView.as_view(), name='partner-update'),
-    path('api/user/login', LoginAccountView.as_view(), name='user-login'),
-
-
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns = (
+    [
+        path("", index, name="index"),
+        path("admin/", admin.site.urls),
+        path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
+        path("", include(router.urls)),
+        path("", include(user_router.urls)),
+        path("user/register/", RegisterView.as_view(), name="user-register"),
+        path(
+            "user/register/confirm/<str:token>/",
+            ConfirmRegistrationView.as_view(),
+            name="user-register-confirm",
+        ),
+        path(
+            "password_reset/",
+            auth_views.PasswordResetView.as_view(),
+            name="password_reset",
+        ),
+        path(
+            "password_reset/confirm/<uidb64>/<token>/",
+            auth_views.PasswordResetConfirmView.as_view(),
+            name="password_reset_confirm",
+        ),
+        path(
+            "password_reset/done/",
+            auth_views.PasswordResetDoneView.as_view(),
+            name="password_reset_done",
+        ),
+        path(
+            "password_reset/complete/",
+            auth_views.PasswordResetCompleteView.as_view(),
+            name="password_reset_complete",
+        ),
+        path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
+        path("categories/", CategoryViewSet.as_view(), name="categories"),
+        path("shops/", ShopViewSet.as_view(), name="shops"),
+        path("order/confirm/", OrderSendMailView.as_view(), name="order"),
+    ]
+    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+)
