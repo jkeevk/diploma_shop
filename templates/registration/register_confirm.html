@@ -1,0 +1,15 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h2>Подтверждение регистрации</h2>
+
+  <p>Пожалуйста, подтвердите свою регистрацию, используя ссылку, отправленную на ваш email.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Подтвердить регистрацию</button>
+  </form>
+
+  <p>Если вы не получили email, <a href="{% url 'password_reset' %}">попробуйте снова</a>.</p>
+{% endblock %}
