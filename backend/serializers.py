@@ -9,6 +9,7 @@ from .models import (
     User,
     Contact,
     Order,
+    OrderItem,
 )
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
@@ -170,11 +171,21 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    shop_name = serializers.CharField(source='shop.name', read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product_name', 'shop_name', 'quantity', 'total_price']
+
+    def get_total_price(self, obj):
+        return obj.cost()
+    
 class OrderSerializer(serializers.ModelSerializer):
+    order_items = OrderItemSerializer(many=True, read_only=True)
     class Meta:
         model = Order
-        fields = "__all__"
-
-    def create(self, validated_data):
-        order = Order.objects.create(**validated_data)
-        return order
+        total_cost = serializers.SerializerMethodField()
+        fields = ['id', "user", "order_items", "dt", "status", "total_cost"]
