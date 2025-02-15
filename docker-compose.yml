@@ -1,0 +1,49 @@
+services:
+  app:
+    env_file:
+      - .env
+    build: .
+    depends_on:
+      - db
+    expose:
+      - "8000"
+    links:
+      - db
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    networks:
+      - net
+  db:
+    env_file:
+      - .env
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - net
+    ports:
+      - "5431:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+networks:
+  net:
+    driver: bridge
