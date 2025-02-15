@@ -2,6 +2,15 @@ from django.contrib import admin
 from .models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, Contact
 from django.contrib.auth.admin import UserAdmin
 
+
+class ProductParameterInline(admin.TabularInline):
+    model = ProductParameter
+    extra = 1
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 1
+
 class UserAdmin(admin.ModelAdmin):
     list_display = ('name', 'email')
     search_fields = ('name', 'email')
@@ -29,6 +38,7 @@ class ProductInfoAdmin(admin.ModelAdmin):
     list_filter = ('product', 'shop')
     list_editable = ('description', 'price', 'quantity', 'price_rrc')
     raw_id_fields = ('product', 'shop')
+    inlines = [ProductParameterInline]
 
 class ParameterAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -45,17 +55,26 @@ class ProductParameterAdmin(admin.ModelAdmin):
     product_info.short_description = 'Product Info'
 
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'status', 'dt')
+    list_display = ('id', 'user', 'status', 'dt', 'total_cost')
     search_fields = ('user__name', 'status')
     list_filter = ('status',)
     ordering = ('-dt',)
     raw_id_fields = ('user',)
+    inlines = [OrderItemInline]
+
+    def total_cost(self, obj):
+        return obj.total_cost()
+    total_cost.short_description = 'Total Cost'
 
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'product', 'shop', 'quantity')
+    list_display = ('order', 'product', 'shop', 'quantity', 'cost')
     search_fields = ('order__id', 'product__name', 'shop__name')
     list_filter = ('order',)
     raw_id_fields = ('order', 'product', 'shop')
+
+    def cost(self, obj):
+        return obj.cost()
+    cost.short_description = 'Cost'
 
 class ContactAdmin(admin.ModelAdmin):
     list_display = ('type', 'user', 'value', 'city', 'street', 'house')
@@ -63,9 +82,14 @@ class ContactAdmin(admin.ModelAdmin):
     list_filter = ('type',)
     list_editable = ('city', 'street', 'house')
     raw_id_fields = ('user',)
+    fieldsets = (
+        (None, {'fields': ('type', 'user', 'value')}),
+        ('Address', {'fields': ('city', 'street', 'house', 'structure', 'building', 'apartment')}),
+        ('Phone', {'fields': ('phone',)}),
+    )
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'is_customer', 'is_supplier')
+    list_display = ('id', 'username', 'email', 'name', 'is_customer', 'is_supplier', 'is_staff', 'is_superuser',)
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {'fields': ('email', 'name')}),
@@ -79,6 +103,8 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('username', 'email', 'password1', 'password2', 'is_customer', 'is_supplier'),
         }),
     )
+    list_filter = ('is_customer', 'is_supplier', 'is_staff', 'is_superuser')
+    ordering = ('id',)
 
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Shop, ShopAdmin)
