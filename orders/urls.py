@@ -11,8 +11,8 @@ from backend.views import (
     ProductViewSet,
     RegisterView,
     ConfirmRegistrationView,
-    CategoryViewSet,
-    ShopViewSet,
+    CategoryView,
+    ShopView,
     ContactViewSet,
     OrderSendMailView,
     PartnerUpdateView,
@@ -62,8 +62,8 @@ urlpatterns = (
             name="password_reset_complete",
         ),
         path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
-        path("categories/", CategoryViewSet.as_view(), name="categories"),
-        path("shops/", ShopViewSet.as_view(), name="shops"),
+        path("categories/", CategoryView.as_view(), name="categories"),
+        path("shops/", ShopView.as_view(), name="shops"),
         path("order/confirm/", OrderSendMailView.as_view(), name="order"),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
