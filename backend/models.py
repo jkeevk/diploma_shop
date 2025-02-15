@@ -30,7 +30,13 @@ class Shop(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
     )
+    class Meta:
+            verbose_name = "Магазин"
+            verbose_name_plural = "Список магазинов"
+            ordering = ("-name",)
 
+    def __str__(self):
+        return self.name
 
 class Category(models.Model):
     shops = models.ManyToManyField(
@@ -58,8 +64,8 @@ class Product(models.Model):
     )
 
     class Meta:
-        verbose_name = "Продукт"
-        verbose_name_plural = "Список продуктов"
+        verbose_name = "Товар"
+        verbose_name_plural = "Список товаров"
         ordering = ("-name",)
 
     def __str__(self):
@@ -87,8 +93,8 @@ class ProductInfo(models.Model):
     )
 
     class Meta:
-        verbose_name = "Информация о продукте"
-        verbose_name_plural = "Список информации о продуктах"
+        verbose_name = "Информация о товаре"
+        verbose_name_plural = "Список информации о товарах"
         ordering = ("-description",)
         unique_together = ("product", "shop")
 
@@ -111,7 +117,7 @@ class Parameter(models.Model):
 class ProductParameter(models.Model):
     product_info = models.ForeignKey(
         ProductInfo,
-        verbose_name="Информация о продукте",
+        verbose_name="Информация о товаре",
         related_name="product_parameters",
         on_delete=models.CASCADE,
     )
@@ -124,8 +130,8 @@ class ProductParameter(models.Model):
     value = models.CharField(verbose_name="Значение", max_length=200)
 
     class Meta:
-        verbose_name = "Параметр продукта"
-        verbose_name_plural = "Список параметров продукта"
+        verbose_name = "Параметр товара"
+        verbose_name_plural = "Список параметров товара"
         ordering = ("-parameter",)
 
     def __str__(self):
