@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 
 
@@ -63,6 +64,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "django_filters",
     "backend",
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -110,8 +112,16 @@ REST_FRAMEWORK = {
         "user": "20/minute",
         "anon": "10/minute",
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
-from datetime import timedelta
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Documentation',
+    'DESCRIPTION': 'API for automating purchases in a retail network',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
