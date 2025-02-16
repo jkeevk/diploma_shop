@@ -1,6 +1,5 @@
 from django.contrib import admin
 from .models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, Contact
-from django.contrib.auth.admin import UserAdmin
 
 
 class ProductParameterInline(admin.TabularInline):
@@ -53,7 +52,6 @@ class ProductParameterAdmin(admin.ModelAdmin):
     def product_info(self, obj):
         return f"{obj.product_info.product.name} ({obj.product_info.shop.name})"
     product_info.short_description = 'Product Info'
-
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'status', 'dt', 'total_cost')
     search_fields = ('user__name', 'status')
@@ -77,24 +75,23 @@ class OrderItemAdmin(admin.ModelAdmin):
     cost.short_description = 'Cost'
 
 class ContactAdmin(admin.ModelAdmin):
-    list_display = ('type', 'user', 'value', 'city', 'street', 'house')
-    search_fields = ('user__name', 'type', 'city', 'street')
-    list_filter = ('type',)
+    list_display = ('user', 'city', 'street', 'house')
+    search_fields = ('user__name', 'city', 'street')
+    list_filter = ('phone',)
     list_editable = ('city', 'street', 'house')
     raw_id_fields = ('user',)
     fieldsets = (
-        (None, {'fields': ('type', 'user', 'value')}),
         ('Address', {'fields': ('city', 'street', 'house', 'structure', 'building', 'apartment')}),
         ('Phone', {'fields': ('phone',)}),
     )
 
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ["email", "name", "surname", "is_customer", "is_supplier"]
-    search_fields = ["email", "name", "surname"]
+    list_display = ["email", "first_name", "last_name", "is_customer", "is_supplier"]
+    search_fields = ["email", "first_name", "last_name"]
     list_filter = ["is_customer", "is_supplier"]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("name", "surname")}),
+        ("Personal Info", {"fields": ("first_name", "last_name")}),
         ("Permissions", {"fields": ("is_customer", "is_supplier", "is_staff", "is_superuser")}),
     )
 
