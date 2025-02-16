@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from .models import (
     Product,
@@ -40,7 +41,8 @@ class ProductInfoSerializer(serializers.ModelSerializer):
         model = ProductInfo
         fields = ["shop", "quantity", "price", "price_rrc", "parameters"]
 
-    def get_parameters(self, obj):
+    @extend_schema_field(serializers.DictField)
+    def get_parameters(self, obj) -> dict:
         parameters = obj.product_parameters.all()
         return {param.parameter.name: param.value for param in parameters}
 
@@ -77,7 +79,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "is_customer", "is_supplier"]
+        fields = ["email", "password", "name", "surname", "is_customer", "is_supplier"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -94,13 +96,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             )
 
         return data
-
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Этот логин уже занят.")
-        if len(value) < 3:
-            raise serializers.ValidationError("Логин должен быть не менее 3 символов.")
-        return value
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -120,23 +115,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = User.objects.create_user(
-            username=validated_data["username"],
             email=validated_data["email"],
             password=validated_data["password"],
+            name=validated_data.get("name", ""),
+            surname=validated_data.get("surname", ""),
             is_customer=validated_data["is_customer"],
             is_supplier=validated_data["is_supplier"],
             is_active=False,
         )
         return user
-
-
+        
 class UserSerializer(serializers.ModelSerializer):
-    contacts = ContactSerializer(many=True, read_only=True)
-
     class Meta:
         model = User
-        fields = ["id", "username", "email", "is_customer", "is_supplier", "contacts"]
-
+        fields = ['id', 'email', 'name', 'surname', 'is_customer', 'is_supplier']
 
 class OrderSendMailSerializer(serializers.Serializer):
     user_email = serializers.EmailField()
@@ -180,12 +172,19 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ['id', 'product_name', 'shop_name', 'quantity', 'total_price']
 
-    def get_total_price(self, obj):
+    @extend_schema_field(serializers.FloatField)
+    def get_total_price(self, obj) -> float:
         return obj.cost()
-    
+
+
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
+    total_cost = serializers.SerializerMethodField()
+
     class Meta:
         model = Order
-        total_cost = serializers.SerializerMethodField()
-        fields = ['id', "user", "order_items", "dt", "status", "total_cost"]
+        fields = ['id', 'user', 'order_items', 'dt', 'status', 'total_cost']
+
+    @extend_schema_field(serializers.FloatField)
+    def get_total_cost(self, obj) -> float:
+        return sum(item.quantity * item.product.price for item in obj.order_items.all())
