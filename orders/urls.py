@@ -18,8 +18,13 @@ from backend.views import (
     OrderSendMailView,
     PartnerUpdateView,
     OrderViewSet,
+    CustomTokenRefreshView,
+    CustomTokenObtainPairView,
 )
-
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -34,9 +39,10 @@ urlpatterns = (
         path('schema/', SpectacularAPIView.as_view(), name='schema'),
         path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
         path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+        path("token/", CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path("token/refresh/", CustomTokenRefreshView.as_view(), name='token_refresh'),
         path("", index, name="index"),
         path("admin/", admin.site.urls),
-        path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register/", RegisterView.as_view(), name="user-register"),
