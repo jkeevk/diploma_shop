@@ -12,7 +12,7 @@ class Command(BaseCommand):
     Эта команда анализирует файл, извлекает необходимые данные и обновляет или создает записи в базе данных.
     
     Аргументы:
-        json_file (str): Путь к JSON файлу, содержащему данные о товарах, магазинах и категориях.
+        json_file (str): Путь к файлу JSON с данными о товарах
     """
     help = 'Загружает или обновляет данные о товарах из JSON файла в базу данных'
 
@@ -80,6 +80,7 @@ class Command(BaseCommand):
                 category_id = good_data['category']
                 product_model = good_data.get('model', '')  # Получаем значение поля model
                 description = good_data.get('description', '')  # Получаем значение поля description
+                external_id = good_data.get('id')  # Получаем внешний ID товара
             except KeyError as e:
                 self.stdout.write(self.style.ERROR(f"Отсутствует обязательное поле {e} в данных товара: {good_data}"))
                 continue
@@ -87,7 +88,7 @@ class Command(BaseCommand):
             # Проверка на наличие категории
             category = categories.get(category_id)
             if not category:
-                self.stdout.write(self.style.ERROR(f"Категория с ID {category_id} не найдена для товара '{product_name}'."))
+                self.stdout.write(self.style.ERROR(f"Категория с ID {category_id} не найдена для товара '{product_name}'.")) 
                 continue
 
             # Обновляем или создаем продукт
@@ -103,22 +104,32 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.SUCCESS(f"Обновлен товар '{product_name}'"))
 
-            # Создаем или обновляем информацию о продукте в магазине
+            # Создаем или обновляем информацию о продукте в магазине с использованием внешнего ID
             try:
-                product_info, created = ProductInfo.objects.update_or_create(
-                    product=product,
-                    shop=shop,
-                    defaults={
-                        'description': description,  # Добавляем поле description
-                        'quantity': good_data.get('quantity', 0),
-                        'price': good_data['price'],
-                        'price_rrc': good_data['price_rrc']
-                    }
-                )
-                if created:
-                    self.stdout.write(self.style.SUCCESS(f"Создана информация о товаре '{product_name}' в магазине '{shop.name}'"))
-                else:
+                # Найдем существующую запись ProductInfo по product и shop
+                product_info = ProductInfo.objects.filter(product=product, shop=shop).first()
+                
+                if product_info:
+                    # Если запись существует, обновляем информацию
+                    product_info.external_id = external_id  # Обновляем внешний ID
+                    product_info.description = description
+                    product_info.quantity = good_data.get('quantity', 0)
+                    product_info.price = good_data['price']
+                    product_info.price_rrc = good_data['price_rrc']
+                    product_info.save()
                     self.stdout.write(self.style.SUCCESS(f"Обновлена информация о товаре '{product_name}' в магазине '{shop.name}'"))
+                else:
+                    # Если записи нет, создаем новую
+                    ProductInfo.objects.create(
+                        product=product,
+                        shop=shop,
+                        external_id=external_id,
+                        description=description,
+                        quantity=good_data.get('quantity', 0),
+                        price=good_data['price'],
+                        price_rrc=good_data['price_rrc']
+                    )
+                    self.stdout.write(self.style.SUCCESS(f"Создана информация о товаре '{product_name}' в магазине '{shop.name}'"))
             except KeyError as e:
                 self.stdout.write(self.style.ERROR(f"Отсутствует обязательное поле {e} в данных товара: {good_data}"))
                 continue
@@ -130,7 +141,7 @@ class Command(BaseCommand):
                     # Создаем или обновляем параметр
                     parameter, created = Parameter.objects.update_or_create(
                         name=param_name,
-                        defaults={}
+                        defaults={},
                     )
 
                     # Создаем или обновляем связь параметра с продуктом
@@ -144,4 +155,3 @@ class Command(BaseCommand):
                     continue
 
         self.stdout.write(self.style.SUCCESS('Данные успешно загружены или обновлены в базе данных.'))
-        
