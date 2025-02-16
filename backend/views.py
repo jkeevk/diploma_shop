@@ -28,7 +28,7 @@ from django.core.mail import send_mail
 from orders.settings import EMAIL_HOST_USER, BACKEND_URL
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_field, OpenApiExample
 
 
 def index(request):
@@ -147,7 +147,32 @@ class ProductViewSet(ModelViewSet):
 
 class RegisterView(APIView):
     serializer_class = UserRegistrationSerializer
-
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Пример регистрации покупателя",
+                value={
+                    "email": "customer1@example.com",
+                    "password": "strongpassword123",
+                    "name": "Иван",
+                    "surname": "Иванов",
+                    "is_customer": True,
+                    "is_supplier": False,
+                },
+            ),
+            OpenApiExample(
+                "Пример регистрации поставщика",
+                value={
+                    "email": "supplier1@example.com",
+                    "password": "strongpassword123",
+                    "name": "Петр",
+                    "surname": "Петров",
+                    "is_customer": False,
+                    "is_supplier": True,
+                },
+            ),
+        ]
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
