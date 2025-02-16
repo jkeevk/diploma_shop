@@ -28,7 +28,7 @@ from django.core.mail import send_mail
 from orders.settings import EMAIL_HOST_USER, BACKEND_URL
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
-from drf_spectacular.utils import extend_schema, extend_schema_field, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiExample
 
 
 def index(request):
@@ -95,6 +95,8 @@ class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     pagination_class = LimitOffsetPagination
+    filter_backends = []
+    search_fields = ["name", "model", "category__name"]
 
     def update(self, request, *args, **kwargs):
         try:
@@ -154,8 +156,8 @@ class RegisterView(APIView):
                 value={
                     "email": "customer1@example.com",
                     "password": "strongpassword123",
-                    "name": "Иван",
-                    "surname": "Иванов",
+                    "first_name": "Иван",
+                    "last_name": "Иванов",
                     "is_customer": True,
                     "is_supplier": False,
                 },
@@ -165,8 +167,8 @@ class RegisterView(APIView):
                 value={
                     "email": "supplier1@example.com",
                     "password": "strongpassword123",
-                    "name": "Петр",
-                    "surname": "Петров",
+                    "first_name": "Петр",
+                    "last_name": "Петров",
                     "is_customer": False,
                     "is_supplier": True,
                 },
