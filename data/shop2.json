@@ -1,125 +1,254 @@
 [
 	{
-		"shop": "MebelStore"
+		"shop": "TechWorld"
 	},
 	{
 		"categories": [
 			{
 				"id": 1,
-				"name": "Диваны"
+				"name": "Телефоны"
 			},
 			{
 				"id": 2,
-				"name": "Столы"
+				"name": "Зарядные устройства"
 			},
 			{
 				"id": 3,
-				"name": "Стулья"
+				"name": "Аксессуары"
 			},
 			{
 				"id": 4,
-				"name": "Шкафы"
+				"name": "Ноутбуки"
 			},
 			{
 				"id": 5,
-				"name": "Кровати"
+				"name": "Часы"
 			},
 			{
 				"id": 6,
-				"name": "Тумбочки"
+				"name": "Наушники"
+			},
+			{
+				"id": 7,
+				"name": "Гаджеты"
+			},
+			{
+				"id": 8,
+				"name": "Компьютерные комплектующие"
 			}
 		]
 	},
 	{
 		"goods": [
 			{
-				"id": 101,
+				"id": 4216292,
 				"category": 1,
-				"model": "mebelstore/sofa/classic",
-				"name": "Диван MebelStore Classic",
-				"price": 25000,
-				"price_rrc": 28000,
-				"quantity": 50,
-				"description": "Диван MebelStore Classic — идеальное сочетание комфорта и стиля. Обивка из качественного материала, просторные подушки для отдыха.",
+				"model": "apple/iphone/xs-max",
+				"name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+				"price": 104999,
+				"price_rrc": 112999,
+				"quantity": 10,
+				"description": "Познакомьтесь с iPhone XS 512 ГБ в золотом цвете в TechWorld — элегантный дизайн, высокая производительность и потрясающий Super Retina дисплей. Премиум-смартфон для тех, кто ценит лучшее!",
 				"parameters": {
-					"Материал обивки": "ткань",
-					"Цвет": "серый",
-					"Размеры (мм)": "2000x900x850"
+					"Диагональ (дюйм)": "6.5",
+					"Разрешение (пикс)": "2688x1242",
+					"Встроенная память (Гб)": "512",
+					"Цвет": "золотистый"
 				}
 			},
 			{
-				"id": 102,
-				"category": 2,
-				"model": "mebelstore/table/wooden",
-				"name": "Стол MebelStore Wooden",
-				"price": 15000,
-				"price_rrc": 17000,
+				"id": 4216293,
+				"category": 1,
+				"model": "apple/iphone/14-pro",
+				"name": "Смартфон Apple iPhone 14 Pro 256GB (фиолетовый)",
+				"price": 124999,
+				"price_rrc": 134990,
 				"quantity": 30,
-				"description": "Стол MebelStore Wooden — стильный стол из натурального дерева, идеально подходит для кухни или гостиной.",
+				"description": "iPhone 14 Pro 256 ГБ в фиолетовом цвете — инновационный дизайн, мощный процессор A16 Bionic и камера с технологией Dynamic Island. Идеальный выбор для любителей технологий!",
 				"parameters": {
-					"Материал": "дерево",
-					"Цвет": "коричневый",
-					"Размеры (мм)": "1200x800x750"
+					"Диагональ (дюйм)": "6.1",
+					"Разрешение (пикс)": "2532x1170",
+					"Встроенная память (Гб)": "256",
+					"Цвет": "фиолетовый"
 				}
 			},
 			{
-				"id": 103,
+				"id": 4216294,
+				"category": 2,
+				"model": "apple/iphone/charger",
+				"name": "Зарядное устройство Apple 20W USB-C",
+				"price": 1899,
+				"price_rrc": 2299,
+				"quantity": 120,
+				"description": "Зарядное устройство Apple 20W USB-C — компактное и мощное решение для быстрой зарядки ваших устройств. Совместимо с iPhone, iPad и другими гаджетами.",
+				"parameters": {
+					"Мощность (Вт)": "20",
+					"Тип подключения": "USB-C",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216295,
 				"category": 3,
-				"model": "mebelstore/chair/ergonomic",
-				"name": "Стул MebelStore Ergonomic",
-				"price": 5000,
-				"price_rrc": 5500,
-				"quantity": 100,
-				"description": "Стул MebelStore Ergonomic с удобной спинкой и подлокотниками. Идеально подходит для работы и отдыха.",
+				"model": "apple/iphone/case",
+				"name": "Чехол Apple для iPhone 14 (синий)",
+				"price": 2899,
+				"price_rrc": 3299,
+				"quantity": 60,
+				"description": "Чехол Apple для iPhone 14 в синем цвете — стильный аксессуар, который защитит ваш смартфон от царапин и повреждений. Изготовлен из мягкого силикона.",
+				"parameters": {
+					"Материал": "силикон",
+					"Цвет": "синий"
+				}
+			},
+			{
+				"id": 4216296,
+				"category": 4,
+				"model": "apple/macbook/pro",
+				"name": "Ноутбук Apple MacBook Pro 14\" M1 Pro 16GB 512GB",
+				"price": 179999,
+				"price_rrc": 199999,
+				"quantity": 25,
+				"description": "MacBook Pro 14\" с процессором M1 Pro — мощный ноутбук для профессионалов. Высокая производительность, потрясающий дисплей и длительное время работы от батареи.",
+				"parameters": {
+					"Процессор": "Apple M1 Pro",
+					"Оперативная память (Гб)": "16",
+					"Объем накопителя (ГБ)": "512",
+					"Диагональ (дюйм)": "14"
+				}
+			},
+			{
+				"id": 4216297,
+				"category": 5,
+				"model": "apple/watch/series-8",
+				"name": "Apple Watch Series 8 (GPS, 41 мм)",
+				"price": 31999,
+				"price_rrc": 35999,
+				"quantity": 40,
+				"description": "Apple Watch Series 8 — умные часы с передовыми функциями для здоровья и фитнеса. Стильный дизайн, водонепроницаемость и поддержка ECG.",
+				"parameters": {
+					"Цвет": "серебристый",
+					"Диагональ экрана": "41 мм",
+					"Тип экрана": "OLED"
+				}
+			},
+			{
+				"id": 4216298,
+				"category": 6,
+				"model": "apple/airpods/pro",
+				"name": "Apple AirPods Pro 2-го поколения",
+				"price": 25999,
+				"price_rrc": 27999,
+				"quantity": 75,
+				"description": "AirPods Pro 2-го поколения — беспроводные наушники с активным шумоподавлением и прозрачным режимом. Идеальное звучание и комфорт.",
+				"parameters": {
+					"Тип наушников": "вставные",
+					"Шумоподавление": "активное",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216299,
+				"category": 4,
+				"model": "apple/macbook/air",
+				"name": "Ноутбук Apple MacBook Air M2 13.6\"",
+				"price": 124999,
+				"price_rrc": 134999,
+				"quantity": 20,
+				"description": "MacBook Air с процессором M2 — ультратонкий и легкий ноутбук с потрясающей производительностью и временем работы от батареи до 18 часов.",
+				"parameters": {
+					"Процессор": "Apple M2",
+					"Оперативная память (Гб)": "8",
+					"Объем накопителя (ГБ)": "256",
+					"Диагональ (дюйм)": "13.6"
+				}
+			},
+			{
+				"id": 4216300,
+				"category": 3,
+				"model": "apple/iphone/stand",
+				"name": "Подставка для телефона Apple (белая)",
+				"price": 1599,
+				"price_rrc": 1999,
+				"quantity": 90,
+				"description": "Подставка для телефона Apple — стильный и функциональный аксессуар для удобного использования вашего устройства. Изготовлена из алюминия.",
+				"parameters": {
+					"Материал": "алюминий",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216301,
+				"category": 2,
+				"model": "apple/iphone/cable",
+				"name": "Кабель USB-C - Lightning Apple 1 м",
+				"price": 1499,
+				"price_rrc": 1799,
+				"quantity": 140,
+				"description": "Кабель USB-C - Lightning Apple длиной 1 м — надежное решение для зарядки и синхронизации ваших устройств. Совместим с iPhone и iPad.",
+				"parameters": {
+					"Тип подключения": "USB-C",
+					"Длина кабеля (м)": "1"
+				}
+			},
+			{
+				"id": 4216302,
+				"category": 5,
+				"model": "apple/watch/series-7",
+				"name": "Apple Watch Series 7 (GPS, 45 мм)",
+				"price": 33999,
+				"price_rrc": 37999,
+				"quantity": 35,
+				"description": "Apple Watch Series 7 — умные часы с увеличенным экраном и улучшенной прочностью. Идеальный спутник для активного образа жизни.",
+				"parameters": {
+					"Цвет": "зеленый",
+					"Диагональ экрана": "45 мм",
+					"Тип экрана": "OLED"
+				}
+			},
+			{
+				"id": 4216303,
+				"category": 6,
+				"model": "apple/airpods/2nd-gen",
+				"name": "Apple AirPods 2-го поколения",
+				"price": 12999,
+				"price_rrc": 14999,
+				"quantity": 220,
+				"description": "AirPods 2-го поколения — беспроводные наушники с улучшенным звуком и функцией быстрой зарядки. Идеальный выбор для повседневного использования.",
+				"parameters": {
+					"Тип наушников": "вставные",
+					"Шумоподавление": "нет",
+					"Цвет": "белый"
+				}
+			},
+			{
+				"id": 4216304,
+				"category": 4,
+				"model": "apple/macbook/pro-16",
+				"name": "Ноутбук Apple MacBook Pro 16\" M1 Max 32GB 1TB",
+				"price": 289999,
+				"price_rrc": 319999,
+				"quantity": 12,
+				"description": "MacBook Pro 16\" с процессором M1 Max — мощный ноутбук для профессионалов. Идеален для работы с графикой, видео и другими ресурсоемкими задачами.",
+				"parameters": {
+					"Процессор": "Apple M1 Max",
+					"Оперативная память (Гб)": "32",
+					"Объем накопителя (ГБ)": "1TB",
+					"Диагональ (дюйм)": "16"
+				}
+			},
+			{
+				"id": 4216305,
+				"category": 3,
+				"model": "apple/iphone/sleeve",
+				"name": "Чехол Apple Sleeve для MacBook Pro 16\"",
+				"price": 7699,
+				"price_rrc": 8499,
+				"quantity": 55,
+				"description": "Чехол Apple Sleeve для MacBook Pro 16\" — стильный и надежный аксессуар для защиты вашего ноутбука. Изготовлен из высококачественной кожи.",
 				"parameters": {
 					"Материал": "кожа",
-					"Цвет": "черный",
-					"Размеры (мм)": "450x450x850"
-				}
-			},
-			{
-				"id": 104,
-				"category": 4,
-				"model": "mebelstore/cabinet/modern",
-				"name": "Шкаф MebelStore Modern",
-				"price": 22000,
-				"price_rrc": 24000,
-				"quantity": 20,
-				"description": "Шкаф MebelStore Modern — функциональный и стильный шкаф с несколькими отделами для хранения одежды.",
-				"parameters": {
-					"Материал": "МДФ",
-					"Цвет": "белый",
-					"Размеры (мм)": "1200x500x2000"
-				}
-			},
-			{
-				"id": 105,
-				"category": 5,
-				"model": "mebelstore/bed/comfort",
-				"name": "Кровать MebelStore Comfort",
-				"price": 35000,
-				"price_rrc": 38000,
-				"quantity": 15,
-				"description": "Кровать MebelStore Comfort с ортопедическим матрасом для качественного сна. Прочные и надежные материалы.",
-				"parameters": {
-					"Материал": "дерево + металл",
-					"Цвет": "темно-коричневый",
-					"Размеры (мм)": "2000x1600x900"
-				}
-			},
-			{
-				"id": 106,
-				"category": 6,
-				"model": "mebelstore/nightstand/simple",
-				"name": "Тумбочка MebelStore Simple",
-				"price": 4000,
-				"price_rrc": 4500,
-				"quantity": 80,
-				"description": "Тумбочка MebelStore Simple — компактная тумбочка для спальни с несколькими ящиками для хранения.",
-				"parameters": {
-					"Материал": "МДФ",
-					"Цвет": "бежевый",
-					"Размеры (мм)": "400x350x500"
+					"Цвет": "черный"
 				}
 			}
 		]
