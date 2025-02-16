@@ -29,6 +29,9 @@ from orders.settings import EMAIL_HOST_USER, BACKEND_URL
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from drf_spectacular.utils import extend_schema, OpenApiExample
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 
 
 def index(request):
@@ -46,32 +49,63 @@ def index(request):
     ]
     return render(request, "index.html", {"urls": urls})
 
+
+# Эндпоинт для получения токена
 @extend_schema(
-    request={
-        'multipart/form-data': {
-            'type': 'object',
-            'properties': {
-                'file': {
-                    'type': 'string',
-                    'format': 'binary',
-                }
-            }
-        }
-    },
+    summary="Получить токен JWT",
+    description="Используйте этот эндпоинт для получения JWT токена, отправив логин и пароль.",
     responses={
-        200: {"description": "Data loaded successfully"},
-        400: {"description": "Bad request (invalid file or no file uploaded)"},
-        500: {"description": "Internal server error"},
+        200: OpenApiResponse(
+            description="Успех",
+            examples=[
+                OpenApiExample(
+                    "Пример ответа",
+                    value={"access": "token_value", "refresh": "refresh_token_value"}
+                ),
+            ]
+        ),
     },
 )
+class CustomTokenObtainPairView(TokenObtainPairView):
+    pass
+
+# Эндпоинт для обновления токена
+@extend_schema(
+    summary="Обновить токен JWT",
+    description="Используйте этот эндпоинт для обновления JWT токена, отправив refresh токен.",
+    responses={
+        200: OpenApiResponse(
+            description="Успех",
+            examples=[
+                OpenApiExample(
+                    "Пример ответа",
+                    value={"access": "new_token_value"}
+                ),
+            ]
+        ),
+    },
+)
+class CustomTokenRefreshView(TokenRefreshView):
+    pass
+
+
 class PartnerUpdateView(APIView):
     serializer_class = FileUploadSerializer
+    permission_classes = [IsAuthenticated]  # Проверяем, что пользователь аутентифицирован
 
     def post(self, request, *args, **kwargs):
+        # Проверка, что пользователь является поставщиком
+        if not request.user.is_supplier and not request.user.is_staff:
+            return Response(
+                {"error": "You do not have permission to upload data"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Логика для обработки файла
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if "file" not in request.FILES:
             return Response(
                 {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
@@ -80,7 +114,20 @@ class PartnerUpdateView(APIView):
         uploaded_file = request.FILES["file"]
         file_path = os.path.join("data", uploaded_file.name)
 
+        # Сохраняем файл
         try:
+            with open(file_path, 'wb') as f:
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+
+            # Проверка формата файла
+            if not uploaded_file.name.endswith('.json'):
+                return Response(
+                    {"error": "Invalid file format. Expected JSON."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Вызываем команду для обработки данных
             call_command("load_products", file_path)
             return Response(
                 {"message": "Data loaded successfully"}, status=status.HTTP_200_OK
@@ -89,7 +136,8 @@ class PartnerUpdateView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
+
+
         
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
