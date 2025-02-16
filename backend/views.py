@@ -32,6 +32,8 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from .filters import ProductFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 def index(request):
@@ -88,20 +90,37 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class CustomTokenRefreshView(TokenRefreshView):
     pass
 
-
+@extend_schema(
+    summary="Обновление каталога поставщика",
+    description="Эндпоинт для обновления каталога поставщика. Требует multipart/form-data в теле запроса. Файл должен быть в формате JSON.",
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                }
+            }
+        }
+    },
+    responses={
+        200: {"description": "Data loaded successfully"},
+        400: {"description": "Bad request (invalid file or no file uploaded)"},
+        500: {"description": "Internal server error"},
+    }
+)
 class PartnerUpdateView(APIView):
     serializer_class = FileUploadSerializer
-    permission_classes = [IsAuthenticated]  # Проверяем, что пользователь аутентифицирован
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # Проверка, что пользователь является поставщиком
         if not request.user.is_supplier and not request.user.is_staff:
             return Response(
                 {"error": "You do not have permission to upload data"}, 
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Логика для обработки файла
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -114,20 +133,17 @@ class PartnerUpdateView(APIView):
         uploaded_file = request.FILES["file"]
         file_path = os.path.join("data", uploaded_file.name)
 
-        # Сохраняем файл
         try:
             with open(file_path, 'wb') as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)
 
-            # Проверка формата файла
             if not uploaded_file.name.endswith('.json'):
                 return Response(
                     {"error": "Invalid file format. Expected JSON."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Вызываем команду для обработки данных
             call_command("load_products", file_path)
             return Response(
                 {"message": "Data loaded successfully"}, status=status.HTTP_200_OK
@@ -137,13 +153,13 @@ class PartnerUpdateView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
         
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     pagination_class = LimitOffsetPagination
-    filter_backends = []
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
 
     def update(self, request, *args, **kwargs):
