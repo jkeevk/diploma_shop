@@ -120,7 +120,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"Обновлена информация о товаре '{product_name}' в магазине '{shop.name}'"))
                 else:
                     # Если записи нет, создаем новую
-                    ProductInfo.objects.create(
+                    product_info = ProductInfo.objects.create(
                         product=product,
                         shop=shop,
                         external_id=external_id,
@@ -136,22 +136,24 @@ class Command(BaseCommand):
 
             # Обрабатываем параметры товара
             parameters_data = good_data.get('parameters', {})
-            for param_name, param_value in parameters_data.items():
-                try:
-                    # Создаем или обновляем параметр
-                    parameter, created = Parameter.objects.update_or_create(
-                        name=param_name,
-                        defaults={},
-                    )
+            if product_info:  # Проверяем, что product_info существует
+                for param_name, param_value in parameters_data.items():
+                    try:
+                        # Создаем или обновляем параметр
+                        parameter, created = Parameter.objects.update_or_create(
+                            name=param_name,
+                            defaults={},
+                        )
 
-                    # Создаем или обновляем связь параметра с продуктом
-                    ProductParameter.objects.update_or_create(
-                        product_info=product_info,
-                        parameter=parameter,
-                        defaults={'value': param_value}
-                    )
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f"Ошибка при обработке параметра '{param_name}': {e}"))
-                    continue
-
+                        # Создаем или обновляем связь параметра с продуктом
+                        ProductParameter.objects.update_or_create(
+                            product_info=product_info,  # Теперь product_info гарантированно существует
+                            parameter=parameter,
+                            defaults={'value': param_value}
+                        )
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(f"Ошибка при обработке параметра '{param_name}': {e}"))
+                        continue
+            else:
+                self.stdout.write(self.style.ERROR(f"Информация о товаре '{product_name}' в магазине '{shop.name}' не найдена. Пропуск параметров."))
         self.stdout.write(self.style.SUCCESS('Данные успешно загружены или обновлены в базе данных.'))
