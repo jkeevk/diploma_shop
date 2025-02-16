@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.contrib.auth.models import BaseUserManager
+from django.utils.text import slugify
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -44,6 +45,12 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = slugify(self.email.replace('@', '_'))
+        
+        super().save(*args, **kwargs)
 
 class Shop(models.Model):
     name = models.CharField(max_length=100)
