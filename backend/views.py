@@ -1,7 +1,7 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView
 
-from .models import Product, Shop, Category, User, Contact, Order
+from .models import Product, Shop, Category, User, Contact, Order, OrderItem
 from .serializers import (
     ProductSerializer,
     ShopSerializer,
@@ -11,6 +11,7 @@ from .serializers import (
     OrderSendMailSerializer,
     FileUploadSerializer,
     OrderSerializer,
+    OrderItemSerializer,
     UserSerializer,
 )
 
@@ -27,6 +28,7 @@ from django.core.mail import send_mail
 from orders.settings import EMAIL_HOST_USER, BACKEND_URL
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from drf_spectacular.utils import extend_schema
 
 
 def index(request):
@@ -44,12 +46,32 @@ def index(request):
     ]
     return render(request, "index.html", {"urls": urls})
 
-
+@extend_schema(
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                }
+            }
+        }
+    },
+    responses={
+        200: {"description": "Data loaded successfully"},
+        400: {"description": "Bad request (invalid file or no file uploaded)"},
+        500: {"description": "Internal server error"},
+    },
+)
 class PartnerUpdateView(APIView):
+    serializer_class = FileUploadSerializer
+
     def post(self, request, *args, **kwargs):
-        serializer = FileUploadSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
         if "file" not in request.FILES:
             return Response(
                 {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
@@ -67,8 +89,8 @@ class PartnerUpdateView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
+        
+        
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -161,7 +183,7 @@ class RegisterView(APIView):
         message = f"Please click the link to confirm your registration: {full_url}"
         send_mail(subject, message, EMAIL_HOST_USER, [user.email])
 
-
+@extend_schema(exclude=True)
 class ConfirmRegistrationView(APIView):
     def get(self, request, token, *args, **kwargs):
         user = get_object_or_404(User, confirmation_token=token)
@@ -180,44 +202,40 @@ class ConfirmRegistrationView(APIView):
 
 
 class OrderSendMailView(APIView):
-    def post(self, request):
-        serializer = OrderSendMailSerializer(data=request.data)
-        if serializer.is_valid():
-            user_email = serializer.validated_data["user_email"]
-            user_name = serializer.validated_data["user_name"]
-            order_details = serializer.validated_data["order_details"]
+    pass
+    # def post(self, request):
+    #     serializer = OrderSendMailSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         user_email = serializer.validated_data["user_email"]
+    #         user_name = serializer.validated_data["user_name"]
+    #         order_details = serializer.validated_data["order_details"]
 
-            print(
-                f"Отправка письма на: {user_email} от {user_name} с деталями: {order_details}"
-            )  # Для отладки
+    #         print(
+    #             f"Отправка письма на: {user_email} от {user_name} с деталями: {order_details}"
+    #         )  # Для отладки
 
-            try:
-                send_mail(
-                    "Subject here",
-                    f"Here is the message from {user_name}. Details: {order_details}",
-                    EMAIL_HOST_USER,
-                    [user_email],
-                    fail_silently=False,
-                )
-                return Response({"status": "Письмо отправлено"})
-            except Exception as e:
-                print(f"Ошибка при отправке письма: {e}")
-                return Response({"error": str(e)}, status=400)
+    #         try:
+    #             send_mail(
+    #                 "Subject here",
+    #                 f"Here is the message from {user_name}. Details: {order_details}",
+    #                 EMAIL_HOST_USER,
+    #                 [user_email],
+    #                 fail_silently=False,
+    #             )
+    #             return Response({"status": "Письмо отправлено"})
+    #         except Exception as e:
+    #             print(f"Ошибка при отправке письма: {e}")
+    #             return Response({"error": str(e)}, status=400)
 
-        return Response(serializer.errors, status=400)
-
-
-class OrderViewSet(ModelViewSet):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
+    #     return Response(serializer.errors, status=400)
 
 
-class CategoryViewSet(ListAPIView):
+class CategoryView(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class ShopViewSet(ListAPIView):
+class ShopView(ListAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
 
@@ -230,3 +248,10 @@ class ContactViewSet(ModelViewSet):
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+
