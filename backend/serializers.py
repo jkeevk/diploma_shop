@@ -179,12 +179,12 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
-    total_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
+        total_cost = serializers.SerializerMethodField()
         fields = ['id', 'user', 'order_items', 'dt', 'status', 'total_cost']
 
-    @extend_schema_field(serializers.FloatField)
-    def get_total_cost(self, obj) -> float:
-        return sum(item.quantity * item.product.price for item in obj.order_items.all())
+        @extend_schema_field(serializers.FloatField)
+        def get_total_cost(self, obj) -> float:
+            return sum(item.quantity * item.product.price for item in obj.order_items.all())
