@@ -12,9 +12,9 @@ class OrderItemInline(admin.TabularInline):
     extra = 1
 
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email')
-    search_fields = ('name', 'email')
-    list_filter = ('name',)
+    list_display = ('name', 'surname', 'email')
+    search_fields = ('name',  'surname','email')
+    list_filter = ('name', 'surname',)
 
 class ShopAdmin(admin.ModelAdmin):
     list_display = ('name', 'url')
@@ -88,23 +88,16 @@ class ContactAdmin(admin.ModelAdmin):
         ('Phone', {'fields': ('phone',)}),
     )
 
-class CustomUserAdmin(UserAdmin):
-    list_display = ('id', 'username', 'email', 'name', 'is_customer', 'is_supplier', 'is_staff', 'is_superuser',)
+class CustomUserAdmin(admin.ModelAdmin):
+    list_display = ["email", "name", "surname", "is_customer", "is_supplier"]
+    search_fields = ["email", "name", "surname"]
+    list_filter = ["is_customer", "is_supplier"]
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('email', 'name')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-        ('Custom fields', {'fields': ('is_customer', 'is_supplier')}),
+        (None, {"fields": ("email", "password")}),
+        ("Personal Info", {"fields": ("name", "surname")}),
+        ("Permissions", {"fields": ("is_customer", "is_supplier", "is_staff", "is_superuser")}),
     )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2', 'is_customer', 'is_supplier'),
-        }),
-    )
-    list_filter = ('is_customer', 'is_supplier', 'is_staff', 'is_superuser')
-    ordering = ('id',)
+
 
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Shop, ShopAdmin)
