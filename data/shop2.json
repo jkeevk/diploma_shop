@@ -1,0 +1,127 @@
+[
+	{
+		"shop": "MebelStore"
+	},
+	{
+		"categories": [
+			{
+				"id": 1,
+				"name": "Диваны"
+			},
+			{
+				"id": 2,
+				"name": "Столы"
+			},
+			{
+				"id": 3,
+				"name": "Стулья"
+			},
+			{
+				"id": 4,
+				"name": "Шкафы"
+			},
+			{
+				"id": 5,
+				"name": "Кровати"
+			},
+			{
+				"id": 6,
+				"name": "Тумбочки"
+			}
+		]
+	},
+	{
+		"goods": [
+			{
+				"id": 101,
+				"category": 1,
+				"model": "mebelstore/sofa/classic",
+				"name": "Диван MebelStore Classic",
+				"price": 25000,
+				"price_rrc": 28000,
+				"quantity": 50,
+				"description": "Диван MebelStore Classic — идеальное сочетание комфорта и стиля. Обивка из качественного материала, просторные подушки для отдыха.",
+				"parameters": {
+					"Материал обивки": "ткань",
+					"Цвет": "серый",
+					"Размеры (мм)": "2000x900x850"
+				}
+			},
+			{
+				"id": 102,
+				"category": 2,
+				"model": "mebelstore/table/wooden",
+				"name": "Стол MebelStore Wooden",
+				"price": 15000,
+				"price_rrc": 17000,
+				"quantity": 30,
+				"description": "Стол MebelStore Wooden — стильный стол из натурального дерева, идеально подходит для кухни или гостиной.",
+				"parameters": {
+					"Материал": "дерево",
+					"Цвет": "коричневый",
+					"Размеры (мм)": "1200x800x750"
+				}
+			},
+			{
+				"id": 103,
+				"category": 3,
+				"model": "mebelstore/chair/ergonomic",
+				"name": "Стул MebelStore Ergonomic",
+				"price": 5000,
+				"price_rrc": 5500,
+				"quantity": 100,
+				"description": "Стул MebelStore Ergonomic с удобной спинкой и подлокотниками. Идеально подходит для работы и отдыха.",
+				"parameters": {
+					"Материал": "кожа",
+					"Цвет": "черный",
+					"Размеры (мм)": "450x450x850"
+				}
+			},
+			{
+				"id": 104,
+				"category": 4,
+				"model": "mebelstore/cabinet/modern",
+				"name": "Шкаф MebelStore Modern",
+				"price": 22000,
+				"price_rrc": 24000,
+				"quantity": 20,
+				"description": "Шкаф MebelStore Modern — функциональный и стильный шкаф с несколькими отделами для хранения одежды.",
+				"parameters": {
+					"Материал": "МДФ",
+					"Цвет": "белый",
+					"Размеры (мм)": "1200x500x2000"
+				}
+			},
+			{
+				"id": 105,
+				"category": 5,
+				"model": "mebelstore/bed/comfort",
+				"name": "Кровать MebelStore Comfort",
+				"price": 35000,
+				"price_rrc": 38000,
+				"quantity": 15,
+				"description": "Кровать MebelStore Comfort с ортопедическим матрасом для качественного сна. Прочные и надежные материалы.",
+				"parameters": {
+					"Материал": "дерево + металл",
+					"Цвет": "темно-коричневый",
+					"Размеры (мм)": "2000x1600x900"
+				}
+			},
+			{
+				"id": 106,
+				"category": 6,
+				"model": "mebelstore/nightstand/simple",
+				"name": "Тумбочка MebelStore Simple",
+				"price": 4000,
+				"price_rrc": 4500,
+				"quantity": 80,
+				"description": "Тумбочка MebelStore Simple — компактная тумбочка для спальни с несколькими ящиками для хранения.",
+				"parameters": {
+					"Материал": "МДФ",
+					"Цвет": "бежевый",
+					"Размеры (мм)": "400x350x500"
+				}
+			}
+		]
+	}
+]
