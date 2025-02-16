@@ -85,15 +85,30 @@ class ContactAdmin(admin.ModelAdmin):
         ('Phone', {'fields': ('phone',)}),
     )
 
-class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ["email", "first_name", "last_name", "is_customer", "is_supplier"]
-    search_fields = ["email", "first_name", "last_name"]
-    list_filter = ["is_customer", "is_supplier"]
+class CustomUserAdmin(UserAdmin):
+    model = User
+    list_display = ('email', 'first_name', 'last_name', 'is_customer', 'is_supplier', 'is_active')
+    list_filter = ('is_customer', 'is_supplier', 'is_active')
+    search_fields = ('email', 'first_name', 'last_name')
+    ordering = ('-email',)
+
     fieldsets = (
-        (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("first_name", "last_name")}),
-        ("Permissions", {"fields": ("is_customer", "is_supplier", "is_staff", "is_superuser")}),
+        (None, {'fields': ('email', 'password')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'is_customer', 'is_supplier')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login',)}),
     )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'password1', 'password2', 'first_name', 'last_name', 'is_customer', 'is_supplier', 'is_active')}
+        ),
+    )
+    def save_model(self, request, obj, form, change):
+        if obj.password:
+            obj.set_password(obj.password)
+        super().save_model(request, obj, form, change)
 
 
 admin.site.register(User, CustomUserAdmin)
