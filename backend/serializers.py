@@ -17,7 +17,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.validators import EmailValidator
 from django.contrib.auth import authenticate
 
-
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parameter
@@ -56,16 +55,17 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "model", "category", "product_infos"]
 
 
+
 class ShopSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
-        fields = "__all__"
+        fields = ['id', 'name']
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = "__all__"
+        fields = ['id', 'name']
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -79,7 +79,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "password", "name", "surname", "is_customer", "is_supplier"]
+        fields = ["email", "password", "first_name", "last_name", "is_customer", "is_supplier"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -117,8 +117,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
-            name=validated_data.get("name", ""),
-            surname=validated_data.get("surname", ""),
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
             is_customer=validated_data["is_customer"],
             is_supplier=validated_data["is_supplier"],
             is_active=False,
@@ -128,7 +128,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'surname', 'is_customer', 'is_supplier']
+        fields = ['id', 'email', 'first_name', 'last_name', 'is_customer', 'is_supplier']
 
 class OrderSendMailSerializer(serializers.Serializer):
     user_email = serializers.EmailField()
@@ -179,12 +179,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, read_only=True)
+    total_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        total_cost = serializers.SerializerMethodField()
         fields = ['id', 'user', 'order_items', 'dt', 'status', 'total_cost']
-
         @extend_schema_field(serializers.FloatField)
         def get_total_cost(self, obj) -> float:
             return sum(item.quantity * item.product.price for item in obj.order_items.all())
