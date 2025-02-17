@@ -20,11 +20,9 @@ from backend.views import (
     OrderViewSet,
     CustomTokenRefreshView,
     CustomTokenObtainPairView,
+    PasswordResetView
 )
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -53,7 +51,7 @@ urlpatterns = (
         ),
         path(
             "password_reset/",
-            auth_views.PasswordResetView.as_view(),
+            PasswordResetView.as_view(),
             name="password_reset",
         ),
         path(

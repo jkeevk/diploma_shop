@@ -16,6 +16,13 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import EmailValidator
 from django.contrib.auth import authenticate
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.conf import settings
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -187,3 +194,28 @@ class OrderSerializer(serializers.ModelSerializer):
         @extend_schema_field(serializers.FloatField)
         def get_total_cost(self, obj) -> float:
             return sum(item.quantity * item.product.price for item in obj.order_items.all())
+        
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Пользователь с таким email не найден.")
+        return value
+
+    def save(self):
+        email = self.validated_data['email']
+        user = User.objects.get(email=email)
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        reset_link = settings.BACKEND_URL + reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+
+        send_mail(
+            subject='Сброс пароля',
+            message=f'Перейдите по следующей ссылке, чтобы сбросить пароль: {reset_link}',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[email],
+        )
