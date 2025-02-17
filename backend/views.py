@@ -1,41 +1,41 @@
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListAPIView
+import os
+import uuid
 
-from .models import Product, Shop, Category, User, Contact, Order, OrderItem
+from django.conf import settings
+from django.core.mail import send_mail
+from django.core.management import call_command
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiExample,
+    OpenApiResponse,
+)
+from rest_framework import status
+from rest_framework.filters import SearchFilter
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+from .filters import ProductFilter
+from .models import Category, Contact, Order, OrderItem, Product, Shop, User
 from .serializers import (
+    CategorySerializer,
+    ContactSerializer,
+    FileUploadSerializer,
+    OrderItemSerializer,
+    OrderSendMailSerializer,
+    OrderSerializer,
     ProductSerializer,
     ShopSerializer,
-    CategorySerializer,
     UserRegistrationSerializer,
-    ContactSerializer,
-    OrderSendMailSerializer,
-    FileUploadSerializer,
-    OrderSerializer,
-    OrderItemSerializer,
     UserSerializer,
 )
-
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.views import APIView
-from django.core.management import call_command
-import os
-
-import uuid
-from django.urls import reverse
-from django.core.mail import send_mail
-from orders.settings import EMAIL_HOST_USER, BACKEND_URL
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render
-from drf_spectacular.utils import extend_schema, OpenApiExample
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
-from .filters import ProductFilter
-from django_filters.rest_framework import DjangoFilterBackend
-
-
 def index(request):
     urls = [
         {"url": "/admin/", "description": "Админ-панель"},
@@ -153,12 +153,12 @@ class PartnerUpdateView(APIView):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        
+  
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     pagination_class = LimitOffsetPagination
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
 
@@ -269,10 +269,10 @@ class RegisterView(APIView):
         user.save()
 
         confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
-        full_url = f"{BACKEND_URL}{confirmation_url}"
+        full_url = f"{settings.BACKEND_URL}{confirmation_url}"
         subject = "Confirm your registration"
         message = f"Please click the link to confirm your registration: {full_url}"
-        send_mail(subject, message, EMAIL_HOST_USER, [user.email])
+        send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
 
 @extend_schema(exclude=True)
 class ConfirmRegistrationView(APIView):
@@ -320,12 +320,17 @@ class OrderSendMailView(APIView):
 
     #     return Response(serializer.errors, status=400)
 
-
+@extend_schema(
+        summary="Список всех категорий",
+        description="Возвращает список всех категорий.",)
 class CategoryView(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
-
+@extend_schema(
+    summary="Список всех магазинов",
+    description="Возвращает список всех магазинов.",
+)
 class ShopView(ListAPIView):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer

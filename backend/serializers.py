@@ -1,5 +1,10 @@
 from drf_spectacular.utils import extend_schema_field
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
+from django.core.validators import EmailValidator
+from django.contrib.auth import authenticate
 from rest_framework import serializers
+
 from .models import (
     Product,
     ProductInfo,
@@ -12,10 +17,7 @@ from .models import (
     Order,
     OrderItem,
 )
-from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-from django.core.validators import EmailValidator
-from django.contrib.auth import authenticate
+
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
