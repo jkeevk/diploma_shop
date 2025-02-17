@@ -1,11 +1,6 @@
 import os
-import uuid
-
-from django.conf import settings
-from django.core.mail import send_mail
 from django.core.management import call_command
 from django.shortcuts import get_object_or_404, render
-from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -20,9 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, GenericAPIView
 
-from .filters import ProductFilter
 from .models import Category, Contact, Order, OrderItem, Product, Shop, User
 from .serializers import (
     CategorySerializer,
@@ -35,28 +29,12 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
-    PasswordResetSerializer
+    PasswordResetSerializer,
 )
 
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.views import APIView
-from django.core.management import call_command
-import os
-
-import uuid
-from django.urls import reverse
-from django.core.mail import send_mail
-from orders.settings import EMAIL_HOST_USER, BACKEND_URL
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render
-from drf_spectacular.utils import extend_schema, OpenApiExample
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 from .filters import ProductFilter
-from django_filters.rest_framework import DjangoFilterBackend
 
 
 def index(request):
@@ -85,14 +63,15 @@ def index(request):
             examples=[
                 OpenApiExample(
                     "Пример ответа",
-                    value={"access": "token_value", "refresh": "refresh_token_value"}
+                    value={"access": "token_value", "refresh": "refresh_token_value"},
                 ),
-            ]
+            ],
         ),
     },
 )
 class CustomTokenObtainPairView(TokenObtainPairView):
     pass
+
 
 # Эндпоинт для обновления токена
 @extend_schema(
@@ -102,48 +81,50 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         200: OpenApiResponse(
             description="Успех",
             examples=[
-                OpenApiExample(
-                    "Пример ответа",
-                    value={"access": "new_token_value"}
-                ),
-            ]
+                OpenApiExample("Пример ответа", value={"access": "new_token_value"}),
+            ],
         ),
     },
 )
 class CustomTokenRefreshView(TokenRefreshView):
     pass
 
+
 @extend_schema(
-        summary="Сброс пароля",
-    description="Используйте этот эндпоинт для получения ссылки на сброс пароля."
+    summary="Сброс пароля", description="Эндпоинт для получения ссылки на сброс пароля."
 )
-class PasswordResetView(generics.GenericAPIView):
+class PasswordResetView(GenericAPIView):
     serializer_class = PasswordResetSerializer
+
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Ссылка для сброса пароля отправлена на email."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Ссылка для сброса пароля отправлена на email."},
+            status=status.HTTP_200_OK,
+        )
+
 
 @extend_schema(
     summary="Обновление каталога поставщика",
     description="Эндпоинт для обновления каталога поставщика. Требует multipart/form-data в теле запроса. Файл должен быть в формате JSON.",
     request={
-        'multipart/form-data': {
-            'type': 'object',
-            'properties': {
-                'file': {
-                    'type': 'string',
-                    'format': 'binary',
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {
+                    "type": "string",
+                    "format": "binary",
                 }
-            }
+            },
         }
     },
     responses={
-        200: {"description": "Data loaded successfully"},
-        400: {"description": "Bad request (invalid file or no file uploaded)"},
-        500: {"description": "Internal server error"},
-    }
+        200: {"description": "Данные успешно загружены"},
+        400: {"description": "Неверный запрос (неверный файл или файл не загружен)"},
+        500: {"description": "Внутренняя ошибка сервера"},
+    },
 )
 class PartnerUpdateView(APIView):
     serializer_class = FileUploadSerializer
@@ -152,8 +133,8 @@ class PartnerUpdateView(APIView):
     def post(self, request, *args, **kwargs):
         if not request.user.is_supplier and not request.user.is_staff:
             return Response(
-                {"error": "You do not have permission to upload data"}, 
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "У вас нет прав на загрузку данных"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = self.serializer_class(data=request.data)
@@ -162,33 +143,33 @@ class PartnerUpdateView(APIView):
 
         if "file" not in request.FILES:
             return Response(
-                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         uploaded_file = request.FILES["file"]
         file_path = os.path.join("data", uploaded_file.name)
 
         try:
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)
 
-            if not uploaded_file.name.endswith('.json'):
+            if not uploaded_file.name.endswith(".json"):
                 return Response(
-                    {"error": "Invalid file format. Expected JSON."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Неверный формат файла. Ожидается JSON."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             call_command("load_products", file_path)
             return Response(
-                {"message": "Data loaded successfully"}, status=status.HTTP_200_OK
+                {"message": "Данные успешно загружены"}, status=status.HTTP_200_OK
             )
         except Exception as e:
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-  
+
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -246,34 +227,13 @@ class ProductViewSet(ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    summary="Регистрация аккаунта",
+    description="Регистрация аккаунта с помощью электронной почты и пароля.",
+)
 class RegisterView(APIView):
     serializer_class = UserRegistrationSerializer
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Пример регистрации покупателя",
-                value={
-                    "email": "customer1@example.com",
-                    "password": "strongpassword123",
-                    "first_name": "Иван",
-                    "last_name": "Иванов",
-                    "is_customer": True,
-                    "is_supplier": False,
-                },
-            ),
-            OpenApiExample(
-                "Пример регистрации поставщика",
-                value={
-                    "email": "supplier1@example.com",
-                    "password": "strongpassword123",
-                    "first_name": "Петр",
-                    "last_name": "Петров",
-                    "is_customer": False,
-                    "is_supplier": True,
-                },
-            ),
-        ]
-    )
+
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
@@ -282,35 +242,29 @@ class RegisterView(APIView):
                 return Response(
                     {
                         "Status": "error",
-                        "Message": "User with this email already exists.",
+                        "Message": "Пользователь с таким email уже существует.",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             user = serializer.save()
-            self.send_confirmation_email(user)
             return Response(
                 {
                     "Status": "success",
-                    "Message": "User created successfully. Please check your email to confirm registration.",
+                    "Message": "Пользователь успешно создан. Пожалуйста, проверьте вашу почту для подтверждения регистрации.",
                 },
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def send_confirmation_email(self, user):
-        token = uuid.uuid4().hex
-        user.confirmation_token = token
-        user.save()
 
-        confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
-        full_url = f"{settings.BACKEND_URL}{confirmation_url}"
-        subject = "Confirm your registration"
-        message = f"Please click the link to confirm your registration: {full_url}"
-        send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
-
-@extend_schema(exclude=True)
+@extend_schema(
+    summary="Активация аккаунта",
+    description="Активация аккаунта покупателя или поставщика с помощью токена.",
+)
 class ConfirmRegistrationView(APIView):
+    serializer_class = None
+
     def get(self, request, token, *args, **kwargs):
         user = get_object_or_404(User, confirmation_token=token)
 
@@ -321,7 +275,7 @@ class ConfirmRegistrationView(APIView):
         return Response(
             {
                 "Status": "success",
-                "Message": "Your account has been successfully activated.",
+                "Message": "Ваш аккаунт успешно активирован.",
             },
             status=status.HTTP_200_OK,
         )
@@ -329,38 +283,16 @@ class ConfirmRegistrationView(APIView):
 
 class OrderSendMailView(APIView):
     pass
-    # def post(self, request):
-    #     serializer = OrderSendMailSerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         user_email = serializer.validated_data["user_email"]
-    #         user_name = serializer.validated_data["user_name"]
-    #         order_details = serializer.validated_data["order_details"]
 
-    #         print(
-    #             f"Отправка письма на: {user_email} от {user_name} с деталями: {order_details}"
-    #         )  # Для отладки
-
-    #         try:
-    #             send_mail(
-    #                 "Subject here",
-    #                 f"Here is the message from {user_name}. Details: {order_details}",
-    #                 EMAIL_HOST_USER,
-    #                 [user_email],
-    #                 fail_silently=False,
-    #             )
-    #             return Response({"status": "Письмо отправлено"})
-    #         except Exception as e:
-    #             print(f"Ошибка при отправке письма: {e}")
-    #             return Response({"error": str(e)}, status=400)
-
-    #     return Response(serializer.errors, status=400)
 
 @extend_schema(
-        summary="Список всех категорий",
-        description="Возвращает список всех категорий.",)
+    summary="Список всех категорий",
+    description="Возвращает список всех категорий.",
+)
 class CategoryView(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
 
 @extend_schema(
     summary="Список всех магазинов",
@@ -384,5 +316,3 @@ class UserViewSet(ModelViewSet):
 class OrderViewSet(ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-
-
