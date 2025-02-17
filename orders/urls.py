@@ -5,13 +5,8 @@ from django.conf.urls.static import static
 from django.conf import settings
 from rest_framework_nested.routers import NestedDefaultRouter
 from rest_framework.routers import DefaultRouter
-from drf_spectacular.views import (
-    SpectacularAPIView,
-    SpectacularSwaggerView,
-    SpectacularRedocView,
-)
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from backend.views import (
-    index,
     UserViewSet,
     ProductViewSet,
     RegisterView,
@@ -38,16 +33,11 @@ user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
 urlpatterns = (
     [
-        path("schema/", SpectacularAPIView.as_view(), name="schema"),
-        path(
-            "swagger/",
-            SpectacularSwaggerView.as_view(url_name="schema"),
-            name="swagger-ui",
-        ),
-        path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path("token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
-        path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
-        path("", index, name="index"),
+        path('schema/', SpectacularAPIView.as_view(), name='schema'),
+        path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+        path("token/", CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path("token/refresh/", CustomTokenRefreshView.as_view(), name='token_refresh'),
         path("admin/", admin.site.urls),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
@@ -81,7 +71,6 @@ urlpatterns = (
         path("categories/", CategoryView.as_view(), name="categories"),
         path("shops/", ShopView.as_view(), name="shops"),
         path("order/confirm/", OrderSendMailView.as_view(), name="order"),
-    ]
-    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-)
+    ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+      + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    )
