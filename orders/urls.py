@@ -24,6 +24,7 @@ from backend.views import (
     OrderViewSet,
     CustomTokenRefreshView,
     CustomTokenObtainPairView,
+    PasswordResetView
 )
 
 
@@ -58,7 +59,7 @@ urlpatterns = (
         ),
         path(
             "password_reset/",
-            auth_views.PasswordResetView.as_view(),
+            PasswordResetView.as_view(),
             name="password_reset",
         ),
         path(

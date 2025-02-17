@@ -20,7 +20,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.generics import ListAPIView
 
 from .filters import ProductFilter
 from .models import Category, Contact, Order, OrderItem, Product, Shop, User
@@ -35,7 +35,30 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    PasswordResetSerializer
 )
+
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.views import APIView
+from django.core.management import call_command
+import os
+
+import uuid
+from django.urls import reverse
+from django.core.mail import send_mail
+from orders.settings import EMAIL_HOST_USER, BACKEND_URL
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from .filters import ProductFilter
+from django_filters.rest_framework import DjangoFilterBackend
+
+
 def index(request):
     urls = [
         {"url": "/admin/", "description": "Админ-панель"},
@@ -89,6 +112,18 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 )
 class CustomTokenRefreshView(TokenRefreshView):
     pass
+
+@extend_schema(
+        summary="Сброс пароля",
+    description="Используйте этот эндпоинт для получения ссылки на сброс пароля."
+)
+class PasswordResetView(generics.GenericAPIView):
+    serializer_class = PasswordResetSerializer
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Ссылка для сброса пароля отправлена на email."}, status=status.HTTP_200_OK)
 
 @extend_schema(
     summary="Обновление каталога поставщика",
