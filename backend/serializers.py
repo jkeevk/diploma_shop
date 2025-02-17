@@ -1,10 +1,5 @@
 from drf_spectacular.utils import extend_schema_field
-from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-from django.core.validators import EmailValidator
-from django.contrib.auth import authenticate
 from rest_framework import serializers
-
 from .models import (
     Product,
     ProductInfo,
@@ -21,6 +16,11 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import EmailValidator
 from django.contrib.auth import authenticate
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+
 
 class ParameterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,17 +60,16 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "model", "category", "product_infos"]
 
 
-
 class ShopSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name']
+        fields = ["id", "name"]
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -84,7 +83,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "password", "first_name", "last_name", "is_customer", "is_supplier"]
+        fields = [
+            "email",
+            "password",
+            "first_name",
+            "last_name",
+            "is_customer",
+            "is_supplier",
+        ]
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -114,7 +120,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             validate_password(value)
         except ValidationError as e:
             raise serializers.ValidationError(
-                f"Пароль не прошел валидацию: {', '.join(e.messages)}"
+                f"Ошибка валидации пароля: {', '.join(e.messages)}"
             )
         return value
 
@@ -129,11 +135,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             is_active=False,
         )
         return user
-        
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'is_customer', 'is_supplier']
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "is_customer",
+            "is_supplier",
+        ]
+
 
 class OrderSendMailSerializer(serializers.Serializer):
     user_email = serializers.EmailField()
@@ -159,23 +174,25 @@ class LoginSerializer(serializers.Serializer):
             )
             if not user:
                 raise serializers.ValidationError(
-                    "Unable to log in with provided credentials."
+                    "Не удалось войти с предоставленными учетными данными."
                 )
         else:
-            raise serializers.ValidationError("Must include 'email' and 'password'.")
+            raise serializers.ValidationError(
+                "Необходимо указать 'email' и 'password'."
+            )
 
         data["user"] = user
         return data
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
-    shop_name = serializers.CharField(source='shop.name', read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    shop_name = serializers.CharField(source="shop.name", read_only=True)
     total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product_name', 'shop_name', 'quantity', 'total_price']
+        fields = ["id", "product_name", "shop_name", "quantity", "total_price"]
 
     @extend_schema_field(serializers.FloatField)
     def get_total_price(self, obj) -> float:
@@ -188,11 +205,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'order_items', 'dt', 'status', 'total_cost']
+        fields = ["id", "user", "order_items", "dt", "status", "total_cost"]
+
         @extend_schema_field(serializers.FloatField)
         def get_total_cost(self, obj) -> float:
-            return sum(item.quantity * item.product.price for item in obj.order_items.all())
-        
+            return sum(
+                item.quantity * item.product.price for item in obj.order_items.all()
+            )
+
+
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -204,16 +225,10 @@ class PasswordResetSerializer(serializers.Serializer):
         return value
 
     def save(self):
-        email = self.validated_data['email']
+        email = self.validated_data["email"]
         user = User.objects.get(email=email)
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-        reset_link = settings.BACKEND_URL + reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
-
-        send_mail(
-            subject='Сброс пароля',
-            message=f'Перейдите по следующей ссылке, чтобы сбросить пароль: {reset_link}',
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[email],
-        )
+        user.reset_password = {"token": token, "uid": uid}
+        user.save()
