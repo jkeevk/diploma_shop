@@ -1,14 +1,15 @@
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError('Поле Email должно быть заполнено')
+            raise ValueError("Поле Email должно быть заполнено")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -16,15 +17,16 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Суперпользователь должен иметь is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Суперпользователь должен иметь is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Суперпользователь должен иметь is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Суперпользователь должен иметь is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
+
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
@@ -44,12 +46,13 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
-    
+
     def save(self, *args, **kwargs):
         if not self.username:
-            self.username = slugify(self.email.replace('@', '_'))
-        
+            self.username = slugify(self.email.replace("@", "_"))
+
         super().save(*args, **kwargs)
+
 
 class Shop(models.Model):
     name = models.CharField(max_length=100)
@@ -57,13 +60,15 @@ class Shop(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
     )
+
     class Meta:
-            verbose_name = "Магазин"
-            verbose_name_plural = "Список магазинов"
-            ordering = ("-name",)
+        verbose_name = "Магазин"
+        verbose_name_plural = "Список магазинов"
+        ordering = ("-name",)
 
     def __str__(self):
         return self.name
+
 
 class Category(models.Model):
     shops = models.ManyToManyField(
@@ -112,12 +117,22 @@ class ProductInfo(models.Model):
         related_name="product_infos",
         on_delete=models.CASCADE,
     )
-    external_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Внешний ID")
+    external_id = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name="Внешний ID"
+    )
     description = models.CharField(max_length=200, blank=True, verbose_name="Описание")
     quantity = models.PositiveIntegerField(verbose_name="Количество", default=0)
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Цена",
+        validators=[MinValueValidator(0.01)],
+    )
     price_rrc = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Рекомендуемая розничная цена"
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Рекомендуемая розничная цена",
+        validators=[MinValueValidator(0.01)],
     )
 
     class Meta:
@@ -164,6 +179,7 @@ class ProductParameter(models.Model):
 
     def __str__(self):
         return f"{self.parameter.name}: {self.value}"
+
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -252,11 +268,11 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.city} {self.street} {self.house}"
-    
+
     def clean(self):
         if self.user.contacts.count() >= 5:
             raise ValidationError("Максимум 5 адресов на пользователя.")
-    
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
