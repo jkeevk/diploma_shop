@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
 from django.conf.urls.static import static
 from django.conf import settings
 from rest_framework_nested.routers import NestedDefaultRouter
@@ -19,7 +18,8 @@ from backend.views import (
     LoginView,
     PasswordResetView,
     PasswordResetConfirmView,
-    LoginView
+    LoginView,
+    BasketViewSet
 )
 
 
@@ -28,6 +28,7 @@ router.register(r"products", ProductViewSet, basename="product")
 router.register(r"orders", OrderViewSet)
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
+router.register(r'basket', BasketViewSet, basename="basket")
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
@@ -53,7 +54,7 @@ urlpatterns = (
             name="password_reset",
         ),
         path(
-            "user/password_reset/confirm/<uidb64>/<token>/",
+            "user/password_reset/confirm/<str:uidb64>/<str:token>/",
             PasswordResetConfirmView.as_view(),
             name="password_reset_confirm",
         ),
