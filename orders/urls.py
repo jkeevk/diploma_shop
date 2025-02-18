@@ -4,7 +4,11 @@ from django.conf.urls.static import static
 from django.conf import settings
 from rest_framework_nested.routers import NestedDefaultRouter
 from rest_framework.routers import DefaultRouter
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 from backend.views import (
     UserViewSet,
     ProductViewSet,
@@ -14,31 +18,34 @@ from backend.views import (
     ShopView,
     ContactViewSet,
     PartnerUpdateView,
-    OrderViewSet,
     LoginView,
     PasswordResetView,
     PasswordResetConfirmView,
     LoginView,
-    BasketViewSet
+    BasketViewSet,
+    PartnerOrders,
 )
 
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
-router.register(r"orders", OrderViewSet)
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
-router.register(r'basket', BasketViewSet, basename="basket")
+router.register(r"basket", BasketViewSet, basename="basket")
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
 urlpatterns = (
     [
-        path('schema/', SpectacularAPIView.as_view(), name='schema'),
-        path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-        path('user/login/', LoginView.as_view(), name='login'),
-        path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+        path("schema/", SpectacularAPIView.as_view(), name="schema"),
+        path(
+            "swagger/",
+            SpectacularSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
+        path("user/login/", LoginView.as_view(), name="login"),
+        path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         path("admin/", admin.site.urls),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
@@ -61,6 +68,8 @@ urlpatterns = (
         path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
         path("categories/", CategoryView.as_view(), name="categories"),
         path("shops/", ShopView.as_view(), name="shops"),
-    ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-      + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    )
+        path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
+    ]
+    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+)

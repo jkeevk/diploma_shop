@@ -1,6 +1,6 @@
 # примеры API-запросов
 
-@baseUrl = http://localhost:8000/api
+@baseUrl = http://localhost:8000
 
 # получение всех товаров
 GET {{baseUrl}}/products/
@@ -114,29 +114,33 @@ Content-Type: application/json
 < /Users/sergeyigumnov/Desktop/VS Code/Netology/diploma_shop/data/shop1.json
 --MyBoundary--
 
-###
-
-# регистрация пользователя
-POST {{baseUrl}}/users/
-Content-Type: application/json
-
-{
-    "username": "hello",
-    "email": "hello@example.com",
-    "password": "hello12",
-    "is_customer": true,
-    "is_supplier": false
-}
 
 ###
 
 # аутентификация
-POST {{baseUrl}}/user/login HTTP/1.1
+POST {{baseUrl}}/token/ HTTP/1.1
 Content-Type: application/json
 
 {
-    "email": "hello@example.com",
-    "password": "hello12"
+    "email": "shop@admin.com",
+    "password": "shop"
 }
 
 ###
+
+# регистрация
+POST {{baseUrl}}/user/register/
+Content-Type: application/json
+
+{
+    "username": "xddd",
+    "email": "admin2d2@example.com",
+    "password": "admidn12!",
+    "is_customer": true,
+    "is_supplier": false
+}
+
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQzNDk3MDc1LCJpYXQiOjE3Mzk4OTcwNzUsImp0aSI6IjYxYWVlYTEyNmVmZjQwYmU4ZDk3YTJmMjY1ZThiNWIwIiwidXNlcl9pZCI6MX0.iyiTjfK1mCrfhuokxrYKZdZCAHy_OPglQ8rVV2Ndavc
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQzNTA0Nzk1LCJpYXQiOjE3Mzk5MDQ3OTUsImp0aSI6IjBiMjhhYjA4OGNhYTQwOWNhYjEzZTZkY2YyY2MyMzdhIiwidXNlcl9pZCI6MX0.tR0y1oVt4D8fi91t2GjNwSTfyAs117h5Uxg2MIvw9Kc

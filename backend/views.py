@@ -1,6 +1,9 @@
 import os
 from django.core.management import call_command
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -23,12 +26,11 @@ from rest_framework.decorators import action
 from .filters import ProductFilter
 from .permissions import IsAdminOrSupplier
 
-from .models import Category, Contact, Order, OrderItem, Product, Shop, User
+from .models import Category, Contact, Order, Product, Shop, User
 from .serializers import (
     CategorySerializer,
     ContactSerializer,
     FileUploadSerializer,
-    OrderItemSerializer,
     OrderSerializer,
     ProductSerializer,
     ShopSerializer,
@@ -38,9 +40,6 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     LoginSerializer
 )
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
-from django.utils.encoding import force_str
 from .swagger_configs import SWAGGER_CONFIGS
 
 
@@ -231,7 +230,7 @@ class UserViewSet(ModelViewSet):
 class OrderViewSet(ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSupplier]
 
 @SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
@@ -249,4 +248,15 @@ class BasketViewSet(ModelViewSet):
             order = Order.objects.create(user=self.request.user, status="new")
 
         serializer.save(user=self.request.user, status="new", id=order.id)
+
+class PartnerOrders(APIView):
+    permission_classes = [IsAdminOrSupplier]
+
+    def get(self, request):
+        shop = Shop.objects.filter(user=request.user).first()
+        if not shop:
+            return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
+        orders = Order.objects.filter(order_items__shop=shop).distinct()
+        order_serializer = OrderSerializer(orders, many=True)
+        return Response(order_serializer.data)
 
