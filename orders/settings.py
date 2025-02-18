@@ -116,10 +116,13 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'API Documentation',
-    'DESCRIPTION': 'API for automating purchases in a retail network',
-    'VERSION': '1.0.0',
+    'TITLE': 'Документация API',
+    'DESCRIPTION': 'API для автоматизации покупок в розничной сети. Данный API предоставляет возможности для управления товарами и обработки заказов.',
+    'VERSION': '0.1.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api',
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
