@@ -290,3 +290,11 @@ class PasswordResetSerializer(serializers.Serializer):
 
         user.reset_password = {"token": token, "uid": uid}
         user.save()
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        if len(value) < 8:  # Например, минимальная длина пароля
+            raise serializers.ValidationError("Пароль должен содержать не менее 8 символов.")
+        return value
