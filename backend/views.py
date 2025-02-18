@@ -35,7 +35,7 @@ from .serializers import (
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .filters import ProductFilter
-
+from .permissions import IsAdminOrSupplier
 
 def index(request):
     urls = [
@@ -128,15 +128,9 @@ class PasswordResetView(GenericAPIView):
 )
 class PartnerUpdateView(APIView):
     serializer_class = FileUploadSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSupplier]
 
     def post(self, request, *args, **kwargs):
-        if not request.user.is_supplier and not request.user.is_staff:
-            return Response(
-                {"error": "У вас нет прав на загрузку данных"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = self.serializer_class(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -172,36 +166,36 @@ class PartnerUpdateView(APIView):
 
 @extend_schema_view(
     list=extend_schema(
-        description="Получить список продуктов.",
-        summary="Список продуктов",
+        description="Получить список товаров.",
+        summary="Список товаров",
         responses={200: ProductSerializer(many=True)},
     ),
     create=extend_schema(
-        description="Создать новый продукт.",
-        summary="Создание продукта",
+        description="Создать новый товар.",
+        summary="Создание товара",
         request=ProductSerializer,
         responses={201: ProductSerializer},
     ),
     retrieve=extend_schema(
-        description="Получить продукт по ID.",
-        summary="Получение продукта",
+        description="Получить товар по ID.",
+        summary="Получение товара",
         responses={200: ProductSerializer},
     ),
     update=extend_schema(
-        description="Обновить продукт по ID.",
-        summary="Обновление продукта",
+        description="Обновить товар по ID.",
+        summary="Обновление товара",
         request=ProductSerializer,
         responses={200: ProductSerializer},
     ),
     partial_update=extend_schema(
-        description="Частичное обновление продукта по ID.",
-        summary="Частичное обновление продукта",
+        description="Частичное обновление товара по ID.",
+        summary="Частичное обновление товара",
         request=ProductSerializer,
         responses={200: ProductSerializer},
     ),
     destroy=extend_schema(
-        description="Удалить продукт по ID.",
-        summary="Удаление продукта",
+        description="Удалить товар по ID.",
+        summary="Удаление товара",
         responses={200: None},
     ),
 )
@@ -212,44 +206,9 @@ class ProductViewSet(ModelViewSet):
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
+    permission_classes = [IsAdminOrSupplier]
 
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            product_id = instance.id
-            self.perform_destroy(instance)
-            return Response(
-                {
-                    "id": product_id,
-                    "status": "success",
-                    "message": f"Товар с ID {product_id} успешно удален.",
-                },
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def get_queryset(self):
-        user_pk = self.kwargs.get("user_pk")
-        if user_pk:
-            return Product.objects.filter(user_id=user_pk)
-        return Product.objects.all()
-
-    def perform_create(self, serializer):
-        try:
-            serializer.save(user=self.request.user)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 @extend_schema(
     summary="Регистрация аккаунта",
     description="Регистрация аккаунта с помощью электронной почты и пароля.",
