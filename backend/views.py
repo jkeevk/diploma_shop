@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
+    extend_schema_view,
     OpenApiExample,
     OpenApiResponse,
 )
@@ -23,7 +24,6 @@ from .serializers import (
     ContactSerializer,
     FileUploadSerializer,
     OrderItemSerializer,
-    OrderSendMailSerializer,
     OrderSerializer,
     ProductSerializer,
     ShopSerializer,
@@ -170,6 +170,41 @@ class PartnerUpdateView(APIView):
             )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description="Получить список продуктов.",
+        summary="Список продуктов",
+        responses={200: ProductSerializer(many=True)},
+    ),
+    create=extend_schema(
+        description="Создать новый продукт.",
+        summary="Создание продукта",
+        request=ProductSerializer,
+        responses={201: ProductSerializer},
+    ),
+    retrieve=extend_schema(
+        description="Получить продукт по ID.",
+        summary="Получение продукта",
+        responses={200: ProductSerializer},
+    ),
+    update=extend_schema(
+        description="Обновить продукт по ID.",
+        summary="Обновление продукта",
+        request=ProductSerializer,
+        responses={200: ProductSerializer},
+    ),
+    partial_update=extend_schema(
+        description="Частичное обновление продукта по ID.",
+        summary="Частичное обновление продукта",
+        request=ProductSerializer,
+        responses={200: ProductSerializer},
+    ),
+    destroy=extend_schema(
+        description="Удалить продукт по ID.",
+        summary="Удаление продукта",
+        responses={200: None},
+    ),
+)
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -215,18 +250,6 @@ class ProductViewSet(ModelViewSet):
             serializer.save(user=self.request.user)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @extend_schema(
     summary="Регистрация аккаунта",
     description="Регистрация аккаунта с помощью электронной почты и пароля.",
@@ -281,10 +304,6 @@ class ConfirmRegistrationView(APIView):
         )
 
 
-class OrderSendMailView(APIView):
-    pass
-
-
 @extend_schema(
     summary="Список всех категорий",
     description="Возвращает список всех категорий.",
@@ -303,16 +322,124 @@ class ShopView(ListAPIView):
     serializer_class = ShopSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description="Получить список контактов.",
+        summary="Список контактов",
+        responses={200: ContactSerializer(many=True)},
+    ),
+    create=extend_schema(
+        description="Создать новый контакт.",
+        summary="Создание контакта",
+        request=ContactSerializer,
+        responses={201: ContactSerializer},
+    ),
+    retrieve=extend_schema(
+        description="Получить контакт по ID.",
+        summary="Получение контакта",
+        responses={200: ContactSerializer},
+    ),
+    update=extend_schema(
+        description="Обновить контакт по ID.",
+        summary="Обновление контакта",
+        request=ContactSerializer,
+        responses={200: ContactSerializer},
+    ),
+    partial_update=extend_schema(
+        description="Частичное обновление контакта по ID.",
+        summary="Частичное обновление контакта",
+        request=ContactSerializer,
+        responses={200: ContactSerializer},
+    ),
+    destroy=extend_schema(
+        description="Удалить контакт по ID.",
+        summary="Удаление контакта",
+        responses={204: None},
+    ),
+)
 class ContactViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated]
+    
 
-
+@extend_schema_view(
+    list=extend_schema(
+        description="Получить список пользователей.",
+        summary="Список пользователей",
+        responses={200: UserSerializer(many=True)},
+    ),
+    create=extend_schema(
+        description="Создать нового пользователя.",
+        summary="Создание пользователя",
+        request=UserSerializer,
+        responses={201: UserSerializer},
+    ),
+    retrieve=extend_schema(
+        description="Получить пользователя по ID.",
+        summary="Получение пользователя",
+        responses={200: UserSerializer},
+    ),
+    update=extend_schema(
+        description="Обновить пользователя по ID.",
+        summary="Обновление пользователя",
+        request=UserSerializer,
+        responses={200: UserSerializer},
+    ),
+    partial_update=extend_schema(
+        description="Частичное обновление пользователя по ID.",
+        summary="Частичное обновление пользователя",
+        request=UserSerializer,
+        responses={200: UserSerializer},
+    ),
+    destroy=extend_schema(
+        description="Удалить пользователя по ID.",
+        summary="Удаление пользователя",
+        responses={204: None},
+    ),
+)
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'put', 'patch', 'delete']
 
-
+@extend_schema_view(
+    list=extend_schema(
+        description="Получить список заказов.",
+        summary="Список заказов",
+        responses={200: OrderSerializer(many=True)},
+    ),
+    create=extend_schema(
+        description="Создать новый заказ.",
+        summary="Создание заказа",
+        request=OrderSerializer,
+        responses={201: OrderSerializer},
+    ),
+    retrieve=extend_schema(
+        description="Получить заказ по ID.",
+        summary="Получение заказа",
+        responses={200: OrderSerializer},
+    ),
+    update=extend_schema(
+        description="Обновить заказ по ID.",
+        summary="Обновление заказа",
+        request=OrderSerializer,
+        responses={200: OrderSerializer},
+    ),
+    partial_update=extend_schema(
+        description="Частичное обновление заказа по ID.",
+        summary="Частичное обновление заказа",
+        request=OrderSerializer,
+        responses={200: OrderSerializer},
+    ),
+    destroy=extend_schema(
+        description="Удалить заказ по ID.",
+        summary="Удаление заказа",
+        responses={204: None},
+    ),
+)
 class OrderViewSet(ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
