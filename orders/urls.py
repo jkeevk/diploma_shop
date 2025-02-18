@@ -14,7 +14,6 @@ from backend.views import (
     CategoryView,
     ShopView,
     ContactViewSet,
-    OrderSendMailView,
     PartnerUpdateView,
     OrderViewSet,
     CustomTokenRefreshView,
@@ -27,6 +26,7 @@ router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"orders", OrderViewSet)
 router.register(r"users", UserViewSet, basename="user")
+router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
@@ -70,7 +70,6 @@ urlpatterns = (
         path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
         path("categories/", CategoryView.as_view(), name="categories"),
         path("shops/", ShopView.as_view(), name="shops"),
-        path("order/confirm/", OrderSendMailView.as_view(), name="order"),
     ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
       + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     )
