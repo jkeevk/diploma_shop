@@ -184,6 +184,7 @@ class CustomUserAdmin(UserAdmin):
     def save_model(self, request, obj, form, change):
         if obj.password:
             obj.set_password(obj.password)
+        obj.created_by_admin = True
         super().save_model(request, obj, form, change)
 
 
