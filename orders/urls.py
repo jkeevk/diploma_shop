@@ -16,9 +16,10 @@ from backend.views import (
     ContactViewSet,
     PartnerUpdateView,
     OrderViewSet,
-    CustomTokenRefreshView,
-    CustomTokenObtainPairView,
-    PasswordResetView
+    LoginView,
+    PasswordResetView,
+    PasswordResetConfirmView,
+    LoginView
 )
 
 
@@ -35,9 +36,8 @@ urlpatterns = (
     [
         path('schema/', SpectacularAPIView.as_view(), name='schema'),
         path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path('user/login/', LoginView.as_view(), name='login'),
         path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-        path("token/", CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-        path("token/refresh/", CustomTokenRefreshView.as_view(), name='token_refresh'),
         path("admin/", admin.site.urls),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
@@ -48,24 +48,14 @@ urlpatterns = (
             name="user-register-confirm",
         ),
         path(
-            "password_reset/",
+            "user/password_reset/",
             PasswordResetView.as_view(),
             name="password_reset",
         ),
         path(
-            "password_reset/confirm/<uidb64>/<token>/",
-            auth_views.PasswordResetConfirmView.as_view(),
+            "user/password_reset/confirm/<uidb64>/<token>/",
+            PasswordResetConfirmView.as_view(),
             name="password_reset_confirm",
-        ),
-        path(
-            "password_reset/done/",
-            auth_views.PasswordResetDoneView.as_view(),
-            name="password_reset_done",
-        ),
-        path(
-            "password_reset/complete/",
-            auth_views.PasswordResetCompleteView.as_view(),
-            name="password_reset_complete",
         ),
         path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
         path("categories/", CategoryView.as_view(), name="categories"),

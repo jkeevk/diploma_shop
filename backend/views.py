@@ -1,6 +1,6 @@
 import os
 from django.core.management import call_command
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -17,6 +17,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView, GenericAPIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .filters import ProductFilter
+from .permissions import IsAdminOrSupplier
 
 from .models import Category, Contact, Order, OrderItem, Product, Shop, User
 from .serializers import (
@@ -30,65 +34,64 @@ from .serializers import (
     UserRegistrationSerializer,
     UserSerializer,
     PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
+    LoginSerializer
 )
+from django.contrib.auth.tokens import default_token_generator
 
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .filters import ProductFilter
-from .permissions import IsAdminOrSupplier
-
-def index(request):
-    urls = [
-        {"url": "/admin/", "description": "Админ-панель"},
-        {"url": "/accounts/login/", "description": "Вход в систему"},
-        {"url": "user/register/", "description": "Регистрация нового пользователя"},
-        {"url": "password_reset/", "description": "Сброс пароля"},
-        {"url": "products", "description": "Список товаров"},
-        {"url": "orders", "description": "Список заказов"},
-        {"url": "users", "description": "Пользователи"},
-        {"url": "partner/update/", "description": "Обновление партнера"},
-        {"url": "categories/", "description": "Список категорий"},
-        {"url": "shops/", "description": "Список магазинов"},
-    ]
-    return render(request, "index.html", {"urls": urls})
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 
 
-# Эндпоинт для получения токена
-@extend_schema(
-    summary="Получить токен JWT",
-    description="Используйте этот эндпоинт для получения JWT токена, отправив логин и пароль.",
-    responses={
-        200: OpenApiResponse(
-            description="Успех",
-            examples=[
-                OpenApiExample(
-                    "Пример ответа",
-                    value={"access": "token_value", "refresh": "refresh_token_value"},
-                ),
-            ],
-        ),
-    },
-)
-class CustomTokenObtainPairView(TokenObtainPairView):
-    pass
+# Эндпоинт для авторизации пользователя
+class LoginView(APIView):
+    @extend_schema(
+        summary="Авторизация", 
+        description="Эндпоинт для авторизации пользователя с помощью электронной почты и пароля.", 
+        request=LoginSerializer,
+        responses={
+            200: {
+                'description': 'Successful login',
+                'examples': [
+                    {
+                        'application/json': {
+                            'user_id': 1,
+                            'email': 'user@example.com',
+                            'access_token': 'string',
+                            'refresh_token': 'string',
+                        }
+                    }
+                ],
+            },
+            400: {
+                'description': 'Bad request',
+                'examples': [
+                    {
+                        'application/json': {
+                            'non_field_errors': ['Invalid credentials.']
+                        }
+                    }
+                ],
+            },
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = LoginSerializer(data=request.data, context={'request': request})
 
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
 
-# Эндпоинт для обновления токена
-@extend_schema(
-    summary="Обновить токен JWT",
-    description="Используйте этот эндпоинт для обновления JWT токена, отправив refresh токен.",
-    responses={
-        200: OpenApiResponse(
-            description="Успех",
-            examples=[
-                OpenApiExample("Пример ответа", value={"access": "new_token_value"}),
-            ],
-        ),
-    },
-)
-class CustomTokenRefreshView(TokenRefreshView):
-    pass
+            return Response({
+                'user_id': user.id,
+                'email': user.email,
+                'access_token': access_token,
+                'refresh_token': refresh_token
+            }, status=status.HTTP_200_OK)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @extend_schema(
     summary="Сброс пароля", description="Эндпоинт для получения ссылки на сброс пароля."
@@ -104,8 +107,33 @@ class PasswordResetView(GenericAPIView):
             {"detail": "Ссылка для сброса пароля отправлена на email."},
             status=status.HTTP_200_OK,
         )
+@extend_schema(
+    summary="Новый пароль", description="Эндпоинт для создания нового пароля."
+)
+class PasswordResetConfirmView(GenericAPIView):
+    serializer_class = PasswordResetConfirmSerializer
 
+    def post(self, request, *args, **kwargs):
 
+        uid = force_str(urlsafe_base64_decode(kwargs['uidb64']))
+        token = kwargs['token']
+        
+        try:
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
+    
 @extend_schema(
     summary="Обновление каталога поставщика",
     description="Эндпоинт для обновления каталога поставщика. Требует multipart/form-data в теле запроса. Файл должен быть в формате JSON.",
