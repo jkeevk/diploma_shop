@@ -8,16 +8,17 @@ from .models import User
 
 @receiver(post_save, sender=User)
 def send_confirmation_email(sender, instance, created, **kwargs):
-    if created:
+    if created and not getattr(instance, 'created_by_admin', False):
         token = uuid.uuid4().hex
         instance.confirmation_token = token
         instance.save()
 
         confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
         full_url = f"{settings.BACKEND_URL}{confirmation_url}"
-        subject = "Подтвердите вашу регистрацию"
-        message = f"Пожалуйста, перейдите по ссылке, чтобы подтвердить вашу регистрацию: {full_url}"
+        subject = "Confirm Your Registration"
+        message = f"Please click the link below to confirm your registration: {full_url}"
         send_mail(subject, message, settings.EMAIL_HOST_USER, [instance.email])
+
 
 @receiver(post_save, sender=User)
 def send_password_reset_email(sender, instance, **kwargs):
@@ -27,8 +28,9 @@ def send_password_reset_email(sender, instance, **kwargs):
         reset_link = settings.BACKEND_URL + reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
 
         send_mail(
-            subject='Сброс пароля',
-            message=f'Пожалуйста, перейдите по ссылке ниже, чтобы сбросить ваш пароль: {reset_link}',
+            subject='Password Reset',
+            message=f'Please click the link below to reset your password: {reset_link}',
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=[instance.email],
         )
+        
