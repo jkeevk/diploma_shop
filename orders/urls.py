@@ -24,6 +24,7 @@ from backend.views import (
     LoginView,
     BasketViewSet,
     PartnerOrders,
+    ConfirmBasketView
 )
 
 
@@ -38,36 +39,37 @@ user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
 urlpatterns = (
     [
-        path("schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("schema", SpectacularAPIView.as_view(), name="schema"),
         path(
-            "swagger/",
+            "swagger",
             SpectacularSwaggerView.as_view(url_name="schema"),
             name="swagger-ui",
         ),
-        path("user/login/", LoginView.as_view(), name="login"),
-        path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path("admin/", admin.site.urls),
+        path("user/login", LoginView.as_view(), name="login"),
+        path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+        path("admin", admin.site.urls),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
-        path("user/register/", RegisterView.as_view(), name="user-register"),
+        path("user/register", RegisterView.as_view(), name="user-register"),
         path(
-            "user/register/confirm/<str:token>/",
+            "user/register/confirm/<str:token>",
             ConfirmRegistrationView.as_view(),
             name="user-register-confirm",
         ),
         path(
-            "user/password_reset/",
+            "user/password_reset",
             PasswordResetView.as_view(),
             name="password_reset",
         ),
         path(
-            "user/password_reset/confirm/<str:uidb64>/<str:token>/",
+            "user/password_reset/confirm/<str:uidb64>/<str:token>",
             PasswordResetConfirmView.as_view(),
             name="password_reset_confirm",
         ),
-        path("partner/update/", PartnerUpdateView.as_view(), name="partner-update"),
-        path("categories/", CategoryView.as_view(), name="categories"),
-        path("shops/", ShopView.as_view(), name="shops"),
+        path("partner/update", PartnerUpdateView.as_view(), name="partner-update"),
+        path('basket/confirm', ConfirmBasketView.as_view(), name='confirm-basket'),
+        path("categories", CategoryView.as_view(), name="categories"),
+        path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

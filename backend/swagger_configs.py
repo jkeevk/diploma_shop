@@ -3,6 +3,8 @@ from drf_spectacular.utils import (
     extend_schema_view,
     OpenApiResponse,
     OpenApiExample,
+    OpenApiParameter
+    
 )
 from drf_spectacular.types import OpenApiTypes
 from .serializers import (
@@ -17,6 +19,7 @@ from .serializers import (
     CategorySerializer,
     ShopSerializer,
     OrderItemSerializer,
+    OrderWithContactSerializer
 )
 
 SWAGGER_CONFIGS = {
@@ -333,4 +336,21 @@ SWAGGER_CONFIGS = {
             },
         ),
     ),
+    "partner_orders_schema": extend_schema(
+        summary="Получить подтвержденные заказы для партнера",
+        description="Возвращает список подтвержденных заказов для магазина, связанного с текущим пользователем.",
+        responses={
+            200: OrderSerializer(many=True),
+            400: OpenApiResponse(description="Ошибка, если пользователь не связан с магазином.")
+        }
+    ),
+    "confirm_basket_schema": extend_schema(
+        summary="Подтвердить корзину",
+        description="Изменяет статус заказа на 'подтвержден' и использует ID контакта для подтверждения.",
+        request=OrderWithContactSerializer,
+        responses={
+            200: OrderWithContactSerializer,
+            400: OpenApiResponse(description="Ошибка, если корзина пуста или ID контакта некорректен.")
+        }
+    )
 }

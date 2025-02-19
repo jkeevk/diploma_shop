@@ -38,7 +38,8 @@ from .serializers import (
     UserSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
-    LoginSerializer
+    LoginSerializer,
+    OrderWithContactSerializer
 )
 from .swagger_configs import SWAGGER_CONFIGS
 
@@ -232,6 +233,7 @@ class OrderViewSet(ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAdminOrSupplier]
 
+
 @SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
     queryset = Order.objects.all()
@@ -249,14 +251,46 @@ class BasketViewSet(ModelViewSet):
 
         serializer.save(user=self.request.user, status="new", id=order.id)
 
+
+@SWAGGER_CONFIGS["partner_orders_schema"]
 class PartnerOrders(APIView):
     permission_classes = [IsAdminOrSupplier]
 
     def get(self, request):
+        if request.user.is_anonymous:
+            return Response({"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         shop = Shop.objects.filter(user=request.user).first()
-        if not shop:
+
+        if not shop and not request.user.is_staff:
             return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
-        orders = Order.objects.filter(order_items__shop=shop).distinct()
+
+        orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
 
+
+@SWAGGER_CONFIGS["confirm_basket_schema"]
+class ConfirmBasketView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        order = Order.objects.filter(user=request.user, status="new").first()
+
+        if not order:
+            return Response({"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST)
+
+        contact_id = request.data.get('contact_id')
+        if not contact_id:
+            return Response({"detail": "ID контакта обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            contact = Contact.objects.get(id=contact_id, user=request.user)
+        except Contact.DoesNotExist:
+            return Response({"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.status = "confirmed"
+        order.contact = contact
+        order.save()
+
+        return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)

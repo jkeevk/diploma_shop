@@ -284,7 +284,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
             if existing_item:
                 existing_item.quantity += quantity
-                existing_item.quantity += quantity
                 existing_item.save()
             else:
                 OrderItem.objects.create(
@@ -342,8 +341,37 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
 
     def validate_new_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError(
-                "Пароль должен содержать не менее 8 символов."
-            )
+        try:
+            validate_password(value)
+        except serializers.ValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
         return value
+    
+
+class OrderWithContactSerializer(serializers.ModelSerializer):
+    contact_id = serializers.PrimaryKeyRelatedField(source='contact', queryset=Contact.objects.all(), required=False)
+
+    class Meta:
+        model = Order
+        fields = ["contact_id"]
+
+    def create(self, validated_data):
+        order_items_data = validated_data.pop("order_items", [])
+        user = validated_data.pop("user", self.context["request"].user)
+
+        order, created = Order.objects.get_or_create(user=user, status="new")
+
+        for item_data in order_items_data:
+            product = item_data.get("product")
+            shop = item_data.get("shop")
+            quantity = item_data.get("quantity")
+
+            existing_item = OrderItem.objects.filter(order=order, product=product, shop=shop).first()
+
+            if existing_item:
+                existing_item.quantity += quantity
+                existing_item.save()
+            else:
+                OrderItem.objects.create(order=order, product=product, shop=shop, quantity=quantity)
+
+        return order
