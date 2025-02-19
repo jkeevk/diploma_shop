@@ -7,7 +7,14 @@ from django.utils.text import slugify
 
 
 class UserManager(BaseUserManager):
+    """
+    Менеджер для управления пользователями. Обеспечивает создание обычных пользователей и суперпользователей.
+    """
+
     def create_user(self, email, password=None, **extra_fields):
+        """
+        Создает и сохраняет пользователя с указанным email и паролем. Если email не указан, выбрасывает исключение.
+        """
         if not email:
             raise ValueError("Поле Email должно быть заполнено")
         email = self.normalize_email(email)
@@ -17,6 +24,9 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Создает и сохраняет суперпользователя с указанным email и паролем. Убеждается, что is_staff и is_superuser установлены в True.
+        """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -29,6 +39,9 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    """
+    Модель пользователя. Расширяет стандартную модель пользователя Django, добавляя поля для ролей заказчика и поставщика.
+    """
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
     is_customer = models.BooleanField(default=False, verbose_name="Заказчик")
     is_supplier = models.BooleanField(default=False, verbose_name="Поставщик")
@@ -48,6 +61,9 @@ class User(AbstractUser):
         return self.email
 
     def save(self, *args, **kwargs):
+        """
+        Сохраняет пользователя. Если username не указан, генерирует его на основе email.
+        """
         if not self.username:
             self.username = slugify(self.email.replace("@", "_"))
 
@@ -55,6 +71,9 @@ class User(AbstractUser):
 
 
 class Shop(models.Model):
+    """
+    Модель магазина. Содержит информацию о названии магазина, его URL и связанном пользователе.
+    """
     name = models.CharField(max_length=100)
     url = models.URLField(blank=True, null=True)
     user = models.ForeignKey(
@@ -71,6 +90,9 @@ class Shop(models.Model):
 
 
 class Category(models.Model):
+    """
+    Модель категории. Содержит название категории и связь с магазинами.
+    """
     shops = models.ManyToManyField(
         Shop, related_name="categories", blank=True, verbose_name="Магазины"
     )
@@ -86,6 +108,9 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    """
+    Модель товара. Содержит информацию о названии, модели и категории товара.
+    """
     model = models.CharField(max_length=255, verbose_name="Модель", blank=True)
     name = models.CharField(max_length=80, verbose_name="Название", db_index=True)
     category = models.ForeignKey(
@@ -105,6 +130,9 @@ class Product(models.Model):
 
 
 class ProductInfo(models.Model):
+    """
+    Модель информации о товаре. Содержит данные о товаре, магазине, количестве, цене и рекомендуемой розничной цене.
+    """
     product = models.ForeignKey(
         Product,
         verbose_name="Продукт",
@@ -146,6 +174,9 @@ class ProductInfo(models.Model):
 
 
 class Parameter(models.Model):
+    """
+    Модель параметра. Содержит название параметра.
+    """
     name = models.CharField(max_length=200, verbose_name="Параметр", db_index=True)
 
     class Meta:
@@ -158,6 +189,9 @@ class Parameter(models.Model):
 
 
 class ProductParameter(models.Model):
+    """
+    Модель параметра товара. Связывает информацию о товаре с параметром и его значением.
+    """
     product_info = models.ForeignKey(
         ProductInfo,
         verbose_name="Информация о товаре",
@@ -182,6 +216,9 @@ class ProductParameter(models.Model):
 
 
 class Order(models.Model):
+    """
+    Модель заказа. Содержит информацию о пользователе, дате заказа и его статусе.
+    """
     STATUS_CHOICES = [
         ("new", "Новый"),
         ("confirmed", "Подтвержден"),
@@ -211,10 +248,16 @@ class Order(models.Model):
         return f"Заказ номер {self.id} - {self.get_status_display()}"
 
     def total_cost(self):
+        """
+        Возвращает общую стоимость заказа.
+        """
         return sum(item.cost() for item in self.order_items.all())
 
 
 class OrderItem(models.Model):
+    """
+    Модель позиции заказа. Содержит информацию о товаре, магазине и количестве.
+    """
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
@@ -236,6 +279,9 @@ class OrderItem(models.Model):
         return f"{self.product.name} : {self.quantity}"
 
     def cost(self):
+        """
+        Возвращает стоимость позиции заказа.
+        """
         product_info = self.product.product_infos.filter(shop=self.shop).first()
         if product_info:
             return self.quantity * product_info.price
@@ -243,6 +289,9 @@ class OrderItem(models.Model):
 
 
 class Contact(models.Model):
+    """
+    Модель контакта. Содержит информацию о контактах пользователя, включая адрес и телефон.
+    """
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -270,9 +319,15 @@ class Contact(models.Model):
         return f"{self.city} {self.street} {self.house}"
 
     def clean(self):
+        """
+        Проверяет, что у пользователя не более 5 контактов. Если больше, выбрасывает исключение.
+        """
         if self.user.contacts.count() >= 5:
             raise ValidationError("Максимум 5 адресов на пользователя.")
 
     def save(self, *args, **kwargs):
+        """
+        Сохраняет контакт, предварительно выполняя проверку на количество контактов.
+        """
         self.clean()
         super().save(*args, **kwargs)
