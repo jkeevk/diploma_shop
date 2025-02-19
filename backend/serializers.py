@@ -23,30 +23,40 @@ from django.utils.encoding import force_bytes
 
 
 class ShopSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Shop."""
+
     class Meta:
         model = Shop
         fields = ["id", "name"]
 
 
 class ContactSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Contact."""
+
     class Meta:
         model = Contact
         fields = "__all__"
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Category."""
+
     class Meta:
         model = Category
         fields = ["id", "name"]
 
 
 class ParameterSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Parameter."""
+
     class Meta:
         model = Parameter
         fields = ["name"]
 
 
 class ProductInfoSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели ProductInfo с дополнительным полем parameters."""
+
     parameters = serializers.SerializerMethodField()
 
     class Meta:
@@ -55,11 +65,14 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField)
     def get_parameters(self, obj) -> dict:
+        """Метод для получения параметров продукта в виде словаря."""
         parameters = obj.product_parameters.all()
         return {param.parameter.name: param.value for param in parameters}
 
 
 class ProductParameterSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели ProductParameter."""
+
     parameter = serializers.SlugRelatedField(
         slug_field="name", queryset=Parameter.objects.all()
     )
@@ -70,6 +83,8 @@ class ProductParameterSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Product с вложенными сериализаторами для категории и информации о продукте."""
+
     category = CategorySerializer()
     product_infos = ProductInfoSerializer(many=True)
 
@@ -78,6 +93,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "model", "category", "product_infos"]
 
     def create(self, validated_data):
+        """Создание нового продукта с учетом вложенных данных."""
         category_data = validated_data.pop("category")
         product_infos_data = validated_data.pop("product_infos")
 
@@ -105,6 +121,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return product
 
     def update(self, instance, validated_data):
+        """Обновление существующего продукта с учетом вложенных данных."""
         category_data = validated_data.pop("category", None)
         product_infos_data = validated_data.pop("product_infos", None)
 
@@ -148,6 +165,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Сериализатор для регистрации пользователя."""
+
     email = serializers.EmailField(validators=[EmailValidator()])
 
     class Meta:
@@ -163,6 +182,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
+        """Проверка, что пользователь не может быть одновременно и продавцом, и покупателем."""
         is_customer = data.get("is_customer", False)
         is_supplier = data.get("is_supplier", False)
 
@@ -178,6 +198,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return data
 
     def validate_email(self, value):
+        """Проверка уникальности email."""
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
@@ -185,6 +206,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate_password(self, value):
+        """Проверка валидности пароля."""
         try:
             validate_password(value)
         except ValidationError as e:
@@ -194,6 +216,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        """Создание нового пользователя."""
         user = User.objects.create_user(
             email=validated_data["email"],
             password=validated_data["password"],
@@ -207,6 +230,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели User."""
+
     class Meta:
         model = User
         fields = [
@@ -220,14 +245,19 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class FileUploadSerializer(serializers.Serializer):
+    """Сериализатор для загрузки файлов."""
+
     file = serializers.FileField()
 
 
 class LoginSerializer(serializers.Serializer):
+    """Сериализатор для аутентификации пользователя."""
+
     email = serializers.EmailField()
     password = serializers.CharField()
 
     def validate(self, data):
+        """Проверка учетных данных пользователя."""
         email = data.get("email")
         password = data.get("password")
 
@@ -249,6 +279,8 @@ class LoginSerializer(serializers.Serializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели OrderItem."""
+
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
     shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all())
 
@@ -258,6 +290,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Order с вложенными элементами заказа."""
+
     order_items = OrderItemSerializer(many=True)
 
     class Meta:
@@ -265,6 +299,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "order_items", "dt", "status"]
 
     def create(self, validated_data):
+        """Создание нового заказа с элементами заказа."""
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
 
@@ -293,6 +328,7 @@ class OrderSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
+        """Обновление существующего заказа с элементами заказа."""
         instance.status = validated_data.get("status", instance.status)
         instance.save()
 
@@ -318,9 +354,12 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class PasswordResetSerializer(serializers.Serializer):
+    """Сериализатор для сброса пароля."""
+
     email = serializers.EmailField()
 
     def validate_email(self, value):
+        """Проверка существования пользователя с указанным email."""
         try:
             user = User.objects.get(email=value)
         except User.DoesNotExist:
@@ -328,6 +367,7 @@ class PasswordResetSerializer(serializers.Serializer):
         return value
 
     def save(self):
+        """Генерация токена для сброса пароля и сохранение его в модели пользователя."""
         email = self.validated_data["email"]
         user = User.objects.get(email=email)
         token = default_token_generator.make_token(user)
@@ -338,9 +378,12 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Сериализатор для подтверждения сброса пароля."""
+
     new_password = serializers.CharField(write_only=True)
 
     def validate_new_password(self, value):
+        """Проверка валидности нового пароля."""
         try:
             validate_password(value)
         except serializers.ValidationError as e:
@@ -349,6 +392,8 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     
 
 class OrderWithContactSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели Order с указанием контактной информации."""
+
     contact_id = serializers.PrimaryKeyRelatedField(source='contact', queryset=Contact.objects.all(), required=False)
 
     class Meta:
@@ -356,6 +401,7 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
         fields = ["contact_id"]
 
     def create(self, validated_data):
+        """Создание нового заказа с указанием контактной информации."""
         order_items_data = validated_data.pop("order_items", [])
         user = validated_data.pop("user", self.context["request"].user)
 
@@ -375,3 +421,4 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
                 OrderItem.objects.create(order=order, product=product, shop=shop, quantity=quantity)
 
         return order
+    

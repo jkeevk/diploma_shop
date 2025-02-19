@@ -1,3 +1,12 @@
+"""
+URL конфигурация для проекта Django.
+
+Этот файл определяет маршруты для API, включая маршруты для пользователей, продуктов,
+категорий, магазинов и других связанных ресурсов. Он также включает маршруты для
+документации API с использованием drf-spectacular.
+
+"""
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
@@ -21,19 +30,19 @@ from backend.views import (
     LoginView,
     PasswordResetView,
     PasswordResetConfirmView,
-    LoginView,
     BasketViewSet,
     PartnerOrders,
     ConfirmBasketView
 )
 
-
+# Создание основного маршрутизатора для API
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
 router.register(r"basket", BasketViewSet, basename="basket")
 
+# Создание вложенного маршрутизатора для контактов пользователей
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
 
@@ -47,7 +56,7 @@ urlpatterns = (
         ),
         path("user/login", LoginView.as_view(), name="login"),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path("admin", admin.site.urls),
+        path("admin", admin.site.urls, name="admin"),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register", RegisterView.as_view(), name="user-register"),
