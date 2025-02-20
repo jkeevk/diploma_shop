@@ -1,5 +1,6 @@
 # Django
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.contrib.auth.hashers import check_password
 
 # Local imports
 from .models import (
@@ -80,10 +81,23 @@ class UserAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Сохраняет пользователя, хэшируя пароль, если он был изменен.
+        Сохраняет пользователя, хэшируя пароль, если он был изменен,
+        и проверяет, что новый пароль не совпадает с предыдущим.
+        Если пароли совпадают, выводим предупреждение и не сохраняем.
         """
         if obj.password:
-            obj.set_password(obj.password)
+            if not obj.pk:
+                obj.set_password(obj.password)
+            else:
+                old_user = User.objects.get(pk=obj.pk)
+                old_password_hash = old_user.password
+
+                if check_password(obj.password, old_password_hash):
+                    messages.warning(request, "Новый пароль не может совпадать с предыдущим.")
+                    return
+
+                obj.set_password(obj.password)
+
         super().save_model(request, obj, form, change)
 
 class ShopAdmin(admin.ModelAdmin):
