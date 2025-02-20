@@ -1,9 +1,19 @@
-from django.core.validators import RegexValidator, MinValueValidator
-from django.core.exceptions import ValidationError
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+# Django
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
+
+# Python Standard Library
+from enum import Enum
+
+
+class UserRole(Enum):
+    CUSTOMER = "customer"
+    SUPPLIER = "supplier"
+    ADMIN = "admin"
 
 
 class UserManager(BaseUserManager):
@@ -40,11 +50,15 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser):
     """
-    Модель пользователя. Расширяет стандартную модель пользователя Django, добавляя поля для ролей заказчика и поставщика.
+    Модель пользователя. Расширяет стандартную модель пользователя Django, добавляя поле для роли (покупатель или поставщик).
     """
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
-    is_customer = models.BooleanField(default=False, verbose_name="Заказчик")
-    is_supplier = models.BooleanField(default=False, verbose_name="Поставщик")
+    role = models.CharField(
+        max_length=30,
+        choices=[(role.value, role.name.capitalize()) for role in UserRole],
+        default=UserRole.CUSTOMER.value,
+        verbose_name="Роль"
+    )
     confirmation_token = models.CharField(max_length=255, blank=True, null=True)
 
     USERNAME_FIELD = "email"

@@ -1,18 +1,25 @@
 from rest_framework import permissions
 
-class IsAdminOrSupplier(permissions.BasePermission):
+class IsSupplier(permissions.BasePermission):
     """
-    Разрешение, которое позволяет доступ только администраторам или пользователям с правами is_supplier.
+    Разрешение, позволяющее доступ только поставщикам.
+    """
+    
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'supplier'
+
+class IsCustomer(permissions.BasePermission):
+    """
+    Разрешение, позволяющее доступ только покупателям.
+    """
+    
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'customer'
+
+class IsAdminUser(permissions.BasePermission):
+    """
+    Разрешение, позволяющее доступ только администраторам.
     """
 
     def has_permission(self, request, view):
-        # Разрешить доступ для всех пользователей на GET запросы
-        if request.method == 'GET':
-            return True
-        
-        # Запретить анонимным пользователям доступ к другим методам
-        if request.user.is_anonymous:
-            return False
-        
-        # Разрешить доступ для администраторов и поставщиков на другие методы
-        return request.user.is_staff or getattr(request.user, 'is_supplier', False)
+        return request.user.is_authenticated and request.user.is_superuser

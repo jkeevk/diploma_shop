@@ -1,25 +1,27 @@
+# DRF Spectacular
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
     extend_schema,
     extend_schema_view,
-    OpenApiResponse,
-    OpenApiExample,
-    OpenApiParameter
-    
 )
-from drf_spectacular.types import OpenApiTypes
+
+# Local imports
 from .serializers import (
-    LoginSerializer,
-    PasswordResetSerializer,
-    PasswordResetConfirmSerializer,
-    ProductSerializer,
-    UserRegistrationSerializer,
-    ContactSerializer,
-    UserSerializer,
-    OrderSerializer,
     CategorySerializer,
-    ShopSerializer,
+    ContactSerializer,
+    LoginSerializer,
     OrderItemSerializer,
-    OrderWithContactSerializer
+    OrderSerializer,
+    OrderWithContactSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
+    ProductSerializer,
+    ShopSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
 )
 
 SWAGGER_CONFIGS = {
@@ -137,7 +139,7 @@ SWAGGER_CONFIGS = {
     ),
     "register_schema": extend_schema(
         summary="Регистрация аккаунта",
-        description="Регистрация нового пользователя с помощью электронной почты и пароля. Включает в себя подтверждение email для активации аккаунта.",
+        description="Регистрация нового пользователя с помощью электронной почты и пароля. Включает в себя подтверждение email для активации аккаунта. Роль пользователя может быть: 'customer' или 'supplier'.",
         request=UserRegistrationSerializer,
         responses={
             201: OpenApiResponse(
@@ -210,7 +212,7 @@ SWAGGER_CONFIGS = {
             responses={200: UserSerializer(many=True)},
         ),
         create=extend_schema(
-            description="Создать нового пользователя.",
+            description="Создать нового пользователя. При регистрации пользователь выбирает роль ('customer' или 'supplier').",
             summary="Создание пользователя",
             request=UserSerializer,
             responses={201: UserSerializer},
@@ -325,16 +327,6 @@ SWAGGER_CONFIGS = {
             request=OrderItemSerializer,
             responses={200: OrderItemSerializer},
         ),
-        total_cost=extend_schema(
-            description="Получить общую стоимость корзины.",
-            summary="Получение общей стоимости корзины",
-            responses={
-                200: {
-                    "type": "object",
-                    "properties": {"total_cost": {"type": "number"}},
-                }
-            },
-        ),
     ),
     "partner_orders_schema": extend_schema(
         summary="Получить подтвержденные заказы для партнера",
@@ -352,5 +344,5 @@ SWAGGER_CONFIGS = {
             200: OrderWithContactSerializer,
             400: OpenApiResponse(description="Ошибка, если корзина пуста или ID контакта некорректен.")
         }
-    )
+    ),
 }

@@ -1,25 +1,30 @@
+# Django
+from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+# DRF Spectacular
 from drf_spectacular.utils import extend_schema_field
-from rest_framework import serializers
+
+# Local imports
 from .models import (
-    Product,
-    ProductInfo,
-    ProductParameter,
-    Parameter,
     Category,
-    Shop,
-    User,
     Contact,
     Order,
     OrderItem,
+    Product,
+    ProductInfo,
+    ProductParameter,
+    Shop,
+    User,
+    UserRole,
+    Parameter
 )
-from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-from django.core.validators import EmailValidator
-from django.contrib.auth import authenticate
-
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
+from rest_framework import serializers
 
 
 class ShopSerializer(serializers.ModelSerializer):
@@ -176,26 +181,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "password",
             "first_name",
             "last_name",
-            "is_customer",
-            "is_supplier",
+            "role",  # заменяем поля is_customer и is_supplier на role
         ]
         extra_kwargs = {"password": {"write_only": True}}
 
-    def validate(self, data):
-        """Проверка, что пользователь не может быть одновременно и продавцом, и покупателем."""
-        is_customer = data.get("is_customer", False)
-        is_supplier = data.get("is_supplier", False)
-
-        if is_customer and is_supplier:
-            raise serializers.ValidationError(
-                "Пользователь не может быть одновременно и продавцом, и покупателем."
-            )
-        if not is_customer and not is_supplier:
-            raise serializers.ValidationError(
-                "Пользователь должен быть либо продавцом, либо покупателем."
-            )
-
-        return data
+    def validate_role(self, value):
+        """Проверка на корректность значения роли."""
+        if value not in [role.value for role in UserRole]:
+            raise serializers.ValidationError("Неверная роль пользователя.")
+        return value
 
     def validate_email(self, value):
         """Проверка уникальности email."""
@@ -222,8 +216,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
-            is_customer=validated_data["is_customer"],
-            is_supplier=validated_data["is_supplier"],
+            role=validated_data["role"],  # сохраняем роль
             is_active=False,
         )
         return user
@@ -239,8 +232,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "is_customer",
-            "is_supplier",
+            "role",  # добавляем роль в сериализатор
         ]
 
 
@@ -421,4 +413,3 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
                 OrderItem.objects.create(order=order, product=product, shop=shop, quantity=quantity)
 
         return order
-    
