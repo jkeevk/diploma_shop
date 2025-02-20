@@ -1,26 +1,41 @@
 from rest_framework import permissions
+from rest_framework.exceptions import PermissionDenied
 
-class IsSupplier(permissions.BasePermission):
+class CheckRole(permissions.BasePermission):
     """
-    Разрешение, позволяющее доступ только поставщикам.
+    Разрешение, которое проверяет, имеет ли пользователь хотя бы одну из указанных ролей.
+    Также проверяет, может ли пользователь изменять конкретный объект.
     """
-    
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'supplier'
-
-class IsCustomer(permissions.BasePermission):
-    """
-    Разрешение, позволяющее доступ только покупателям.
-    """
-    
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'customer'
-
-class IsAdminUser(permissions.BasePermission):
-    """
-    Разрешение, позволяющее доступ только администраторам.
-    """
+    def __init__(self, *required_roles):
+        self.required_roles = required_roles
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.is_superuser
-    
+        """
+        Глобальная проверка: пользователь должен быть аутентифицирован и иметь одну из требуемых ролей.
+        """
+        if not request.user.is_authenticated:
+            return False
+        return request.user.role in self.required_roles
+
+    def has_object_permission(self, request, view, obj):
+        """
+        Объектная проверка:
+        - Пользователь может изменять только свои данные, если он не админ.
+        - Только админ может изменять роль пользователя.
+        """
+        if request.user.role == 'admin':
+            return True
+
+        if obj != request.user:
+            return False
+
+        if 'role' in request.data and request.data['role'] != obj.role:
+            raise PermissionDenied("Только администратор может изменять роль пользователя.")
+
+        return True
+
+def check_role_permission(*required_roles):
+    """
+    Функция для создания экземпляра CheckRole с нужными ролями.
+    """
+    return lambda: CheckRole(*required_roles)
