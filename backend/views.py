@@ -21,7 +21,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 # Local imports
 from .filters import ProductFilter
 from .models import Category, Contact, Order, Product, Shop, User
-from .permissions import IsAdminUser, IsCustomer, IsSupplier
+from .permissions import check_role_permission
 from .serializers import (
     CategorySerializer,
     ContactSerializer,
@@ -122,8 +122,9 @@ class PartnerUpdateView(APIView):
     Представление для обновления данных поставщика через загрузку файла.
     """
     serializer_class = FileUploadSerializer
-    permission_classes = [IsSupplier | IsAdminUser]
-
+    permission_classes = [
+        check_role_permission('admin'),
+    ]
     def post(self, request, *args, **kwargs):
         """
         Загружает файл с данными и обновляет информацию о товарах.
@@ -172,8 +173,7 @@ class ProductViewSet(ModelViewSet):
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
-    permission_classes = [IsSupplier | IsAdminUser]
-
+    permission_classes = [check_role_permission('supplier', 'admin')]
 
 @SWAGGER_CONFIGS["register_schema"]
 class RegisterView(APIView):
@@ -260,7 +260,7 @@ class ContactViewSet(ModelViewSet):
     """
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [IsCustomer | IsSupplier | IsAdminUser]
+    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
 
 
 @SWAGGER_CONFIGS["user_viewset_schema"]
@@ -270,7 +270,7 @@ class UserViewSet(ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsCustomer | IsSupplier | IsAdminUser]
+    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
     http_method_names = ['get', 'put', 'patch', 'delete']
 
 
@@ -281,7 +281,7 @@ class OrderViewSet(ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAdminUser | IsSupplier]
+    permission_classes = [check_role_permission('admin', 'supplier')]
 
 
 @SWAGGER_CONFIGS["basket_viewset_schema"]
@@ -291,7 +291,7 @@ class BasketViewSet(ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsCustomer]
+    permission_classes = [check_role_permission('customer', 'admin')]
 
     def get_queryset(self):
         """
@@ -316,7 +316,7 @@ class PartnerOrders(APIView):
     """
     Представление для получения заказов, связанных с магазином поставщика.
     """
-    permission_classes = [IsSupplier]
+    permission_classes = [check_role_permission('supplier', 'admin')]
 
     def get(self, request):
         """
@@ -340,7 +340,7 @@ class ConfirmBasketView(APIView):
     """
     Представление для подтверждения корзины и создания заказа.
     """
-    permission_classes = [IsCustomer]
+    permission_classes = [check_role_permission('customer', 'admin')]
 
     def post(self, request):
         """
