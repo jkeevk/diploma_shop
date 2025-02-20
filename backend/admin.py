@@ -1,6 +1,7 @@
 # Django
-from django.contrib import admin, messages
-from django.contrib.auth.hashers import check_password
+from django.contrib import admin
+from django.contrib.auth.forms import UserChangeForm
+from django import forms
 
 # Local imports
 from .models import (
@@ -25,6 +26,35 @@ class ProductParameterInline(admin.TabularInline):
     model = ProductParameter
     extra = 1
 
+
+class CustomUserChangeForm(UserChangeForm):
+    """
+    Кастомная форма для редактирования пользователя в админке.
+    Добавляет поле для ввода нового пароля с подсказкой и хэширует пароль при его изменении.
+    """
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "Введите новый пароль"}),
+        required=False,
+        help_text="Оставьте поле пустым, если не хотите менять пароль.",
+    )
+
+    class Meta(UserChangeForm.Meta):
+        model = User
+        fields = "__all__"
+
+    def save(self, commit=True):
+        """
+        Сохраняет пользователя, хэшируя пароль только если он был изменен.
+        Если пароль не был изменен, оставляем его без изменений.
+        """
+        user = super().save(commit=False)
+        if self.cleaned_data["password"]:
+            user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user
+
+
 class OrderItemInline(admin.TabularInline):
     """
     Инлайн интерфейс админки для элементов заказов, связанных с заказами.
@@ -33,11 +63,14 @@ class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
 
+
 class UserAdmin(admin.ModelAdmin):
     """
     Интерфейс админки для управления пользователями.
     Этот интерфейс предоставляет список пользователей с возможностью поиска и фильтрации по email и роли.
     """
+    form = CustomUserChangeForm
+
     list_display = ("email", "first_name", "last_name", "role", "is_active")
     search_fields = ("email", "first_name", "last_name")
     list_filter = ("role", "is_active")
@@ -81,24 +114,20 @@ class UserAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Сохраняет пользователя, хэшируя пароль, если он был изменен,
-        и проверяет, что новый пароль не совпадает с предыдущим.
-        Если пароли совпадают, выводим предупреждение и не сохраняем.
+        Сохраняет пользователя, хэшируя пароль только если он был изменен.
+        Если пароль не был изменен, оставляем его без изменений.
         """
-        if obj.password:
-            if not obj.pk:
-                obj.set_password(obj.password)
+        if change:
+            if form.cleaned_data.get("password"):
+                obj.set_password(form.cleaned_data["password"])
             else:
-                old_user = User.objects.get(pk=obj.pk)
-                old_password_hash = old_user.password
-
-                if check_password(obj.password, old_password_hash):
-                    messages.warning(request, "Новый пароль не может совпадать с предыдущим.")
-                    return
-
+                obj.password = User.objects.get(pk=obj.pk).password
+        else:
+            if obj.password:
                 obj.set_password(obj.password)
 
         super().save_model(request, obj, form, change)
+
 
 class ShopAdmin(admin.ModelAdmin):
     """
@@ -109,6 +138,7 @@ class ShopAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_filter = ("name",)
 
+
 class CategoryAdmin(admin.ModelAdmin):
     """
     Интерфейс админки для управления категориями продуктов.
@@ -117,6 +147,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
     filter_horizontal = ("shops",)
+
 
 class ProductAdmin(admin.ModelAdmin):
     """
@@ -128,6 +159,7 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name", "model", "category__name")
     list_filter = ("category",)
     list_editable = ("model",)
+
 
 class ProductInfoAdmin(admin.ModelAdmin):
     """
@@ -142,6 +174,7 @@ class ProductInfoAdmin(admin.ModelAdmin):
     raw_id_fields = ("product", "shop")
     inlines = [ProductParameterInline]
 
+
 class ParameterAdmin(admin.ModelAdmin):
     """
     Интерфейс админки для управления параметрами продуктов.
@@ -149,6 +182,7 @@ class ParameterAdmin(admin.ModelAdmin):
     """
     list_display = ("name",)
     search_fields = ("name",)
+
 
 class ProductParameterAdmin(admin.ModelAdmin):
     """
@@ -167,6 +201,7 @@ class ProductParameterAdmin(admin.ModelAdmin):
         return f"{obj.product_info.product.name} ({obj.product_info.shop.name})"
 
     product_info.short_description = "Информация о продукте"
+
 
 class OrderAdmin(admin.ModelAdmin):
     """
@@ -189,6 +224,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     total_cost.short_description = "Общая стоимость"
 
+
 class OrderItemAdmin(admin.ModelAdmin):
     """
     Интерфейс админки для управления элементами заказа.
@@ -207,6 +243,7 @@ class OrderItemAdmin(admin.ModelAdmin):
         return obj.cost()
 
     cost.short_description = "Стоимость"
+
 
 class ContactAdmin(admin.ModelAdmin):
     """
@@ -235,6 +272,7 @@ class ContactAdmin(admin.ModelAdmin):
         ),
         ("Телефон", {"fields": ("phone",)}),
     )
+
 
 # Регистрация моделей в админке
 admin.site.register(User, UserAdmin)
