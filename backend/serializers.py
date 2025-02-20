@@ -181,7 +181,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "password",
             "first_name",
             "last_name",
-            "role",  # заменяем поля is_customer и is_supplier на role
+            "role",
         ]
         extra_kwargs = {"password": {"write_only": True}}
 
@@ -232,7 +232,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
-            "role",  # добавляем роль в сериализатор
+            "role",
         ]
 
 

@@ -139,7 +139,7 @@ SWAGGER_CONFIGS = {
     ),
     "register_schema": extend_schema(
         summary="Регистрация аккаунта",
-        description="Регистрация нового пользователя с помощью электронной почты и пароля. Включает в себя подтверждение email для активации аккаунта. Роль пользователя может быть: 'customer' или 'supplier'.",
+        description="Регистрация нового пользователя с помощью электронной почты и пароля. Включает в себя подтверждение email для активации аккаунта.",
         request=UserRegistrationSerializer,
         responses={
             201: OpenApiResponse(
@@ -212,7 +212,7 @@ SWAGGER_CONFIGS = {
             responses={200: UserSerializer(many=True)},
         ),
         create=extend_schema(
-            description="Создать нового пользователя. При регистрации пользователь выбирает роль ('customer' или 'supplier').",
+            description="Создать нового пользователя.",
             summary="Создание пользователя",
             request=UserSerializer,
             responses={201: UserSerializer},

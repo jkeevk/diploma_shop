@@ -50,7 +50,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser):
     """
-    Модель пользователя. Расширяет стандартную модель пользователя Django, добавляя поле для роли (покупатель или поставщик).
+    Модель пользователя. Расширяет стандартную модель пользователя Django, добавляя поле для роли (покупатель, поставщик или админ).
     """
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
     role = models.CharField(
