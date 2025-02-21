@@ -18,6 +18,7 @@ djangorestframework_simplejwt==5.4.0
 drf-nested-routers==0.94.1
 drf-spectacular==0.28.0
 drf-yasg==1.21.8
+h11==0.14.0
 idna==3.10
 inflection==0.5.1
 iniconfig==2.0.0
@@ -35,6 +36,7 @@ pytest-django==4.10.0
 python-dateutil==2.9.0.post0
 pytz==2024.2
 PyYAML==6.0.2
+redis==5.2.1
 referencing==0.36.2
 requests==2.31.0
 rpds-py==0.22.3
@@ -45,5 +47,6 @@ tzdata==2024.2
 ujson==5.9.0
 uritemplate==4.1.1
 urllib3==2.3.0
+uvicorn==0.34.0
 vine==5.1.0
 wcwidth==0.2.13

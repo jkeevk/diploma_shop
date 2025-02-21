@@ -1,12 +1,13 @@
-FROM python:3.12-alpine
+FROM python:3.12
 
-COPY .env .env
+WORKDIR /app
 
-COPY requirements.txt requirements.txt
+COPY requirements.txt /app/
 
-RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+RUN pip install uvicorn
 
-CMD python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+COPY . /app/
+
+CMD ["uvicorn", "orders.asgi:application", "--host", "0.0.0.0", "--port", "8000"]
