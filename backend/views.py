@@ -36,6 +36,7 @@ from .serializers import (
     UserSerializer,
 )
 from .swagger_configs import SWAGGER_CONFIGS
+from .tasks import load_products_task
 
 class LoginView(APIView):
     """
@@ -115,7 +116,6 @@ class PasswordResetConfirmView(GenericAPIView):
 
         return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
 
-
 @SWAGGER_CONFIGS["partner_update_schema"]
 class PartnerUpdateView(APIView):
     """
@@ -125,6 +125,7 @@ class PartnerUpdateView(APIView):
     permission_classes = [
         check_role_permission('admin', 'supplier'),
     ]
+
     def post(self, request, *args, **kwargs):
         """
         Загружает файл с данными и обновляет информацию о товарах.
@@ -152,15 +153,16 @@ class PartnerUpdateView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            call_command("load_products", file_path)
+            load_products_task.delay(file_path)
+
             return Response(
-                {"message": "Данные успешно загружены"}, status=status.HTTP_200_OK
+                {"message": "Задача на загрузку данных поставлена в очередь"},
+                status=status.HTTP_200_OK,
             )
         except Exception as e:
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
 @SWAGGER_CONFIGS["product_viewset_schema"]
 class ProductViewSet(ModelViewSet):

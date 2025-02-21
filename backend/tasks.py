@@ -4,6 +4,7 @@ from django.conf import settings
 from django.urls import reverse
 import logging
 from .models import User, Order, Shop
+from django.core.management import call_command
 
 
 logger = logging.getLogger(__name__)
@@ -113,3 +114,11 @@ def send_email_to_customer_async(recipient_email, order_id, contact_id):
         logger.error(
             f"Failed to send confirmation email to {recipient_email} for order {order_id}: {e}"
         )
+
+@shared_task
+def load_products_task(file_path):
+    try:
+        call_command("load_products", file_path)
+        return {"message": "Данные успешно загружены"}
+    except Exception as e:
+        return {"error": str(e)}
