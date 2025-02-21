@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def send_confirmation_email_async(user_id, token):
-    """Асинхронно отправляет письмо для подтверждения регистрации пользователя."""
+    """Асинхронно отправляет письмо для подтверждения регистрации."""
     try:
         user = User.objects.get(id=user_id)
         confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
@@ -28,7 +28,7 @@ def send_confirmation_email_async(user_id, token):
 
 @shared_task
 def send_password_reset_email_async(user_id, token, uid):
-    """Асинхронно отправляет письмо для сброса пароля пользователя."""
+    """Асинхронно отправляет письмо для сброса пароля."""
     try:
         user = User.objects.get(id=user_id)
         reset_link = settings.BACKEND_URL + reverse(
@@ -116,9 +116,19 @@ def send_email_to_customer_async(recipient_email, order_id, contact_id):
         )
 
 @shared_task
-def load_products_task(file_path):
+def export_products_task(file_path):
+    """Асинхронно экспортирует данные о продуктах."""
     try:
-        call_command("load_products", file_path)
+        call_command("export_products", file_path)
         return {"message": "Данные успешно загружены"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@shared_task
+def import_products_task():
+    """Асинхронно импортирует данные о продуктах."""
+    try:
+        call_command("import_products")
+        return {"message": "Данные успешно импортированы"}
     except Exception as e:
         return {"error": str(e)}

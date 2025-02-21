@@ -36,7 +36,8 @@ from .serializers import (
     UserSerializer,
 )
 from .swagger_configs import SWAGGER_CONFIGS
-from .tasks import load_products_task
+from .tasks import import_products_task, export_products_task
+
 
 class LoginView(APIView):
     """
@@ -116,6 +117,7 @@ class PasswordResetConfirmView(GenericAPIView):
 
         return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
 
+
 @SWAGGER_CONFIGS["partner_update_schema"]
 class PartnerUpdateView(APIView):
     """
@@ -153,7 +155,7 @@ class PartnerUpdateView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            load_products_task.delay(file_path)
+            export_products_task.delay(file_path)
 
             return Response(
                 {"message": "Задача на загрузку данных поставлена в очередь"},
@@ -163,6 +165,28 @@ class PartnerUpdateView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+@SWAGGER_CONFIGS["partner_import_schema"]
+class PartnerImportView(APIView):
+    """
+    Представление для импорта данных поставщика в файл.
+    """
+    permission_classes = [
+        check_role_permission('admin', 'supplier'),]
+    def get(self, request, *args, **kwargs):
+        try:
+            import_products_task.delay()
+            return Response(
+                {"message": "Задача на импорт данных поставлена в очередь"},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 
 @SWAGGER_CONFIGS["product_viewset_schema"]
 class ProductViewSet(ModelViewSet):
@@ -176,6 +200,7 @@ class ProductViewSet(ModelViewSet):
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
     permission_classes = [check_role_permission('supplier', 'admin')]
+
 
 @SWAGGER_CONFIGS["register_schema"]
 class RegisterView(APIView):
