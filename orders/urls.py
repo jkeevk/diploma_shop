@@ -56,7 +56,7 @@ urlpatterns = (
         ),
         path("user/login", LoginView.as_view(), name="login"),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path("admin", admin.site.urls, name="admin"),
+        path("admin/", admin.site.urls, name="admin"),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register", RegisterView.as_view(), name="user-register"),

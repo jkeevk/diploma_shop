@@ -1,25 +1,27 @@
+# DRF Spectacular
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
     extend_schema,
     extend_schema_view,
-    OpenApiResponse,
-    OpenApiExample,
-    OpenApiParameter
-    
 )
-from drf_spectacular.types import OpenApiTypes
+
+# Local imports
 from .serializers import (
-    LoginSerializer,
-    PasswordResetSerializer,
-    PasswordResetConfirmSerializer,
-    ProductSerializer,
-    UserRegistrationSerializer,
-    ContactSerializer,
-    UserSerializer,
-    OrderSerializer,
     CategorySerializer,
-    ShopSerializer,
+    ContactSerializer,
+    LoginSerializer,
     OrderItemSerializer,
-    OrderWithContactSerializer
+    OrderSerializer,
+    OrderWithContactSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
+    ProductSerializer,
+    ShopSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
 )
 
 SWAGGER_CONFIGS = {
@@ -325,16 +327,6 @@ SWAGGER_CONFIGS = {
             request=OrderItemSerializer,
             responses={200: OrderItemSerializer},
         ),
-        total_cost=extend_schema(
-            description="Получить общую стоимость корзины.",
-            summary="Получение общей стоимости корзины",
-            responses={
-                200: {
-                    "type": "object",
-                    "properties": {"total_cost": {"type": "number"}},
-                }
-            },
-        ),
     ),
     "partner_orders_schema": extend_schema(
         summary="Получить подтвержденные заказы для партнера",
@@ -352,5 +344,5 @@ SWAGGER_CONFIGS = {
             200: OrderWithContactSerializer,
             400: OpenApiResponse(description="Ошибка, если корзина пуста или ID контакта некорректен.")
         }
-    )
+    ),
 }

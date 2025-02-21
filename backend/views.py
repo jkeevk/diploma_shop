@@ -1,42 +1,41 @@
 import os
+
+# Django
+from django.contrib.auth.tokens import default_token_generator
 from django.core.management import call_command
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
 
+# Rest Framework
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.generics import ListAPIView, GenericAPIView
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+# Local imports
 from .filters import ProductFilter
-from .permissions import IsAdminOrSupplier
-
 from .models import Category, Contact, Order, Product, Shop, User
+from .permissions import check_role_permission
 from .serializers import (
     CategorySerializer,
     ContactSerializer,
     FileUploadSerializer,
+    LoginSerializer,
     OrderSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
     ProductSerializer,
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
-    PasswordResetSerializer,
-    PasswordResetConfirmSerializer,
-    LoginSerializer,
-    OrderWithContactSerializer
 )
 from .swagger_configs import SWAGGER_CONFIGS
-
 
 class LoginView(APIView):
     """
@@ -123,8 +122,9 @@ class PartnerUpdateView(APIView):
     Представление для обновления данных поставщика через загрузку файла.
     """
     serializer_class = FileUploadSerializer
-    permission_classes = [IsAdminOrSupplier]
-
+    permission_classes = [
+        check_role_permission('admin'),
+    ]
     def post(self, request, *args, **kwargs):
         """
         Загружает файл с данными и обновляет информацию о товарах.
@@ -173,8 +173,7 @@ class ProductViewSet(ModelViewSet):
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
-    permission_classes = [IsAdminOrSupplier]
-
+    permission_classes = [check_role_permission('supplier', 'admin')]
 
 @SWAGGER_CONFIGS["register_schema"]
 class RegisterView(APIView):
@@ -261,7 +260,7 @@ class ContactViewSet(ModelViewSet):
     """
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
 
 
 @SWAGGER_CONFIGS["user_viewset_schema"]
@@ -271,7 +270,7 @@ class UserViewSet(ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
     http_method_names = ['get', 'put', 'patch', 'delete']
 
 
@@ -282,7 +281,7 @@ class OrderViewSet(ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAdminOrSupplier]
+    permission_classes = [check_role_permission('admin', 'supplier')]
 
 
 @SWAGGER_CONFIGS["basket_viewset_schema"]
@@ -292,7 +291,7 @@ class BasketViewSet(ModelViewSet):
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [check_role_permission('customer', 'admin')]
 
     def get_queryset(self):
         """
@@ -317,7 +316,7 @@ class PartnerOrders(APIView):
     """
     Представление для получения заказов, связанных с магазином поставщика.
     """
-    permission_classes = [IsAdminOrSupplier]
+    permission_classes = [check_role_permission('supplier', 'admin')]
 
     def get(self, request):
         """
@@ -328,7 +327,7 @@ class PartnerOrders(APIView):
         
         shop = Shop.objects.filter(user=request.user).first()
 
-        if not shop and not request.user.is_staff:
+        if not shop:
             return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
 
         orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
@@ -341,7 +340,7 @@ class ConfirmBasketView(APIView):
     """
     Представление для подтверждения корзины и создания заказа.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [check_role_permission('customer', 'admin')]
 
     def post(self, request):
         """
@@ -366,4 +365,3 @@ class ConfirmBasketView(APIView):
         order.save()
 
         return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
-    
