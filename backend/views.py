@@ -123,7 +123,7 @@ class PartnerUpdateView(APIView):
     """
     serializer_class = FileUploadSerializer
     permission_classes = [
-        check_role_permission('admin'),
+        check_role_permission('admin', 'supplier'),
     ]
     def post(self, request, *args, **kwargs):
         """
@@ -365,3 +365,4 @@ class ConfirmBasketView(APIView):
         order.save()
 
         return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
+    
