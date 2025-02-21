@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 # Rest Framework
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
@@ -311,7 +312,6 @@ class OrderViewSet(ModelViewSet):
     permission_classes = [check_role_permission('admin', 'supplier')]
 
 
-@SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
     """
     Сет представлений для управления корзиной пользователя.
@@ -329,14 +329,27 @@ class BasketViewSet(ModelViewSet):
     def perform_create(self, serializer):
         """
         Создает новый заказ или использует существующий заказ со статусом "new".
+        Запрещает создание заказа, если хотя бы один продавец неактивен.
         """
-        order = Order.objects.filter(user=self.request.user, status="new").first()
+        user = self.request.user
 
+        if not user.is_active:
+            raise ValidationError("Ваш аккаунт неактивен. Вы не можете создавать заказы.")
+
+        order = Order.objects.filter(user=user, status="new").first()
         if not order:
-            order = Order.objects.create(user=self.request.user, status="new")
+            order = Order.objects.create(user=user, status="new")
 
-        serializer.save(user=self.request.user, status="new", id=order.id)
+        for item in serializer.validated_data.get("items", []):
+            product = item.get("product")
+            if product:
+                shop = product.shop
+                if not shop.user.is_active:
+                    raise ValidationError(
+                        f"Продавец {shop.user.email} неактивен. Невозможно создать заказ."
+                    )
 
+        serializer.save(user=user, status="new", id=order.id)
 
 @SWAGGER_CONFIGS["partner_orders_schema"]
 class PartnerOrders(APIView):
@@ -392,4 +405,26 @@ class ConfirmBasketView(APIView):
         order.save()
 
         return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
-    
+
+
+[SWAGGER_CONFIGS["disable_supplier_schema"]] 
+class ToggleSupplierActivityView(APIView):
+    """
+    Представление для включения/отключения активности пользователя.
+    Доступно только администраторам.
+    """
+    permission_classes = [check_role_permission('admin')]
+
+    def post(self, request, supplier_id):
+        """
+        Переключает статус активности пользователя. Продавец не может выставлять товары, покупатель не может делать заказы.
+        """
+        shop = get_object_or_404(Shop, user_id=supplier_id)
+        user = shop.user
+        user.is_active = not user.is_active
+        user.save()
+
+        return Response(
+            {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
+            status=status.HTTP_200_OK,
+        )

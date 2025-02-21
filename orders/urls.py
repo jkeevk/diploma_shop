@@ -33,10 +33,10 @@ from backend.views import (
     BasketViewSet,
     PartnerOrders,
     PartnerImportView,
-    ConfirmBasketView
+    ConfirmBasketView,
+    ToggleSupplierActivityView,
 )
 
-# Создание основного маршрутизатора для API
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"users", UserViewSet, basename="user")
@@ -81,6 +81,11 @@ urlpatterns = (
         path("categories", CategoryView.as_view(), name="categories"),
         path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
+        path(
+        "user/<int:supplier_id>/disable-orders/",
+        ToggleSupplierActivityView.as_view(),
+        name="disable-user-orders",
+        ),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

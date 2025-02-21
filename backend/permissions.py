@@ -11,10 +11,17 @@ class CheckRole(permissions.BasePermission):
 
     def has_permission(self, request, view):
         """
-        Глобальная проверка: пользователь должен быть аутентифицирован и иметь одну из требуемых ролей.
+        Глобальная проверка:
+        - Пользователь должен быть аутентифицирован.
+        - Пользователь должен быть активен (is_active=True).
+        - Пользователь должен иметь одну из требуемых ролей.
         """
         if not request.user.is_authenticated:
             return False
+
+        if not request.user.is_active:
+            raise PermissionDenied("Ваш аккаунт заблокирован или вы поставщик и отключили продажи. Обратитесь к администратору.")
+
         return request.user.role in self.required_roles
 
     def has_object_permission(self, request, view, obj):

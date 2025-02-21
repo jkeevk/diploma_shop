@@ -507,4 +507,47 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
+    "disable_supplier_schema": extend_schema(
+        summary="Переключить активность пользователя",
+        description="Позволяет администратору включить или отключить активность пользователя. "
+                    "Если активность отключена, товары продавца не будут отображаться в поиске, а покупатель не сможет купить товары продавца.",
+        parameters=[
+            OpenApiParameter(
+                name="supplier_id",
+                type=int,
+                location=OpenApiParameter.PATH,
+                description="ID продавца (пользователя с ролью supplier).",
+            ),
+        ],
+        responses={
+            200: {
+                "description": "Активность пользователя успешно изменена.",
+                "examples": {
+                    "application/json": {
+                        "message": "Активность магазина Магазин 1 изменена на False"
+                    }
+                }
+            },
+            404: {
+                "description": "Пользователь не найден.",
+                "examples": {
+                    "application/json": {
+                        "detail": "Not found."
+                    }
+                }
+            },
+        },
+        examples=[
+            OpenApiExample(
+                name="Успешный запрос",
+                value={"message": "Активность магазина Магазин 1 изменена на False"},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Продавец не найден",
+                value={"detail": "Not found."},
+                status_codes=["404"],
+            ),
+        ],
+    )
 }
