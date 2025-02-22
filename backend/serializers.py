@@ -22,7 +22,7 @@ from .models import (
     Shop,
     User,
     UserRole,
-    Parameter
+    Parameter,
 )
 from rest_framework import serializers
 
@@ -302,6 +302,24 @@ class OrderSerializer(serializers.ModelSerializer):
                     f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
                 )
 
+        for item_data in order_items_data:
+            product = item_data.get("product")
+            shop = item_data.get("shop")
+            quantity = item_data.get("quantity")
+
+            product_info = ProductInfo.objects.filter(
+                product=product, shop=shop
+            ).first()
+            if not product_info:
+                raise serializers.ValidationError(
+                    f"Товар {product.name} (ID={product.id}) отсутствует в магазине {shop.name} (ID={shop.id})."
+                )
+
+            if product_info.quantity < quantity:
+                raise serializers.ValidationError(
+                    f"Недостаточно товара {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрошено: {quantity}."
+                )
+
         order = Order.objects.filter(user=user, status="new").first()
         if not order:
             order = Order.objects.create(user=user, status="new")
@@ -322,6 +340,10 @@ class OrderSerializer(serializers.ModelSerializer):
                 OrderItem.objects.create(
                     order=order, product=product, shop=shop, quantity=quantity
                 )
+
+            product_info = ProductInfo.objects.get(product=product, shop=shop)
+            product_info.quantity -= quantity
+            product_info.save()
 
         return order
 
@@ -349,7 +371,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 item.delete()
 
         return instance
-    
+
 
 class PasswordResetSerializer(serializers.Serializer):
     """Сериализатор для сброса пароля."""
@@ -387,12 +409,14 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         except serializers.ValidationError as e:
             raise serializers.ValidationError(list(e.messages))
         return value
-    
+
 
 class OrderWithContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Order с указанием контактной информации."""
 
-    contact_id = serializers.PrimaryKeyRelatedField(source='contact', queryset=Contact.objects.all(), required=False)
+    contact_id = serializers.PrimaryKeyRelatedField(
+        source="contact", queryset=Contact.objects.all(), required=False
+    )
 
     class Meta:
         model = Order
@@ -410,12 +434,16 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
             shop = item_data.get("shop")
             quantity = item_data.get("quantity")
 
-            existing_item = OrderItem.objects.filter(order=order, product=product, shop=shop).first()
+            existing_item = OrderItem.objects.filter(
+                order=order, product=product, shop=shop
+            ).first()
 
             if existing_item:
                 existing_item.quantity += quantity
                 existing_item.save()
             else:
-                OrderItem.objects.create(order=order, product=product, shop=shop, quantity=quantity)
+                OrderItem.objects.create(
+                    order=order, product=product, shop=shop, quantity=quantity
+                )
 
         return order
