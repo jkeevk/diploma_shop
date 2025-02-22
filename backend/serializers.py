@@ -295,8 +295,14 @@ class OrderSerializer(serializers.ModelSerializer):
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
 
-        order = Order.objects.filter(user=user, status="new").first()
+        for item_data in order_items_data:
+            shop = item_data.get("shop")
+            if shop and not shop.user.is_active:
+                raise serializers.ValidationError(
+                    f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
+                )
 
+        order = Order.objects.filter(user=user, status="new").first()
         if not order:
             order = Order.objects.create(user=user, status="new")
 
@@ -343,7 +349,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 item.delete()
 
         return instance
-
+    
 
 class PasswordResetSerializer(serializers.Serializer):
     """Сериализатор для сброса пароля."""

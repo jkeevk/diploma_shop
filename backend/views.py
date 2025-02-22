@@ -2,15 +2,14 @@ import os
 
 # Django
 from django.contrib.auth.tokens import default_token_generator
-from django.core.management import call_command
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
 
 # Rest Framework
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
@@ -54,6 +53,10 @@ class LoginView(APIView):
 
         if serializer.is_valid():
             user = serializer.validated_data['user']
+            
+            user.last_login = timezone.now()
+            user.save(update_fields=['last_login'])
+            
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
@@ -66,7 +69,7 @@ class LoginView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
 
 @SWAGGER_CONFIGS["password_reset_schema"]
 class PasswordResetView(GenericAPIView):
@@ -329,27 +332,13 @@ class BasketViewSet(ModelViewSet):
     def perform_create(self, serializer):
         """
         Создает новый заказ или использует существующий заказ со статусом "new".
-        Запрещает создание заказа, если хотя бы один продавец неактивен.
         """
         user = self.request.user
-
-        if not user.is_active:
-            raise ValidationError("Ваш аккаунт неактивен. Вы не можете создавать заказы.")
-
         order = Order.objects.filter(user=user, status="new").first()
         if not order:
             order = Order.objects.create(user=user, status="new")
-
-        for item in serializer.validated_data.get("items", []):
-            product = item.get("product")
-            if product:
-                shop = product.shop
-                if not shop.user.is_active:
-                    raise ValidationError(
-                        f"Продавец {shop.user.email} неактивен. Невозможно создать заказ."
-                    )
-
         serializer.save(user=user, status="new", id=order.id)
+
 
 @SWAGGER_CONFIGS["partner_orders_schema"]
 class PartnerOrders(APIView):
