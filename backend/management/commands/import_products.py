@@ -7,7 +7,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         try:
-            # Собираем данные из всех моделей
             data = []
 
             shops = Shop.objects.all()
@@ -18,7 +17,6 @@ class Command(BaseCommand):
             category_data = [{"id": category.id, "name": category.name} for category in categories]
             data.append({"categories": category_data})
 
-            # Товары
             products = Product.objects.all()
             product_data = []
             for product in products:

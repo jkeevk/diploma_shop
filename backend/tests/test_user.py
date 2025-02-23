@@ -96,7 +96,6 @@ class TestUserRegistration:
         assert "password" in response.data
         assert "role" in response.data
 
-
 @pytest.mark.django_db
 class TestContactUserCRUD:
     """
@@ -109,9 +108,14 @@ class TestContactUserCRUD:
         """
         self.client = APIClient()
         self.user = User.objects.create_user(
-            username="testuser",
-            password="testpassword"
+            email="user@example.com",  # Обязательный аргумент
+            password="strongpassword123",
+            first_name="User",
+            last_name="Test",
+            role="customer",
+            is_active=True
         )
+        self.client.force_authenticate(user=self.user)  # Аутентификация пользователя
 
     def test_create_contact(self):
         """
@@ -119,20 +123,23 @@ class TestContactUserCRUD:
         """
         url = reverse("user-contacts-list", kwargs={"user_pk": self.user.pk})
         data = {
-            "name": "Test Contact",
-            "phone": "1234567890"
+            "city": "Test City",
+            "street": "Test Street",
+            "house": "123",
+            "phone": "+79991234567",
+            "user": self.user.pk  # Добавляем поле user
         }
         response = self.client.post(url, data, format="json")
 
-        assert response.status_code == status.HTTP_201_CREATED
-        assert Contact.objects.filter(name="Test Contact").exists()
+        assert response.status_code == status.HTTP_201_CREATED, f"Ожидался статус 201, получен {response.status_code}. Ответ: {response.data}"
+        assert Contact.objects.filter(city="Test City").exists()
 
     def test_list_contacts(self):
         """
         Тест получения списка контактов.
         """
-        Contact.objects.create(name="Contact One", phone="1234567890", user=self.user)
-        Contact.objects.create(name="Contact Two", phone="0987654321", user=self.user)
+        Contact.objects.create(city="City1", street="Street1", house="123", phone="+79991234567", user=self.user)
+        Contact.objects.create(city="City2", street="Street2", house="456", phone="+79997654321", user=self.user)
 
         url = reverse("user-contacts-list", kwargs={"user_pk": self.user.pk})
         response = self.client.get(url, format="json")
@@ -144,54 +151,57 @@ class TestContactUserCRUD:
         """
         Тест получения конкретного контакта.
         """
-        contact = Contact.objects.create(name="Test Contact", phone="1234567890", user=self.user)
+        contact = Contact.objects.create(city="Test City", street="Test Street", house="123", phone="+79991234567", user=self.user)
 
-        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "id": contact.pk})
+        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "pk": contact.pk})
         response = self.client.get(url, format="json")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["name"] == "Test Contact"
-        assert response.data["phone"] == "1234567890"
+        assert response.data["city"] == "Test City"
+        assert response.data["phone"] == "+79991234567"
 
     def test_update_contact(self):
         """
         Тест обновления контакта.
         """
-        contact = Contact.objects.create(name="Test Contact", phone="1234567890", user=self.user)
+        contact = Contact.objects.create(city="Test City", street="Test Street", house="123", phone="+79991234567", user=self.user)
 
-        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "id": contact.pk})
+        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "pk": contact.pk})
         updated_data = {
-            "name": "Updated Contact",
-            "phone": "9876543210"
+            "city": "Updated City",
+            "street": "Updated Street",
+            "house": "456",
+            "phone": "+79991111111",
+            "user": self.user.pk  # Добавляем поле user
         }
         response = self.client.put(url, updated_data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         contact.refresh_from_db()
-        assert contact.name == "Updated Contact"
-        assert contact.phone == "9876543210"
+        assert contact.city == "Updated City"
+        assert contact.phone == "+79991111111"
 
     def test_partial_update_contact(self):
         """
         Тест частичного обновления контакта.
         """
-        contact = Contact.objects.create(name="Test Contact", phone="1234567890", user=self.user)
+        contact = Contact.objects.create(city="Test City", street="Test Street", house="123", phone="+79991234567", user=self.user)
 
-        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "id": contact.pk})
-        partial_data = {"phone": "1112223333"}
+        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "pk": contact.pk})
+        partial_data = {"phone": "+79991111111"}
         response = self.client.patch(url, partial_data, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         contact.refresh_from_db()
-        assert contact.phone == "1112223333"
+        assert contact.phone == "+79991111111"
 
     def test_delete_contact(self):
         """
         Тест удаления контакта.
         """
-        contact = Contact.objects.create(name="Test Contact", phone="1234567890", user=self.user)
+        contact = Contact.objects.create(city="Test City", street="Test Street", house="123", phone="+79991234567", user=self.user)
 
-        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "id": contact.pk})
+        url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "pk": contact.pk})
         response = self.client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
