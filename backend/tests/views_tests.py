@@ -72,7 +72,7 @@ class CheckPytestTaskView(APIView):
                 continue
 
             if in_failures_section:
-                if "::" in line and ("FAILED" in line or "ERROR" in line):
+                if "::" in line and re.search(failed_tests_pattern, line):
                     test_name = line.split("::")[-1].split(" ")[0]
                     failed_tests.append(test_name)
 
