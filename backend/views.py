@@ -140,12 +140,10 @@ class PartnerUpdateView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if "file" not in request.FILES:
-            return Response(
-                {"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST
-            )
+        if 'file' not in request.FILES or not request.FILES['file']:
+            return Response({"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST)
 
-        uploaded_file = request.FILES["file"]
+        uploaded_file = request.FILES.get('file')
         file_path = os.path.join("data", uploaded_file.name)
 
         try:
@@ -167,9 +165,10 @@ class PartnerUpdateView(APIView):
             )
         except Exception as e:
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Ошибка при загрузке файла: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
+              
 
 @SWAGGER_CONFIGS["partner_import_schema"]
 class PartnerImportView(APIView):
