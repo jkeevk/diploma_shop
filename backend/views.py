@@ -314,7 +314,7 @@ class OrderViewSet(ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [check_role_permission('admin', 'supplier')]
 
-
+@SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
     """
     Сет представлений для управления корзиной пользователя.

@@ -6,8 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from celery.result import AsyncResult
+from backend.swagger_configs import SWAGGER_CONFIGS
 
 
+@SWAGGER_CONFIGS["run_pytest_schema"]
 class RunPytestView(APIView):
     """
     Представление для запуска pytest.
@@ -27,7 +29,7 @@ class RunPytestView(APIView):
             status=status.HTTP_202_ACCEPTED,
         )
 
-
+@SWAGGER_CONFIGS["check_pytest_task_schema"]
 class CheckPytestTaskView(APIView):
     """
     Представление для проверки статуса задачи pytest.

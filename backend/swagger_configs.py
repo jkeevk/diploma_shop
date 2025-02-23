@@ -549,5 +549,75 @@ SWAGGER_CONFIGS = {
                 status_codes=["404"],
             ),
         ],
-    )
+    ),
+    "run_pytest_schema": extend_schema(
+        summary="Запуск pytest",
+        description="Эндпоинт для запуска pytest. Доступен только для администраторов.",
+        responses={
+            202: {
+                "description": "Задача на выполнение pytest успешно создана.",
+                "content": {
+                    "application/json": {
+                        "example": {"task_id": "550e8400-e29b-41d4-a716-446655440000"}
+                    }
+                },
+            },
+            403: {
+                "description": "Доступ запрещен. Требуются права администратора.",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "You do not have permission to perform this action."}
+                    }
+                },
+            },
+        },
+    ),
+    "check_pytest_task_schema": extend_schema(
+        summary="Проверка статуса задачи pytest",
+        description="Эндпоинт для проверки статуса задачи pytest. Возвращает результат выполнения тестов.",
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description="ID задачи, возвращенный при запуске pytest.",
+            ),
+        ],
+        responses={
+            200: {
+                "description": "Результат выполнения тестов.",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "SUCCESS",
+                            "summary": {
+                                "passed": 5,
+                                "failed": 1,
+                                "errors": 0,
+                            },
+                            "successful_tests": ["test_example_1", "test_example_2"],
+                            "failed_tests": ["test_example_3"],
+                        }
+                    }
+                },
+            },
+            202: {
+                "description": "Задача ещё выполняется.",
+                "content": {
+                    "application/json": {
+                        "example": {"status": "PENDING", "message": "Задача ещё выполняется."}
+                    }
+                },
+            },
+            500: {
+                "description": "Ошибка при выполнении задачи.",
+                "content": {
+                    "application/json": {
+                        "example": {"status": "FAILURE", "message": "Задача завершилась с ошибкой."}
+                    }
+                },
+            },
+        },
+    ),
 }
+
