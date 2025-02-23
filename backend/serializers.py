@@ -41,7 +41,16 @@ class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
-
+    def validate(self, data):
+            """
+            Проверяет данные перед созданием или обновлением контакта.
+            """
+            try:
+                contact = Contact(**data)
+                contact.clean()
+            except ValidationError as e:
+                raise serializers.ValidationError(e.message)
+            return data
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для модели Category."""
@@ -183,7 +192,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "last_name",
             "role",
         ]
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "email": {"required": True},
+            "role": {"required": True},
+        }
 
     def validate_role(self, value):
         """Проверка на корректность значения роли."""

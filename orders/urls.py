@@ -36,6 +36,7 @@ from backend.views import (
     ConfirmBasketView,
     ToggleSupplierActivityView,
 )
+from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -57,6 +58,12 @@ urlpatterns = (
         path("user/login", LoginView.as_view(), name="login"),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         path("admin/", admin.site.urls, name="admin"),
+        path("tests/run-pytest/", RunPytestView.as_view(), name="run_pytest"),
+        path(
+            "tests/check-pytest-task/<str:task_id>/",
+            CheckPytestTaskView.as_view(),
+            name="check_pytest_task",
+        ),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register", RegisterView.as_view(), name="user-register"),
@@ -77,14 +84,14 @@ urlpatterns = (
         ),
         path("partner/update", PartnerUpdateView.as_view(), name="partner-update"),
         path("partner/import", PartnerImportView.as_view(), name="partner-export"),
-        path('basket/confirm', ConfirmBasketView.as_view(), name='confirm-basket'),
+        path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
         path("categories", CategoryView.as_view(), name="categories"),
         path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path(
-        "user/<int:supplier_id>/disable-orders/",
-        ToggleSupplierActivityView.as_view(),
-        name="disable-user-orders",
+            "user/<int:supplier_id>/disable-orders/",
+            ToggleSupplierActivityView.as_view(),
+            name="disable-user-orders",
         ),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

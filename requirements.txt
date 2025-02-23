@@ -33,6 +33,7 @@ psycopg2-binary==2.9.10
 PyJWT==2.10.1
 pytest==8.3.4
 pytest-django==4.10.0
+pytest-mock==3.14.0
 python-dateutil==2.9.0.post0
 pytz==2024.2
 PyYAML==6.0.2

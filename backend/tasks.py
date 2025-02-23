@@ -5,9 +5,11 @@ from django.urls import reverse
 import logging
 from .models import User, Order, Shop
 from django.core.management import call_command
-
+import subprocess
+import re
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task
 def send_confirmation_email_async(user_id, token):
@@ -115,6 +117,7 @@ def send_email_to_customer_async(recipient_email, order_id, contact_id):
             f"Failed to send confirmation email to {recipient_email} for order {order_id}: {e}"
         )
 
+
 @shared_task
 def export_products_task(file_path):
     """Асинхронно экспортирует данные о продуктах."""
@@ -124,6 +127,7 @@ def export_products_task(file_path):
     except Exception as e:
         return {"error": str(e)}
 
+
 @shared_task
 def import_products_task():
     """Асинхронно импортирует данные о продуктах."""
@@ -131,4 +135,44 @@ def import_products_task():
         call_command("import_products")
         return {"message": "Данные успешно импортированы"}
     except Exception as e:
+        return {"error": str(e)}
+
+
+@shared_task
+def run_pytest():
+    """
+    Асинхронно запускает команду pytest и возвращает результат.
+    """
+    try:
+        logger.info("Запуск pytest...")
+        result = subprocess.run(
+            ["pytest"],
+            capture_output=True,
+            text=True,
+        )
+        logger.info(f"Результат pytest: {result}")
+
+        output = result.stdout
+        summary = re.search(r"(\d+) passed.*?(\d+) failed.*?(\d+) errors", output)
+        if summary:
+            passed = int(summary.group(1))
+            failed = int(summary.group(2))
+            errors = int(summary.group(3))
+        else:
+            passed = failed = errors = 0
+
+        failed_tests = []
+        for line in output.splitlines():
+            if "FAILED" in line or "ERROR" in line:
+                failed_tests.append(line.strip())
+
+        return {
+            "passed": passed,
+            "failed": failed,
+            "errors": errors,
+            "failed_tests": failed_tests,
+            "output": output,
+        }
+    except Exception as e:
+        logger.error(f"Ошибка при запуске pytest: {e}")
         return {"error": str(e)}
