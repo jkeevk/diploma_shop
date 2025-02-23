@@ -28,12 +28,31 @@ from rest_framework import serializers
 
 
 class ShopSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Shop."""
-
     class Meta:
         model = Shop
-        fields = ["id", "name"]
+        fields = ["id", "name", "url", "user"]
 
+    def create(self, validated_data):
+        """
+        Создает магазин, если он не существует.
+        Если магазин с таким именем или URL уже существует, возвращает его.
+        """
+        name = validated_data.get("name")
+        url = validated_data.get("url")
+        user = validated_data.get("user")
+
+        shop, created = Shop.objects.get_or_create(
+            name=name,
+            defaults={"url": url, "user": user},
+        )
+
+        if not created:
+            shop.url = url
+            shop.user = user
+            shop.save()
+
+        return shop
+    
 
 class ContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Contact."""

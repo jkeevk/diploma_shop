@@ -11,7 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 # Rest Framework
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -191,8 +191,6 @@ class PartnerImportView(APIView):
             )
 
 
-
-@SWAGGER_CONFIGS["product_viewset_schema"]
 class ProductViewSet(ModelViewSet):
     """
     Сет представлений для управления товарами. Поддерживает фильтрацию и поиск.
@@ -276,13 +274,20 @@ class CategoryView(ListAPIView):
 
 
 @SWAGGER_CONFIGS["shop_schema"]
-class ShopView(ListAPIView):
+class ShopView(ListCreateAPIView):
     """
-    Представление для получения списка магазинов.
+    Представление для получения списка магазинов и создания нового магазина.
+    Пользователи с ролью admin или supplier могут создавать магазины.
     """
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
+    permission_classes = [check_role_permission('admin', 'supplier')]
 
+    def perform_create(self, serializer):
+        """
+        При создании магазина автоматически связываем его с текущим пользователем.
+        """
+        serializer.save(user=self.request.user)
 
 @SWAGGER_CONFIGS["contact_viewset_schema"]
 class ContactViewSet(ModelViewSet):
