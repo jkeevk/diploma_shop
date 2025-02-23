@@ -1,7 +1,6 @@
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 
-
 class CheckRole(permissions.BasePermission):
     """
     Разрешение, которое проверяет, имеет ли пользователь хотя бы одну из указанных ролей.
@@ -40,6 +39,13 @@ class CheckRole(permissions.BasePermission):
             raise PermissionDenied("Только администратор может изменять роль пользователя.")
 
         return False
+
+    def check_user_active(self, user):
+        """
+        Проверяет, активен ли пользователь.
+        """
+        if not user.is_active:
+            raise PermissionDenied("Пользователь неактивен и не может быть изменен.")
 
 def check_role_permission(*required_roles):
     """

@@ -411,10 +411,11 @@ class ToggleSupplierActivityView(APIView):
 
     def post(self, request, supplier_id):
         """
-        Переключает статус активности пользователя. Продавец не может выставлять товары, покупатель не может делать заказы.
+        Переключает статус активности пользователя. 
+        Продавец не может выставлять товары, покупатель не может делать заказы.
         """
-        shop = get_object_or_404(Shop, user_id=supplier_id)
-        user = shop.user
+        user = get_object_or_404(User, id=supplier_id)
+        
         user.is_active = not user.is_active
         user.save()
 
