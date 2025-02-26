@@ -619,5 +619,96 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
+    "run_pytest_schema": extend_schema(
+        summary="Запуск pytest с измерением покрытия",
+        description="Эндпоинт для запуска тестов с измерением покрытия (pytest-cov). "
+                    "Доступен только для администраторов. Возвращает результаты выполнения тестов и отчет о покрытии.",
+        responses={
+            200: {
+                "description": "Тесты успешно выполнены",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "success",
+                            "output": "Результаты выполнения тестов...",
+                            "error": "",
+                            "coverage": {
+                                "total": "81%",
+                                "details": {
+                                    "backend/models.py": "80%",
+                                    "backend/views.py": "83%",
+                                },
+                            },
+                        }
+                    }
+                },
+            },
+            400: {
+                "description": "Ошибка при выполнении тестов",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "error",
+                            "output": "Результаты выполнения тестов...",
+                            "error": "Ошибки выполнения тестов...",
+                        }
+                    }
+                },
+            },
+            403: {
+                "description": "Доступ запрещен. Требуются права администратора.",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "You do not have permission to perform this action."}
+                    }
+                },
+            },
+            500: {
+                "description": "Внутренняя ошибка сервера",
+                "content": {
+                    "application/json": {
+                        "example": {"status": "error", "message": "Internal server error."}
+                    }
+                },
+            },
+        },
+        examples=[
+            OpenApiExample(
+                name="Успешный запуск тестов",
+                value={
+                    "status": "success",
+                    "output": "Результаты выполнения тестов...",
+                    "error": "",
+                    "coverage": {
+                        "total": "81%",
+                        "details": {
+                            "backend/models.py": "80%",
+                            "backend/views.py": "83%",
+                        },
+                    },
+                },
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка при выполнении тестов",
+                value={
+                    "status": "error",
+                    "output": "Результаты выполнения тестов...",
+                    "error": "Ошибки выполнения тестов...",
+                },
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Доступ запрещен",
+                value={"detail": "You do not have permission to perform this action."},
+                status_codes=["403"],
+            ),
+            OpenApiExample(
+                name="Внутренняя ошибка сервера",
+                value={"status": "error", "message": "Internal server error."},
+                status_codes=["500"],
+            ),
+        ],
+    ),
 }
 
