@@ -1,6 +1,5 @@
 import pytest
 from django.db import IntegrityError
-from rest_framework.test import APIClient
 from backend.models import (
     Category, Shop, Product, ProductInfo, Parameter, ProductParameter
 )

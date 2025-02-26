@@ -1,8 +1,7 @@
 import pytest
 from django.urls import reverse
-from rest_framework.test import APIClient
 from rest_framework import status
-from backend.models import Contact, User
+from backend.models import Contact
 
 
 @pytest.mark.django_db
@@ -11,24 +10,12 @@ class TestUserContacts:
     Тесты для работы с контактами пользователя.
     """
 
-    def setup_method(self):
-        """
-        Инициализация клиента и пользователя перед каждым тестом.
-        """
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            email="test@example.com",
-            password="strongpassword123",
-            first_name="Test",
-            last_name="User",
-            role="customer",
-        )
-        self.client.force_authenticate(user=self.user)
-
-    def test_create_contact(self):
+    def test_create_contact(self, api_client, customer):
         """
         Тест создания контакта.
         """
+        api_client.force_authenticate(user=customer)
+
         data = {
             "city": "Moscow",
             "street": "Lenina",
@@ -37,15 +24,15 @@ class TestUserContacts:
             "building": "A",
             "apartment": "15",
             "phone": "+79991234567",
-            "user": self.user.id,
+            "user": customer.id,
         }
 
         url = reverse("user-contacts-list")
-        response = self.client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_201_CREATED
 
-        contact = Contact.objects.get(user=self.user)
+        contact = Contact.objects.get(user=customer)
         assert contact.city == "Moscow"
         assert contact.street == "Lenina"
         assert contact.house == "10"
@@ -54,10 +41,12 @@ class TestUserContacts:
         assert contact.apartment == "15"
         assert contact.phone == "+79991234567"
 
-    def test_create_contact_with_invalid_phone(self):
+    def test_create_contact_with_invalid_phone(self, api_client, customer):
         """
         Тест создания контакта с неверным номером телефона.
         """
+        api_client.force_authenticate(user=customer)
+
         data = {
             "city": "Moscow",
             "street": "Lenina",
@@ -66,22 +55,24 @@ class TestUserContacts:
             "building": "A",
             "apartment": "15",
             "phone": "invalid_phone",
-            "user": self.user.id,
+            "user": customer.id,
         }
 
         url = reverse("user-contacts-list")
-        response = self.client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "phone" in response.data
 
-    def test_create_max_contacts(self):
+    def test_create_max_contacts(self, api_client, customer):
         """
         Тест создания максимального количества контактов (5).
         """
+        api_client.force_authenticate(user=customer)
+
         for i in range(5):
             Contact.objects.create(
-                user=self.user,
+                user=customer,
                 city=f"City {i}",
                 street=f"Street {i}",
                 house=f"{i}",
@@ -99,11 +90,11 @@ class TestUserContacts:
             "building": "A",
             "apartment": "15",
             "phone": "+79991234567",
-            "user": self.user.id,
+            "user": customer.id,
         }
 
         url = reverse("user-contacts-list")
-        response = self.client.post(url, data, format="json")
+        response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "non_field_errors" in response.data
@@ -112,23 +103,14 @@ class TestUserContacts:
             in response.data["non_field_errors"][0]
         )
 
-    def test_delete_contact(self):
+    def test_delete_contact(self, api_client, customer, contact):
         """
         Тест удаления контакта.
         """
-        contact = Contact.objects.create(
-            user=self.user,
-            city="Moscow",
-            street="Lenina",
-            house="10",
-            structure="1",
-            building="A",
-            apartment="15",
-            phone="+79991234567",
-        )
+        api_client.force_authenticate(user=customer)
 
         url = reverse("user-contacts-detail", args=[contact.id])
-        response = self.client.delete(url)
+        response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Contact.objects.filter(id=contact.id).exists()
