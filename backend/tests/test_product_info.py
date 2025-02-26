@@ -1,9 +1,10 @@
 import pytest
 from rest_framework.test import APIClient
 from backend.models import (
-    Category, Shop, Product, User, ProductInfo
+    Category, Shop, Product, ProductInfo
 )
 from django.core.exceptions import ValidationError
+
 
 @pytest.mark.django_db
 class TestProductInfo:
@@ -11,25 +12,10 @@ class TestProductInfo:
     Тесты для модели ProductInfo.
     """
 
-    def setup_method(self):
-        """
-        Инициализация клиента перед каждым тестом.
-        """
-        self.client = APIClient()
-
-    def test_create_product_info(self):
+    def test_create_product_info(self, supplier):
         """
         Тест создания информации о товаре.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -62,19 +48,10 @@ class TestProductInfo:
         assert product_info.price == 100.00
         assert product_info.price_rrc == 120.00
 
-    def test_product_info_unique_together(self):
+    def test_product_info_unique_together(self, supplier):
         """
         Тест, проверяющий уникальность сочетания продукта и магазина в ProductInfo.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -110,19 +87,10 @@ class TestProductInfo:
                 price_rrc=220.00,
             )
 
-    def test_product_info_price_validation(self):
+    def test_product_info_price_validation(self, supplier):
         """
         Тест для проверки валидации цены.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -150,19 +118,10 @@ class TestProductInfo:
             )
             product_info.clean()
 
-    def test_product_info_quantity_validation(self):
+    def test_product_info_quantity_validation(self, supplier):
         """
         Тест для проверки валидации количества.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -190,19 +149,10 @@ class TestProductInfo:
             )
             product_info.clean()
 
-    def test_product_info_str_method(self):
+    def test_product_info_str_method(self, supplier):
         """
         Тест метода __str__ модели ProductInfo.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",

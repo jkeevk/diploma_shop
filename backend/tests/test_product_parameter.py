@@ -2,8 +2,9 @@ import pytest
 from django.db import IntegrityError
 from rest_framework.test import APIClient
 from backend.models import (
-    Category, Shop, Product, User, ProductInfo, Parameter, ProductParameter
+    Category, Shop, Product, ProductInfo, Parameter, ProductParameter
 )
+
 
 @pytest.mark.django_db
 class TestProductParameter:
@@ -11,25 +12,10 @@ class TestProductParameter:
     Тесты для модели ProductParameter.
     """
 
-    def setup_method(self):
-        """
-        Инициализация клиента перед каждым тестом.
-        """
-        self.client = APIClient()
-
-    def test_create_product_parameter(self):
+    def test_create_product_parameter(self, supplier):
         """
         Тест создания параметра товара.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -69,19 +55,10 @@ class TestProductParameter:
         assert product_parameter.parameter == parameter
         assert product_parameter.value == "Test Value"
 
-    def test_update_product_parameter(self):
+    def test_update_product_parameter(self, supplier):
         """
         Тест обновления параметра товара.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -122,19 +99,10 @@ class TestProductParameter:
 
         assert product_parameter.value == "Updated Value"
 
-    def test_delete_product_parameter(self):
+    def test_delete_product_parameter(self, supplier):
         """
         Тест удаления параметра товара.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -175,19 +143,10 @@ class TestProductParameter:
 
         assert not ProductParameter.objects.filter(id=product_parameter_id).exists()
 
-    def test_create_product_parameter_without_required_fields(self):
+    def test_create_product_parameter_without_required_fields(self, supplier):
         """
         Тест создания параметра товара без обязательных полей.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
@@ -223,19 +182,10 @@ class TestProductParameter:
                 value="Test Value",
             )
 
-    def test_create_duplicate_product_parameter(self):
+    def test_create_duplicate_product_parameter(self, supplier):
         """
         Тест создания дубликата параметра товара.
         """
-        supplier = User.objects.create_user(
-            email="supplier@example.com",
-            password="strongpassword123",
-            first_name="Supplier",
-            last_name="User",
-            role="supplier",
-            is_active=True
-        )
-
         shop = Shop.objects.create(
             name="Supplier Shop",
             url="http://supplier.com",
