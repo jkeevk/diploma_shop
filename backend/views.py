@@ -264,12 +264,24 @@ class ConfirmRegistrationView(APIView):
 
 
 @SWAGGER_CONFIGS["category_schema"]
-class CategoryView(ListAPIView):
+class CategoryViewSet(ModelViewSet):
     """
-    Представление для получения списка категорий товаров.
+    ViewSet для работы с категориями.
+    Поддерживает все CRUD операции.
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+    def get_permissions(self):
+        """
+        Настройка прав доступа в зависимости от действия.
+        """
+        if self.action in ["list", "retrieve"]:
+            permission_classes = []
+        elif self.action in ["create", "update", "partial_update", "destroy"]:
+            permission_classes = [check_role_permission("admin")]
+
+        return [permission() for permission in permission_classes]
 
 
 @SWAGGER_CONFIGS["shop_schema"]
