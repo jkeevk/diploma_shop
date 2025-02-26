@@ -36,23 +36,26 @@
 
 ## Технологии
 
-- **Python 3.10+**
-- **Django**
-- **Django Rest Framework (DRF)**
-- **PostgreSQL** (в качестве базы данных)
-- **Redis** (для кеширования и Celery)
-- **Celery** (для асинхронных задач, таких как отправка email-уведомлений)
-- **Docker** (для контейнеризации)
-- **Nginx** (как reverse proxy)
-- **Swagger/Redoc** (для документации API)
+- **Python 3.10+**  
+- **Django** (веб-фреймворк для создания приложения)  
+- **Django Rest Framework (DRF)** (для создания RESTful API)  
+- **PostgreSQL** (в качестве основной базы данных)  
+- **Redis** (для кеширования и работы с Celery)  
+- **Celery** (для выполнения асинхронных задач, таких как отправка email-уведомлений, запуска тестов, импорт/экспорт товаров)  
+- **Docker** (для контейнеризации приложения и зависимостей)  
+- **Nginx** (как reverse proxy для обработки HTTP-запросов)  
+- **Swagger/Redoc** (для автоматической документации API)  
+- **pytest** (для написания и запуска unit- и integration-тестов)  
+- **pytest-django** (плагин для интеграции pytest с Django)  
+- **pytest-cov** (для проверки покрытия кода тестами)  
 
 ## Установка и запуск
 
 ### Предварительные требования
 
-1. Убедитесь, что у вас установлена ОС Linux или MacOS.
-2. Установите Python 3.10 или новее.
-3. Установите IDE с поддержкой Python (например, PyCharm, VS Code).
+1. Убедитесь, что у вас установлена ОС Linux или MacOS. (опционально)
+2. Установите Python 3.10 или новее. (опционально)
+3. Установите IDE с поддержкой Python (например, PyCharm, VS Code). (опционально)
 4. Установите [Docker](https://www.docker.com/) и [Docker Compose](https://docs.docker.com/compose/install/).
 
 ### Порядок запуска
@@ -63,19 +66,7 @@
 
    ```cd diploma_shop```
 
-2. Создать виртуальное окружение и активировать его:
-
-    ```python3 -m venv venv```
-
-    ```source venv/bin/activate```
-
-3. Установить зависимости:
-
-    ```pip install -r requirements.txt```
-
-4. Создать файл .env и заполнить значения переменных окружения из примера файла .env.example
-
-5. Запустить контейнеры с помощью Docker Compose:
+2. Запустить контейнеры с помощью Docker Compose:
 
     ```docker-compose up -d --build```
 
@@ -92,6 +83,7 @@
 После успешного запуска сервер будет доступен по адресу: http://127.0.0.1/.
 
 ### Документация API
+
 Документация API доступна в следующих форматах:
 
 Swagger: http://127.0.0.1/swagger
@@ -102,7 +94,9 @@ Redoc: http://127.0.0.1/redoc
 ### Контакты:
 
 Если у вас есть вопросы или предложения, свяжитесь со мной:
+
 Email: jkeevk@yandex.ru
+
 GitHub: [jkeevk](https://github.com/jkeevk/)
 
 Ссылка на задание дипломного проекта: [Диплом](https://github.com/netology-code/python-final-diplom)
