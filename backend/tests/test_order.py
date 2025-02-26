@@ -1,5 +1,6 @@
 import pytest
 from backend.models import Order, User
+from django.core.exceptions import ValidationError
 
 @pytest.mark.django_db
 class TestOrderModel:
@@ -48,8 +49,9 @@ class TestOrderModel:
         """
         Тест создания заказа с некорректным статусом.
         """
-        with pytest.raises(ValueError):
-            Order.objects.create(user=customer, status="invalid_status")
+        with pytest.raises(ValidationError):
+            order = Order(user=customer, status="invalid_status")
+            order.full_clean() 
 
     def test_order_assigned_to_correct_user(self, customer, admin):
         """
