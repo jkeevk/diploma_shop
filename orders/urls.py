@@ -35,6 +35,7 @@ from backend.views import (
     PartnerImportView,
     ConfirmBasketView,
     ToggleSupplierActivityView,
+    RunCoverageTestsView,
 )
 from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
 
@@ -87,6 +88,7 @@ urlpatterns = (
         path("partner/import", PartnerImportView.as_view(), name="partner-export"),
         path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
         path("shops", ShopView.as_view(), name="shops"),
+        path("run-tests/", RunCoverageTestsView.as_view(), name="run-tests"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path(
             "user/<int:supplier_id>/disable-orders/",
