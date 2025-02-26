@@ -108,14 +108,14 @@ class TestContactUserCRUD:
         """
         self.client = APIClient()
         self.user = User.objects.create_user(
-            email="user@example.com",  # Обязательный аргумент
+            email="user@example.com",
             password="strongpassword123",
             first_name="User",
             last_name="Test",
             role="customer",
             is_active=True
         )
-        self.client.force_authenticate(user=self.user)  # Аутентификация пользователя
+        self.client.force_authenticate(user=self.user)
 
     def test_create_contact(self):
         """
@@ -127,7 +127,7 @@ class TestContactUserCRUD:
             "street": "Test Street",
             "house": "123",
             "phone": "+79991234567",
-            "user": self.user.pk  # Добавляем поле user
+            "user": self.user.pk
         }
         response = self.client.post(url, data, format="json")
 
@@ -172,7 +172,7 @@ class TestContactUserCRUD:
             "street": "Updated Street",
             "house": "456",
             "phone": "+79991111111",
-            "user": self.user.pk  # Добавляем поле user
+            "user": self.user.pk
         }
         response = self.client.put(url, updated_data, format="json")
 
@@ -188,10 +188,10 @@ class TestContactUserCRUD:
         contact = Contact.objects.create(city="Test City", street="Test Street", house="123", phone="+79991234567", user=self.user)
 
         url = reverse("user-contacts-detail", kwargs={"user_pk": self.user.pk, "pk": contact.pk})
-        partial_data = {"phone": "+79991111111"}
+        partial_data = {"phone": "+79991111111", "user": self.user.pk}
         response = self.client.patch(url, partial_data, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK, f"Ожидался статус 200, получен {response.status_code}. Ответ: {response.data}"
         contact.refresh_from_db()
         assert contact.phone == "+79991111111"
 
