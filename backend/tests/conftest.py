@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+from backend.models import Category, Shop, Product
 
 User = get_user_model()
 
@@ -47,4 +48,27 @@ def customer():
         last_name="User",
         role="customer",
         is_active=True
+    )
+
+@pytest.fixture
+def category():
+    """Фикстура для создания категории."""
+    return Category.objects.create(name="Test Category")
+
+@pytest.fixture
+def shop(supplier):
+    """Фикстура для создания магазина."""
+    return Shop.objects.create(
+        name="Supplier Shop",
+        url="http://supplier.com",
+        user=supplier,
+    )
+
+@pytest.fixture
+def product(category):
+    """Фикстура для создания продукта."""
+    return Product.objects.create(
+        name="Test Product",
+        model="Test Model",
+        category=category,
     )
