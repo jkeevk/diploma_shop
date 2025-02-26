@@ -1,8 +1,5 @@
 import pytest
-from rest_framework.test import APIClient
-from backend.models import (
-    Category, Shop, Product, ProductInfo
-)
+from backend.models import ProductInfo
 from django.core.exceptions import ValidationError
 
 
@@ -12,26 +9,10 @@ class TestProductInfo:
     Тесты для модели ProductInfo.
     """
 
-    def test_create_product_info(self, supplier):
+    def test_create_product_info(self, shop, product):
         """
         Тест создания информации о товаре.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
         product_info = ProductInfo.objects.create(
             product=product,
             shop=shop,
@@ -48,26 +29,10 @@ class TestProductInfo:
         assert product_info.price == 100.00
         assert product_info.price_rrc == 120.00
 
-    def test_product_info_unique_together(self, supplier):
+    def test_product_info_unique_together(self, shop, product):
         """
         Тест, проверяющий уникальность сочетания продукта и магазина в ProductInfo.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
         product_info1 = ProductInfo.objects.create(
             product=product,
             shop=shop,
@@ -87,26 +52,10 @@ class TestProductInfo:
                 price_rrc=220.00,
             )
 
-    def test_product_info_price_validation(self, supplier):
+    def test_product_info_price_validation(self, shop, product):
         """
         Тест для проверки валидации цены.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
         with pytest.raises(ValidationError):
             product_info = ProductInfo(
                 product=product,
@@ -118,26 +67,10 @@ class TestProductInfo:
             )
             product_info.clean()
 
-    def test_product_info_quantity_validation(self, supplier):
+    def test_product_info_quantity_validation(self, shop, product):
         """
         Тест для проверки валидации количества.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
         with pytest.raises(ValidationError):
             product_info = ProductInfo(
                 product=product,
@@ -149,26 +82,10 @@ class TestProductInfo:
             )
             product_info.clean()
 
-    def test_product_info_str_method(self, supplier):
+    def test_product_info_str_method(self, shop, product):
         """
         Тест метода __str__ модели ProductInfo.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
         product_info = ProductInfo.objects.create(
             product=product,
             shop=shop,
