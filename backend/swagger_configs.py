@@ -53,7 +53,9 @@ SWAGGER_CONFIGS = {
             },
             401: {
                 "description": "Неавторизованный доступ",
-                "content": {"application/json": {"example": {"detail": "Unauthorized"}}},
+                "content": {
+                    "application/json": {"example": {"detail": "Unauthorized"}}
+                },
             },
         },
     ),
@@ -94,7 +96,9 @@ SWAGGER_CONFIGS = {
             200: {
                 "description": "Пароль успешно изменён.",
                 "content": {
-                    "application/json": {"example": {"message": "Password reset successful."}}
+                    "application/json": {
+                        "example": {"message": "Password reset successful."}
+                    }
                 },
             },
             400: {
@@ -131,7 +135,9 @@ SWAGGER_CONFIGS = {
             200: {
                 "description": "Данные успешно загружены",
                 "content": {
-                    "application/json": {"example": {"message": "Data uploaded successfully."}}
+                    "application/json": {
+                        "example": {"message": "Data uploaded successfully."}
+                    }
                 },
             },
             400: {
@@ -168,9 +174,7 @@ SWAGGER_CONFIGS = {
                 "description": "Пользователь не связан с магазином",
                 "content": {
                     "application/json": {
-                        "example": {
-                            "detail": "Вы не связаны с магазином."
-                        }
+                        "example": {"detail": "Вы не связаны с магазином."}
                     }
                 },
             },
@@ -178,9 +182,7 @@ SWAGGER_CONFIGS = {
                 "description": "Пользователь не авторизован",
                 "content": {
                     "application/json": {
-                        "example": {
-                            "detail": "Пожалуйста, войдите в систему."
-                        }
+                        "example": {"detail": "Пожалуйста, войдите в систему."}
                     }
                 },
             },
@@ -188,9 +190,7 @@ SWAGGER_CONFIGS = {
                 "description": "Ошибка сервера",
                 "content": {
                     "application/json": {
-                        "example": {
-                            "error": "Ошибка при импорте данных: "
-                        }
+                        "example": {"error": "Ошибка при импорте данных: "}
                     }
                 },
             },
@@ -220,7 +220,7 @@ SWAGGER_CONFIGS = {
     ),
     "product_viewset_schema": extend_schema_view(
         list=extend_schema(
-            description="Получить список товаров. Фильтрация возможна по категории, имени товара и модели.",
+            description="Получить список всех товаров. Фильтрация возможна по категории, имени товара и модели.",
             summary="Список товаров",
             responses={200: ProductSerializer(many=True)},
         ),
@@ -276,6 +276,41 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
+    "category_viewset_schema": extend_schema_view(
+        list=extend_schema(
+            description="Получить список всех категорий. Фильтрация возможна по названию.",
+            summary="Список категорий",
+            responses={200: CategorySerializer(many=True)},
+        ),
+        create=extend_schema(
+            description="Создать новую категорию.",
+            summary="Создание категории",
+            request=CategorySerializer,
+            responses={201: CategorySerializer},
+        ),
+        retrieve=extend_schema(
+            description="Получить информацию о категории по её ID.",
+            summary="Получение категории",
+            responses={200: CategorySerializer},
+        ),
+        update=extend_schema(
+            description="Обновить информацию о категории по её ID.",
+            summary="Обновление категории",
+            request=CategorySerializer,
+            responses={200: CategorySerializer},
+        ),
+        partial_update=extend_schema(
+            description="Частичное обновление информации о категории.",
+            summary="Частичное обновление категории",
+            request=CategorySerializer,
+            responses={200: CategorySerializer},
+        ),
+        destroy=extend_schema(
+            description="Удалить категорию по ID.",
+            summary="Удаление категории",
+            responses={204: None},
+        ),
+    ),
     "confirm_registration_schema": extend_schema(
         summary="Активация аккаунта",
         description="Активация аккаунта пользователя с помощью подтверждения по токену, который был отправлен на email.",
@@ -283,13 +318,17 @@ SWAGGER_CONFIGS = {
             200: {
                 "description": "Аккаунт успешно активирован",
                 "content": {
-                    "application/json": {"example": {"message": "Account activated successfully."}}
+                    "application/json": {
+                        "example": {"message": "Account activated successfully."}
+                    }
                 },
             },
             404: {
                 "description": "Пользователь не найден или неверный токен",
                 "content": {
-                    "application/json": {"example": {"detail": "User not found or invalid token."}}
+                    "application/json": {
+                        "example": {"detail": "User not found or invalid token."}
+                    }
                 },
             },
         },
@@ -510,7 +549,7 @@ SWAGGER_CONFIGS = {
     "disable_supplier_schema": extend_schema(
         summary="Переключить активность пользователя",
         description="Позволяет администратору включить или отключить активность пользователя. "
-                    "Если активность отключена, товары продавца не будут отображаться в поиске, а покупатель не сможет купить товары продавца.",
+        "Если активность отключена, товары продавца не будут отображаться в поиске, а покупатель не сможет купить товары продавца.",
         parameters=[
             OpenApiParameter(
                 name="supplier_id",
@@ -526,15 +565,11 @@ SWAGGER_CONFIGS = {
                     "application/json": {
                         "message": "Активность магазина Магазин 1 изменена на False"
                     }
-                }
+                },
             },
             404: {
                 "description": "Пользователь не найден.",
-                "examples": {
-                    "application/json": {
-                        "detail": "Not found."
-                    }
-                }
+                "examples": {"application/json": {"detail": "Not found."}},
             },
         },
         examples=[
@@ -566,7 +601,9 @@ SWAGGER_CONFIGS = {
                 "description": "Доступ запрещен. Требуются права администратора.",
                 "content": {
                     "application/json": {
-                        "example": {"detail": "You do not have permission to perform this action."}
+                        "example": {
+                            "detail": "You do not have permission to perform this action."
+                        }
                     }
                 },
             },
@@ -605,7 +642,10 @@ SWAGGER_CONFIGS = {
                 "description": "Задача ещё выполняется.",
                 "content": {
                     "application/json": {
-                        "example": {"status": "PENDING", "message": "Задача ещё выполняется."}
+                        "example": {
+                            "status": "PENDING",
+                            "message": "Задача ещё выполняется.",
+                        }
                     }
                 },
             },
@@ -613,7 +653,10 @@ SWAGGER_CONFIGS = {
                 "description": "Ошибка при выполнении задачи.",
                 "content": {
                     "application/json": {
-                        "example": {"status": "FAILURE", "message": "Задача завершилась с ошибкой."}
+                        "example": {
+                            "status": "FAILURE",
+                            "message": "Задача завершилась с ошибкой.",
+                        }
                     }
                 },
             },
@@ -622,7 +665,7 @@ SWAGGER_CONFIGS = {
     "run_pytest_schema": extend_schema(
         summary="Запуск pytest с измерением покрытия",
         description="Эндпоинт для запуска тестов с измерением покрытия (pytest-cov). "
-                    "Доступен только для администраторов. Возвращает результаты выполнения тестов и отчет о покрытии.",
+        "Доступен только для администраторов. Возвращает результаты выполнения тестов и отчет о покрытии.",
         responses={
             200: {
                 "description": "Тесты успешно выполнены",
@@ -659,7 +702,9 @@ SWAGGER_CONFIGS = {
                 "description": "Доступ запрещен. Требуются права администратора.",
                 "content": {
                     "application/json": {
-                        "example": {"detail": "You do not have permission to perform this action."}
+                        "example": {
+                            "detail": "You do not have permission to perform this action."
+                        }
                     }
                 },
             },
@@ -667,7 +712,10 @@ SWAGGER_CONFIGS = {
                 "description": "Внутренняя ошибка сервера",
                 "content": {
                     "application/json": {
-                        "example": {"status": "error", "message": "Internal server error."}
+                        "example": {
+                            "status": "error",
+                            "message": "Internal server error.",
+                        }
                     }
                 },
             },
@@ -711,4 +759,3 @@ SWAGGER_CONFIGS = {
         ],
     ),
 }
-

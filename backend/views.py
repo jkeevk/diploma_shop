@@ -192,6 +192,7 @@ class PartnerImportView(APIView):
             )
 
 
+@SWAGGER_CONFIGS["product_viewset_schema"]
 class ProductViewSet(ModelViewSet):
     """
     Сет представлений для управления товарами. Поддерживает фильтрацию и поиск.
@@ -265,7 +266,7 @@ class ConfirmRegistrationView(APIView):
         )
 
 
-@SWAGGER_CONFIGS["category_schema"]
+@SWAGGER_CONFIGS["category_viewset_schema"]
 class CategoryViewSet(ModelViewSet):
     """
     ViewSet для работы с категориями.
