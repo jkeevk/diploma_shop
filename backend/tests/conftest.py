@@ -1,7 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from backend.models import Category, Shop, Product
+from backend.models import Category, Shop, Product, Contact
 
 User = get_user_model()
 
@@ -71,4 +71,18 @@ def product(category):
         name="Test Product",
         model="Test Model",
         category=category,
+    )
+
+@pytest.fixture
+def contact(customer):
+    """Фикстура для создания контакта пользователя."""
+    return Contact.objects.create(
+        user=customer,
+        city="Moscow",
+        street="Lenina",
+        house="10",
+        structure="1",
+        building="A",
+        apartment="15",
+        phone="+79991234567",
     )
