@@ -272,6 +272,13 @@ class Order(models.Model):
         """
         return sum(item.cost() for item in self.order_items.all())
 
+    def clean(self):
+        """
+        Проверка на валидность статуса заказа.
+        """
+        if self.status not in dict(self.STATUS_CHOICES):
+            raise ValidationError(f"Некорректный статус: {self.status}. Доступные статусы: {', '.join(dict(self.STATUS_CHOICES).keys())}")
+        
 
 class OrderItem(models.Model):
     """
