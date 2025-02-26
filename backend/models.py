@@ -183,6 +183,13 @@ class ProductInfo(models.Model):
         ordering = ("-description",)
         unique_together = ("product", "shop")
 
+    def clean(self):
+        if self.price < 0:
+            raise ValidationError("Цена не может быть отрицательной.")
+        if self.quantity < 0:
+            raise ValidationError("Количество не может быть отрицательным.")
+        super().clean()
+
     def __str__(self):
         return f"{self.description} ({self.shop.name})"
 
@@ -203,9 +210,6 @@ class Parameter(models.Model):
 
 
 class ProductParameter(models.Model):
-    """
-    Модель параметра товара. Связывает информацию о товаре с параметром и его значением.
-    """
     product_info = models.ForeignKey(
         ProductInfo,
         verbose_name="Информация о товаре",
@@ -224,6 +228,7 @@ class ProductParameter(models.Model):
         verbose_name = "Параметр товара"
         verbose_name_plural = "Список параметров товара"
         ordering = ("-parameter",)
+        unique_together = ("product_info", "parameter", "value")
 
     def __str__(self):
         return f"{self.parameter.name}: {self.value}"

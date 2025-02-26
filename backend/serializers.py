@@ -60,16 +60,19 @@ class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = "__all__"
+
     def validate(self, data):
-            """
-            Проверяет данные перед созданием или обновлением контакта.
-            """
+        """
+        Проверяет данные перед созданием или обновлением контакта.
+        """
+        if not self.partial:
             try:
                 contact = Contact(**data)
                 contact.clean()
             except ValidationError as e:
                 raise serializers.ValidationError(e.message)
-            return data
+        return data
+    
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для модели Category."""
