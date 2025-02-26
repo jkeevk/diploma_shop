@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 # Django
 from django.contrib.auth.tokens import default_token_generator
@@ -7,6 +8,7 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse
 
 # Rest Framework
 from rest_framework import status
@@ -412,7 +414,7 @@ class ConfirmBasketView(APIView):
         return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
 
 
-[SWAGGER_CONFIGS["disable_supplier_schema"]] 
+@SWAGGER_CONFIGS["disable_supplier_schema"]
 class ToggleSupplierActivityView(APIView):
     """
     Представление для включения/отключения активности пользователя.
@@ -434,3 +436,36 @@ class ToggleSupplierActivityView(APIView):
             {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
             status=status.HTTP_200_OK,
         )
+
+@SWAGGER_CONFIGS["run_pytest_schema"]
+class RunCoverageTestsView(APIView):
+    """
+    Представление для запуска тестов с измерением покрытия. Доступен только для администраторов.
+    """
+    permission_classes = [check_role_permission("admin")]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            result = subprocess.run(
+                ["pytest", "--cov=backend", "--cov-report=term", "--cov-report=html"],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                response_data = {
+                    "status": "success",
+                    "output": result.stdout,
+                    "error": result.stderr,
+                }
+            else:
+                response_data = {
+                    "status": "error",
+                    "output": result.stdout,
+                    "error": result.stderr,
+                }
+
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
