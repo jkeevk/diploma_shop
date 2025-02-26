@@ -23,7 +23,7 @@ from backend.views import (
     ProductViewSet,
     RegisterView,
     ConfirmRegistrationView,
-    CategoryView,
+    CategoryViewSet,
     ShopView,
     ContactViewSet,
     PartnerUpdateView,
@@ -43,6 +43,7 @@ router.register(r"products", ProductViewSet, basename="product")
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
 router.register(r"basket", BasketViewSet, basename="basket")
+router.register(r"categories", CategoryViewSet, basename="category")
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
@@ -85,7 +86,6 @@ urlpatterns = (
         path("partner/update", PartnerUpdateView.as_view(), name="partner-update"),
         path("partner/import", PartnerImportView.as_view(), name="partner-export"),
         path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
-        path("categories", CategoryView.as_view(), name="categories"),
         path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path(
