@@ -146,7 +146,7 @@ def run_pytest():
     try:
         logger.info("Запуск pytest...")
         result = subprocess.run(
-            ["pytest"],
+            ["pytest", "--disable-warnings", "--tb=short"],
             capture_output=True,
             text=True,
         )
