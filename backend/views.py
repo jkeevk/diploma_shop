@@ -20,7 +20,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 # Local imports
 from .filters import ProductFilter
-from .models import Category, Contact, Order, Product, Shop, User
+from .models import Category, Contact, Order, Product, Shop, User, Parameter
 from .permissions import check_role_permission
 from .serializers import (
     CategorySerializer,
@@ -34,6 +34,7 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    ParameterSerializer
 )
 from .swagger_configs import SWAGGER_CONFIGS
 from .tasks import import_products_task, export_products_task
@@ -435,3 +436,12 @@ class ToggleSupplierActivityView(APIView):
             {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
             status=status.HTTP_200_OK,
         )
+
+@SWAGGER_CONFIGS["parameter_viewset_schema"]
+class ParameterViewSet(ModelViewSet):
+    """
+    Сет представлений для управления параметрами товаров.
+    """
+    queryset = Parameter.objects.all()
+    serializer_class = ParameterSerializer
+    permission_classes = [check_role_permission('admin', 'supplier')]

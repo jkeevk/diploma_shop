@@ -22,6 +22,7 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    ParameterSerializer
 )
 
 SWAGGER_CONFIGS = {
@@ -338,10 +339,25 @@ SWAGGER_CONFIGS = {
         description="Возвращает список всех доступных категорий товаров в магазине.",
         responses={200: CategorySerializer(many=True)},
     ),
-    "shop_schema": extend_schema(
-        summary="Список всех магазинов",
-        description="Возвращает список всех магазинов в системе.",
-        responses={200: ShopSerializer(many=True)},
+    "shop_schema": extend_schema_view(
+        get=extend_schema(
+            description="Получить список всех магазинов.",
+            summary="Список магазинов",
+            responses={
+                200: ShopSerializer(many=True),
+                401: "Необходима аутентификация",
+            },
+        ),
+        post=extend_schema(
+            description="Создать новый магазин и связать его с текущим пользователем. Только пользователи с ролью admin или supplier могут выполнять этот запрос.",
+            summary="Создание магазина",
+            request=ShopSerializer,
+            responses={
+                201: ShopSerializer,
+                403: "У вас недостаточно прав для выполнения этого действия.",
+                400: "Некорректные данные запроса.",
+            },
+        ),
     ),
     "contact_viewset_schema": extend_schema_view(
         list=extend_schema(
@@ -757,5 +773,40 @@ SWAGGER_CONFIGS = {
                 status_codes=["500"],
             ),
         ],
+    ),
+    "parameter_viewset_schema": extend_schema_view(
+        list=extend_schema(
+            description="Получить список всех параметров.",
+            summary="Список параметров",
+            responses={200: ParameterSerializer(many=True)},
+        ),
+        create=extend_schema(
+            description="Создать новый параметр.",
+            summary="Создание параметра",
+            request=ParameterSerializer,
+            responses={201: ParameterSerializer},
+        ),
+        retrieve=extend_schema(
+            description="Получить параметр по ID.",
+            summary="Получение параметра",
+            responses={200: ParameterSerializer},
+        ),
+        update=extend_schema(
+            description="Обновить параметр по ID.",
+            summary="Обновление параметра",
+            request=ParameterSerializer,
+            responses={200: ParameterSerializer},
+        ),
+        partial_update=extend_schema(
+            description="Частичное обновление параметра по ID.",
+            summary="Частичное обновление параметра",
+            request=ParameterSerializer,
+            responses={200: ParameterSerializer},
+        ),
+        destroy=extend_schema(
+            description="Удалить параметр по ID.",
+            summary="Удаление параметра",
+            responses={204: None},
+        ),
     ),
 }
