@@ -1,4 +1,7 @@
+# Standard library imports
 import os
+
+# Celery
 from celery import Celery
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'orders.settings')

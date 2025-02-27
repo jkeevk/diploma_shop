@@ -1,4 +1,7 @@
+# Django
 from django_filters import rest_framework as filters
+
+# Local imports
 from .models import Product, Shop, Category
 
 class ProductFilter(filters.FilterSet):

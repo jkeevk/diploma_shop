@@ -1,4 +1,6 @@
+# Standard library imports
 import os
+from typing import Any, List
 
 # Django
 from django.contrib.auth.tokens import default_token_generator
@@ -11,16 +13,16 @@ from django_filters.rest_framework import DjangoFilterBackend
 # Rest Framework
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import GenericAPIView, ListAPIView, ListCreateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Local imports
 from .filters import ProductFilter
-from .models import Category, Contact, Order, Product, Shop, User, Parameter
+from .models import Category, Contact, Order, Parameter, Product, Shop, User
 from .permissions import check_role_permission
 from .serializers import (
     CategorySerializer,
@@ -28,99 +30,268 @@ from .serializers import (
     FileUploadSerializer,
     LoginSerializer,
     OrderSerializer,
+    ParameterSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     ProductSerializer,
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
-    ParameterSerializer
 )
 from .swagger_configs import SWAGGER_CONFIGS
-from .tasks import import_products_task, export_products_task
+from .tasks import export_products_task, import_products_task
 
 
+@SWAGGER_CONFIGS["basket_viewset_schema"]
+class BasketViewSet(ModelViewSet):
+    """
+    Сет представлений для управления корзиной пользователя.
+    Позволяет просматривать, создавать и изменять заказы со статусом "new".
+    """
+
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [check_role_permission("customer", "admin")]
+
+    def get_queryset(self) -> List[Order]:
+        """
+        Возвращает только заказы текущего пользователя со статусом "new".
+        """
+        return Order.objects.filter(user=self.request.user, status="new")
+
+    def perform_create(self, serializer: OrderSerializer) -> None:
+        """
+        Создает новый заказ или использует существующий заказ со статусом "new".
+        """
+        user = self.request.user
+        order = Order.objects.filter(user=user, status="new").first()
+        if not order:
+            order = Order.objects.create(user=user, status="new")
+        serializer.save(user=user, status="new", id=order.id)
+
+
+@SWAGGER_CONFIGS["category_viewset_schema"]
+class CategoryViewSet(ModelViewSet):
+    """
+    Сет представлений для управления категориями.
+    Поддерживает все CRUD операции.
+    """
+
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def get_permissions(self) -> List[Any]:
+        """
+        Настраивает права доступа в зависимости от действия.
+        """
+        if self.action in ["list", "retrieve"]:
+            permission_classes = []
+        elif self.action in ["create", "update", "partial_update", "destroy"]:
+            permission_classes = [check_role_permission("admin")]
+        return [permission() for permission in permission_classes]
+
+
+@SWAGGER_CONFIGS["confirm_basket_schema"]
+class ConfirmBasketView(APIView):
+    """
+    Представление для подтверждения корзины и создания заказа.
+    """
+
+    permission_classes = [check_role_permission("customer", "admin")]
+
+    def post(self, request: Any) -> Response:
+        """
+        Подтверждает корзину, создает заказ и связывает его с контактом пользователя.
+        """
+        order = Order.objects.filter(user=request.user, status="new").first()
+
+        if not order:
+            return Response({"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST)
+
+        contact_id = request.data.get("contact_id")
+        if not contact_id:
+            return Response({"detail": "ID контакта обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            contact = Contact.objects.get(id=contact_id, user=request.user)
+        except Contact.DoesNotExist:
+            return Response({"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.status = "confirmed"
+        order.contact = contact
+        order.save()
+
+        return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
+
+
+@SWAGGER_CONFIGS["confirm_registration_schema"]
+class ConfirmRegistrationView(APIView):
+    """
+    Представление для подтверждения регистрации пользователя по токену.
+    """
+
+    def get(self, request: Any, token: str, *args: Any, **kwargs: Any) -> Response:
+        """
+        Подтверждает регистрацию пользователя по токену.
+        """
+        user = get_object_or_404(User, confirmation_token=token)
+
+        user.is_active = True
+        user.confirmation_token = None
+        user.save()
+
+        return Response(
+            {
+                "Status": "success",
+                "Message": "Ваш аккаунт успешно активирован.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+@SWAGGER_CONFIGS["contact_viewset_schema"]
+class ContactViewSet(ModelViewSet):
+    """
+    Сет представлений для управления контактами пользователя.
+    Поддерживает все CRUD операции.
+    """
+
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+    permission_classes = [check_role_permission("customer", "admin", "supplier")]
+
+
+@SWAGGER_CONFIGS["disable_supplier_schema"]
+class ToggleSupplierActivityView(APIView):
+    """
+    Представление для включения/отключения активности пользователя.
+    Доступно только администраторам.
+    """
+
+    permission_classes = [check_role_permission("admin")]
+
+    def post(self, request: Any, supplier_id: int) -> Response:
+        """
+        Переключает статус активности пользователя.
+        """
+        user = get_object_or_404(User, id=supplier_id)
+
+        user.is_active = not user.is_active
+        user.save()
+
+        return Response(
+            {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
+            status=status.HTTP_200_OK,
+        )
+
+
+@SWAGGER_CONFIGS["login_schema"]
 class LoginView(APIView):
     """
     Представление для аутентификации пользователя и получения JWT-токенов.
     При успешной аутентификации возвращает access и refresh токены.
     """
-    @SWAGGER_CONFIGS["login_schema"]
-    def post(self, request, *args, **kwargs):
+
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """
         Аутентифицирует пользователя и возвращает JWT-токены.
         """
-        serializer = LoginSerializer(data=request.data, context={'request': request})
+        serializer = LoginSerializer(data=request.data, context={"request": request})
 
         if serializer.is_valid():
-            user = serializer.validated_data['user']
-            
+            user = serializer.validated_data["user"]
+
             user.last_login = timezone.now()
-            user.save(update_fields=['last_login'])
-            
+            user.save(update_fields=["last_login"])
+
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
 
-            return Response({
-                'user_id': user.id,
-                'email': user.email,
-                'access_token': access_token,
-                'refresh_token': refresh_token
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "user_id": user.id,
+                    "email": user.email,
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                },
+                status=status.HTTP_200_OK,
+            )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
-@SWAGGER_CONFIGS["password_reset_schema"]
-class PasswordResetView(GenericAPIView):
+
+@SWAGGER_CONFIGS["order_viewset_schema"]
+class OrderViewSet(ModelViewSet):
     """
-    Представление для сброса пароля. Отправляет ссылку для сброса на email пользователя.
+    Сет представлений для управления заказами.
+    Доступен только для администраторов и поставщиков.
     """
-    serializer_class = PasswordResetSerializer
 
-    def post(self, request, *args, **kwargs):
-        """
-        Обрабатывает запрос на сброс пароля и отправляет ссылку на email.
-        """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {"detail": "Ссылка для сброса пароля отправлена на email."},
-            status=status.HTTP_200_OK,
-        )
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [check_role_permission("admin", "supplier")]
 
 
-@SWAGGER_CONFIGS["password_reset_confirm_schema"]
-class PasswordResetConfirmView(GenericAPIView):
+@SWAGGER_CONFIGS["parameter_viewset_schema"]
+class ParameterViewSet(ModelViewSet):
     """
-    Представление для подтверждения сброса пароля. Позволяет установить новый пароль.
+    Сет представлений для управления параметрами товаров.
+    Поддерживает все CRUD операции.
     """
-    serializer_class = PasswordResetConfirmSerializer
 
-    def post(self, request, *args, **kwargs):
+    queryset = Parameter.objects.all()
+    serializer_class = ParameterSerializer
+    permission_classes = [check_role_permission("admin", "supplier")]
+
+
+@SWAGGER_CONFIGS["partner_import_schema"]
+class PartnerImportView(APIView):
+    """
+    Представление для импорта данных поставщика в файл.
+    """
+
+    permission_classes = [check_role_permission("admin", "supplier")]
+
+    def get(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """
-        Подтверждает сброс пароля и устанавливает новый пароль.
+        Запускает задачу на импорт данных поставщика.
         """
-        uid = force_str(urlsafe_base64_decode(kwargs['uidb64']))
-        token = kwargs['token']
-        
         try:
-            user = User.objects.get(pk=uid)
-        except User.DoesNotExist:
-            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+            import_products_task.delay()
+            return Response(
+                {"message": "Задача на импорт данных поставлена в очередь"},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if not default_token_generator.check_token(user, token):
-            return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+@SWAGGER_CONFIGS["partner_orders_schema"]
+class PartnerOrders(APIView):
+    """
+    Представление для получения заказов, связанных с магазином поставщика.
+    """
 
-        user.set_password(serializer.validated_data['new_password'])
-        user.save()
+    permission_classes = [check_role_permission("supplier", "admin")]
 
-        return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
+    def get(self, request: Any) -> Response:
+        """
+        Возвращает список заказов, связанных с магазином поставщика.
+        """
+        if request.user.is_anonymous:
+            return Response(
+                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        shop = Shop.objects.filter(user=request.user).first()
+
+        if not shop:
+            return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
+
+        orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
+        order_serializer = OrderSerializer(orders, many=True)
+        return Response(order_serializer.data)
 
 
 @SWAGGER_CONFIGS["partner_update_schema"]
@@ -128,12 +299,11 @@ class PartnerUpdateView(APIView):
     """
     Представление для обновления данных поставщика через загрузку файла.
     """
-    serializer_class = FileUploadSerializer
-    permission_classes = [
-        check_role_permission('admin', 'supplier'),
-    ]
 
-    def post(self, request, *args, **kwargs):
+    serializer_class = FileUploadSerializer
+    permission_classes = [check_role_permission("admin", "supplier")]
+
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """
         Загружает файл с данными и обновляет информацию о товарах.
         """
@@ -141,10 +311,10 @@ class PartnerUpdateView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if 'file' not in request.FILES or not request.FILES['file']:
+        if "file" not in request.FILES or not request.FILES["file"]:
             return Response({"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST)
 
-        uploaded_file = request.FILES.get('file')
+        uploaded_file = request.FILES.get("file")
         file_path = os.path.join("data", uploaded_file.name)
 
         try:
@@ -167,28 +337,61 @@ class PartnerUpdateView(APIView):
         except Exception as e:
             return Response(
                 {"error": f"Ошибка при загрузке файла: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-              
 
-@SWAGGER_CONFIGS["partner_import_schema"]
-class PartnerImportView(APIView):
+
+@SWAGGER_CONFIGS["password_reset_confirm_schema"]
+class PasswordResetConfirmView(GenericAPIView):
     """
-    Представление для импорта данных поставщика в файл.
+    Представление для подтверждения сброса пароля. Позволяет установить новый пароль.
     """
-    permission_classes = [
-        check_role_permission('admin', 'supplier'),]
-    def get(self, request, *args, **kwargs):
+
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Подтверждает сброс пароля и устанавливает новый пароль.
+        """
+        uid = force_str(urlsafe_base64_decode(kwargs["uidb64"]))
+        token = kwargs["token"]
+
         try:
-            import_products_task.delay()
-            return Response(
-                {"message": "Задача на импорт данных поставлена в очередь"},
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+
+        return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
+
+
+@SWAGGER_CONFIGS["password_reset_schema"]
+class PasswordResetView(GenericAPIView):
+    """
+    Представление для сброса пароля. Отправляет ссылку для сброса на email пользователя.
+    """
+
+    serializer_class = PasswordResetSerializer
+
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Обрабатывает запрос на сброс пароля и отправляет ссылку на email.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "Ссылка для сброса пароля отправлена на email."},
+            status=status.HTTP_200_OK,
+        )
 
 
 @SWAGGER_CONFIGS["product_viewset_schema"]
@@ -196,13 +399,14 @@ class ProductViewSet(ModelViewSet):
     """
     Сет представлений для управления товарами. Поддерживает фильтрацию и поиск.
     """
+
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
-    permission_classes = [check_role_permission('supplier', 'admin')]
+    permission_classes = [check_role_permission("supplier", "admin")]
 
 
 @SWAGGER_CONFIGS["register_schema"]
@@ -210,9 +414,10 @@ class RegisterView(APIView):
     """
     Представление для регистрации нового пользователя.
     """
+
     serializer_class = UserRegistrationSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         """
         Регистрирует нового пользователя и отправляет подтверждение на email.
         """
@@ -239,209 +444,32 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@SWAGGER_CONFIGS["confirm_registration_schema"]
-class ConfirmRegistrationView(APIView):
-    """
-    Представление для подтверждения регистрации пользователя по токену.
-    """
-    serializer_class = None
-
-    def get(self, request, token, *args, **kwargs):
-        """
-        Подтверждает регистрацию пользователя по токену.
-        """
-        user = get_object_or_404(User, confirmation_token=token)
-
-        user.is_active = True
-        user.confirmation_token = None
-        user.save()
-
-        return Response(
-            {
-                "Status": "success",
-                "Message": "Ваш аккаунт успешно активирован.",
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-@SWAGGER_CONFIGS["category_viewset_schema"]
-class CategoryViewSet(ModelViewSet):
-    """
-    ViewSet для работы с категориями.
-    Поддерживает все CRUD операции.
-    """
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-
-    def get_permissions(self):
-        """
-        Настройка прав доступа в зависимости от действия.
-        """
-        if self.action in ["list", "retrieve"]:
-            permission_classes = []
-        elif self.action in ["create", "update", "partial_update", "destroy"]:
-            permission_classes = [check_role_permission("admin")]
-
-        return [permission() for permission in permission_classes]
-
-
 @SWAGGER_CONFIGS["shop_schema"]
 class ShopView(ListCreateAPIView):
     """
     Представление для получения списка магазинов и создания нового магазина.
     Пользователи с ролью admin или supplier могут создавать магазины.
     """
+
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
-    permission_classes = [check_role_permission('admin', 'supplier')]
+    permission_classes = [check_role_permission("admin", "supplier")]
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: ShopSerializer) -> None:
         """
-        При создании магазина автоматически связываем его с текущим пользователем.
+        При создании магазина автоматически связывает его с текущим пользователем.
         """
         serializer.save(user=self.request.user)
-
-@SWAGGER_CONFIGS["contact_viewset_schema"]
-class ContactViewSet(ModelViewSet):
-    """
-    Сет представлений для управления контактами пользователя.
-    """
-    queryset = Contact.objects.all()
-    serializer_class = ContactSerializer
-    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
 
 
 @SWAGGER_CONFIGS["user_viewset_schema"]
 class UserViewSet(ModelViewSet):
     """
     Сет представлений для управления данными пользователя.
+    Поддерживает все CRUD операции.
     """
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [check_role_permission('customer', 'admin', 'supplier')]
-    http_method_names = ['get', 'put', 'patch', 'delete']
-
-
-@SWAGGER_CONFIGS["order_viewset_schema"]
-class OrderViewSet(ModelViewSet):
-    """
-    Сет представлений для управления заказами. Доступен только для администраторов и поставщиков.
-    """
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [check_role_permission('admin', 'supplier')]
-
-@SWAGGER_CONFIGS["basket_viewset_schema"]
-class BasketViewSet(ModelViewSet):
-    """
-    Сет представлений для управления корзиной пользователя.
-    """
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [check_role_permission('customer', 'admin')]
-
-    def get_queryset(self):
-        """
-        Возвращает только заказы текущего пользователя со статусом "new".
-        """
-        return Order.objects.filter(user=self.request.user, status="new")
-
-    def perform_create(self, serializer):
-        """
-        Создает новый заказ или использует существующий заказ со статусом "new".
-        """
-        user = self.request.user
-        order = Order.objects.filter(user=user, status="new").first()
-        if not order:
-            order = Order.objects.create(user=user, status="new")
-        serializer.save(user=user, status="new", id=order.id)
-
-
-@SWAGGER_CONFIGS["partner_orders_schema"]
-class PartnerOrders(APIView):
-    """
-    Представление для получения заказов, связанных с магазином поставщика.
-    """
-    permission_classes = [check_role_permission('supplier', 'admin')]
-
-    def get(self, request):
-        """
-        Возвращает список заказов, связанных с магазином поставщика.
-        """
-        if request.user.is_anonymous:
-            return Response({"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        shop = Shop.objects.filter(user=request.user).first()
-
-        if not shop:
-            return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
-
-        orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
-        order_serializer = OrderSerializer(orders, many=True)
-        return Response(order_serializer.data)
-
-
-@SWAGGER_CONFIGS["confirm_basket_schema"]
-class ConfirmBasketView(APIView):
-    """
-    Представление для подтверждения корзины и создания заказа.
-    """
-    permission_classes = [check_role_permission('customer', 'admin')]
-
-    def post(self, request):
-        """
-        Подтверждает корзину, создает заказ и связывает его с контактом пользователя.
-        """
-        order = Order.objects.filter(user=request.user, status="new").first()
-
-        if not order:
-            return Response({"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST)
-
-        contact_id = request.data.get('contact_id')
-        if not contact_id:
-            return Response({"detail": "ID контакта обязателен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            contact = Contact.objects.get(id=contact_id, user=request.user)
-        except Contact.DoesNotExist:
-            return Response({"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST)
-
-        order.status = "confirmed"
-        order.contact = contact
-        order.save()
-
-        return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
-
-
-@SWAGGER_CONFIGS["disable_supplier_schema"]
-class ToggleSupplierActivityView(APIView):
-    """
-    Представление для включения/отключения активности пользователя.
-    Доступно только администраторам.
-    """
-    permission_classes = [check_role_permission('admin')]
-
-    def post(self, request, supplier_id):
-        """
-        Переключает статус активности пользователя. 
-        Продавец не может выставлять товары, покупатель не может делать заказы.
-        """
-        user = get_object_or_404(User, id=supplier_id)
-        
-        user.is_active = not user.is_active
-        user.save()
-
-        return Response(
-            {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
-            status=status.HTTP_200_OK,
-        )
-
-@SWAGGER_CONFIGS["parameter_viewset_schema"]
-class ParameterViewSet(ModelViewSet):
-    """
-    Сет представлений для управления параметрами товаров.
-    """
-    queryset = Parameter.objects.all()
-    serializer_class = ParameterSerializer
-    permission_classes = [check_role_permission('admin', 'supplier')]
+    permission_classes = [check_role_permission("customer", "admin", "supplier")]
+    http_method_names = ["get", "put", "patch", "delete"]
