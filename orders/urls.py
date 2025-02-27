@@ -35,9 +35,8 @@ from backend.views import (
     PartnerImportView,
     ConfirmBasketView,
     ToggleSupplierActivityView,
-    RunCoverageTestsView,
 )
-from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
+from backend.tests.views_tests import RunPytestView, CheckPytestTaskView, RunCoverageTestsView
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -66,6 +65,7 @@ urlpatterns = (
             CheckPytestTaskView.as_view(),
             name="check_pytest_task",
         ),
+        path("tests/run-tests-coverage/", RunCoverageTestsView.as_view(), name="run-tests-coverage"),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register", RegisterView.as_view(), name="user-register"),
@@ -88,7 +88,6 @@ urlpatterns = (
         path("partner/import", PartnerImportView.as_view(), name="partner-export"),
         path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
         path("shops", ShopView.as_view(), name="shops"),
-        path("run-tests/", RunCoverageTestsView.as_view(), name="run-tests"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path(
             "user/<int:supplier_id>/disable-orders/",
