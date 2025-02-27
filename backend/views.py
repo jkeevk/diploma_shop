@@ -79,6 +79,7 @@ class CategoryViewSet(ModelViewSet):
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    pagination_class = LimitOffsetPagination
 
     def get_permissions(self) -> List[Any]:
         """
