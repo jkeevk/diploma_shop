@@ -35,6 +35,7 @@ from backend.views import (
     PartnerImportView,
     ConfirmBasketView,
     ToggleSupplierActivityView,
+    ParameterViewSet,
 )
 from backend.tests.views_tests import RunPytestView, CheckPytestTaskView, RunCoverageTestsView
 
@@ -44,6 +45,7 @@ router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
 router.register(r"basket", BasketViewSet, basename="basket")
 router.register(r"categories", CategoryViewSet, basename="category")
+router.register(r'parameters', ParameterViewSet, basename='parameter')
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
