@@ -1,13 +1,22 @@
-from backend.tasks import run_pytest
+# Celery
 from celery.result import AsyncResult
-from backend.permissions import check_role_permission
-import re
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from celery.result import AsyncResult
-from backend.swagger_configs import SWAGGER_CONFIGS
 
+# Django
+from django.http import JsonResponse
+
+# Local imports
+from backend.permissions import check_role_permission
+from backend.swagger_configs import SWAGGER_CONFIGS
+from backend.tasks import run_pytest
+
+# Rest Framework
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# Subprocess
+import re
+import subprocess
 
 @SWAGGER_CONFIGS["run_pytest_schema"]
 class RunPytestView(APIView):
@@ -131,3 +140,53 @@ class CheckPytestTaskView(APIView):
                 {"status": "PENDING", "message": "Задача ещё выполняется."},
                 status=status.HTTP_202_ACCEPTED,
             )
+
+@SWAGGER_CONFIGS["run_coverage_pytest_schema"]
+class RunCoverageTestsView(APIView):
+    """
+    Представление для запуска тестов с измерением покрытия. Доступен только для администраторов.
+    """
+    permission_classes = [check_role_permission("admin")]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            result = subprocess.run(
+                ["pytest", "--cov=backend", "--cov-report=term", "--cov-report=html"],
+                capture_output=True,
+                text=True,
+            )
+
+            coverage_output = result.stdout
+            total_coverage_match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+%)', coverage_output)
+            total_coverage = total_coverage_match.group(1) if total_coverage_match else "0%"
+
+            coverage_details = {}
+            for line in coverage_output.splitlines():
+                if "backend/" in line and ".py" in line:
+                    file_match = re.match(r'([\w/]+\.py)\s+(\d+)\s+(\d+)\s+(\d+%)', line)
+                    if file_match:
+                        file_name = file_match.group(1)
+                        coverage_percent = file_match.group(4)
+                        coverage_details[file_name] = coverage_percent
+
+            if result.returncode == 0:
+                response_data = {
+                    "status": "success",
+                    "output": "Результаты выполнения тестов...",
+                    "error": "",
+                    "coverage": {
+                        "total": total_coverage,
+                        "details": coverage_details
+                    }
+                }
+            else:
+                response_data = {
+                    "status": "error",
+                    "output": result.stdout,
+                    "error": result.stderr,
+                }
+
+            return JsonResponse(response_data)
+
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
