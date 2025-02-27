@@ -1,0 +1,6 @@
+[run]
+omit =
+    */backend/migrations/*
+    */backend/tests/*
+    */backend/celery_app.py
+    */backend/tasks.py
