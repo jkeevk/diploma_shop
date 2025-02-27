@@ -90,7 +90,7 @@ class Category(models.Model):
     shops = models.ManyToManyField(
         'Shop', related_name="categories", blank=True, verbose_name="Магазины"
     )
-    name = models.CharField(max_length=200, verbose_name="Название", db_index=True)
+    name = models.CharField(max_length=200, verbose_name="Название", db_index=True, unique=True)
 
     class Meta:
         verbose_name = "Категория"
