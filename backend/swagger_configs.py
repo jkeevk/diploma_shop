@@ -662,7 +662,7 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
-    "run_pytest_schema": extend_schema(
+    "run_coverage_pytest_schema": extend_schema(
         summary="Запуск pytest с измерением покрытия",
         description="Эндпоинт для запуска тестов с измерением покрытия (pytest-cov). "
         "Доступен только для администраторов. Возвращает результаты выполнения тестов и отчет о покрытии.",
