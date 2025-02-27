@@ -3,4 +3,5 @@ omit =
     */backend/migrations/*
     */backend/tests/*
     */backend/celery_app.py
+    */backend/signals.py
     */backend/tasks.py
