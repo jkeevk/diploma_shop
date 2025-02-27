@@ -48,6 +48,31 @@ class TestCategoryViewSet:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
 
+    def test_create_category_unauthenticated(self, api_client):
+        """
+        Тест создания категории неавторизованным пользователем.
+        Должен вернуть ошибку 403.
+        """
+        data = {"name": "New Category"}
+        url = reverse("category-list")
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_create_category_invalid_data(self, api_client, admin):
+        """
+        Тест создания категории с некорректными данными (пустое название).
+        Должен вернуть ошибку 400.
+        """
+        api_client.force_authenticate(user=admin)
+
+        data = {"name": ""}
+        url = reverse("category-list")
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "name" in response.data
+
     def test_update_category_as_admin(self, api_client, admin, category):
         """
         Тест обновления категории администратором.
@@ -76,6 +101,17 @@ class TestCategoryViewSet:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
 
+    def test_update_category_unauthenticated(self, api_client, category):
+        """
+        Тест обновления категории неавторизованным пользователем.
+        Должен вернуть ошибку 403.
+        """
+        data = {"name": "Updated Category"}
+        url = reverse("category-detail", args=[category.id])
+        response = api_client.put(url, data, format="json")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
     def test_delete_category_as_admin(self, api_client, admin, category):
         """
         Тест удаления категории администратором.
@@ -101,8 +137,69 @@ class TestCategoryViewSet:
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
 
+    def test_delete_category_unauthenticated(self, api_client, category):
+        """
+        Тест удаления категории неавторизованным пользователем.
+        Должен вернуть ошибку 403.
+        """
+        url = reverse("category-detail", args=[category.id])
+        response = api_client.delete(url)
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
     def test_category_str_method(self, category):
         """
         Тест метода __str__ модели Category.
         """
         assert str(category) == "Test Category"
+
+    def test_category_unique_name(self, api_client, admin):
+        """
+        Тест на уникальность названия категории.
+        """
+        api_client.force_authenticate(user=admin)
+
+        category1 = Category.objects.create(name="Unique Category")
+
+        data = {"name": "Unique Category"}
+        url = reverse("category-list")
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "name" in response.data
+        assert "unique" in str(response.data["name"])
+
+    def test_category_search(self, api_client, category):
+        """
+        Тест поиска категорий.
+        """
+        url = reverse("category-list") + "?search=Test"
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["name"] == "Test Category"
+
+    def test_category_pagination(self, api_client):
+        """
+        Тест пагинации при получении списка категорий.
+        """
+        for i in range(2, 12):
+            Category.objects.create(name=f"Category {i}")
+
+        assert Category.objects.count() == 10
+
+        url = reverse("category-list") + "?limit=5"
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["results"]) == 5
+        assert "next" in response.data
+
+        url = response.data["next"]
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data["results"]) == 5
+
+        assert response.data["next"] is None
