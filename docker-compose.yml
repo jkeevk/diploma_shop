@@ -36,9 +36,9 @@ services:
         python manage.py makemigrations &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.get_or_create(email='admin@admin.com', defaults={'username': 'admin', 'is_superuser': True, 'is_staff': True, 'is_active': True})\" | python manage.py shell &&
+        python manage.py create_superuser_with_password --email admin@admin.com --password admin --role admin &&
         uvicorn orders.asgi:application --host 0.0.0.0 --port 8000 --reload
-      "
+        "
   
   db:
     env_file:
