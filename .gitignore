@@ -4,7 +4,6 @@ env/
 .idea/
 __pycache__/
 STEPS.md
-*/migrations/
 .pytest_cache
 .DS_Store
 .readme.md
