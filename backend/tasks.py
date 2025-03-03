@@ -42,37 +42,43 @@ def run_pytest() -> dict:
     """
     try:
         logger.info("Запуск pytest...")
+        
         result = subprocess.run(
-            ["pytest", "--disable-warnings", "--tb=short"],
+            [
+                "pytest",
+                "--create-db",
+                "--no-migrations",
+                "--disable-warnings",
+                "--tb=short",
+                "-v",
+                "backend/tests/"
+            ],
             capture_output=True,
             text=True,
         )
+
         logger.info(f"Результат pytest: {result}")
 
-        output = result.stdout
-        summary = re.search(r"(\d+) passed.*?(\d+) failed.*?(\d+) errors", output)
-        if summary:
-            passed = int(summary.group(1))
-            failed = int(summary.group(2))
-            errors = int(summary.group(3))
-        else:
-            passed = failed = errors = 0
-
-        failed_tests = []
-        for line in output.splitlines():
-            if "FAILED" in line or "ERROR" in line:
-                failed_tests.append(line.strip())
+        output = result.stdout + "\n" + result.stderr
+        
+        passed = len(re.findall(r'PASSED', output))
+        failed = len(re.findall(r'FAILED', output))
+        errors = len(re.findall(r'ERROR', output))
+        
+        failed_tests = re.findall(
+            r'(FAILED|ERROR) \[.*?\] (.*?)(?=\n\S+|\Z)', 
+            output
+        )
 
         return {
             "passed": passed,
             "failed": failed,
             "errors": errors,
-            "failed_tests": failed_tests,
+            "failed_tests": [f"{res[0]}: {res[1]}" for res in failed_tests],
             "output": output,
         }
     except Exception as e:
-        logger.error(f"Ошибка при запуске pytest: {e}")
-        return {"error": str(e)}
+        logger.error(f"Ошибка при запуске pytest: {e}", exc_info=True)
 
 @shared_task
 def send_confirmation_email_async(user_id: int, token: str) -> None:

@@ -47,53 +47,40 @@ class CheckPytestTaskView(APIView):
 
     def parse_pytest_output(self, output):
         """
-        Парсит вывод pytest и извлекает количество пройденных, проваленных тестов и ошибок,
-        а также списки проваленных и успешных тестов.
+        Парсинг вывода pytest с поддержкой разных форматов
         """
-        summary_pattern = r"(\d+) passed.*?(\d+) failed.*?(\d+) errors|(\d+) passed.*?(\d+) failed|(\d+) passed"
-        passed_tests_pattern = r"PASSED"
-        failed_tests_pattern = r"FAILED|ERROR"
+        summary_pattern = r'=+ (\d+) (passed|failed|error)[^=]*=+'
+        test_case_pattern = r'^(?P<outcome>FAILED|PASSED|ERROR) (?P<test_name>[^\s]+)'
 
-        summary_match = re.search(summary_pattern, output)
-        if summary_match:
-            passed = int(
-                summary_match.group(1)
-                or summary_match.group(4)
-                or summary_match.group(6)
-                or 0
-            )
-            failed = int(summary_match.group(2) or summary_match.group(5) or 0)
-            errors = int(summary_match.group(3) or 0)
-        else:
-            passed = failed = errors = 0
-
+        passed = failed = errors = 0
         successful_tests = []
-        for line in output.splitlines():
-            if re.search(passed_tests_pattern, line):
-                test_name = line.split("::")[-1].split(" ")[0]
-                successful_tests.append(test_name)
-
         failed_tests = []
-        in_failures_section = False
-        for line in output.splitlines():
-            if "FAILURES" in line:
-                in_failures_section = True
-                continue
+        
+        stats = re.findall(summary_pattern, output)
+        for count, status in stats:
+            count = int(count)
+            if status == 'passed':
+                passed = count
+            elif status == 'failed':
+                failed = count
+            elif status == 'error':
+                errors = count
 
-            if in_failures_section:
-                if "::" in line and re.search(failed_tests_pattern, line):
-                    test_name = line.split("::")[-1].split(" ")[0]
+        for line in output.split('\n'):
+            match = re.match(test_case_pattern, line)
+            if match:
+                test_name = match.group('test_name')
+                if match.group('outcome') == 'PASSED':
+                    successful_tests.append(test_name)
+                else:
                     failed_tests.append(test_name)
-
-        if failed == 0 and len(failed_tests) > 0:
-            failed = len(failed_tests)
 
         return {
             "passed": passed,
             "failed": failed,
             "errors": errors,
-            "successful_tests": successful_tests,
-            "failed_tests": failed_tests,
+            "successful_tests": list(set(successful_tests)),
+            "failed_tests": list(set(failed_tests)),
         }
 
     def get(self, request, task_id, *args, **kwargs):

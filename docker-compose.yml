@@ -33,7 +33,7 @@ services:
       - ./data/:/app/data/
     command: >
       bash -c "
-        python manage.py makemigrations &&
+        python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         python manage.py create_superuser_with_password --email admin@admin.com --password admin --role admin &&
