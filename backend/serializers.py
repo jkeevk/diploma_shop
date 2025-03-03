@@ -41,23 +41,45 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Contact."""
-
     class Meta:
         model = Contact
         fields = "__all__"
 
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Проверяет данные перед созданием или обновлением контакта.
-        """
+    def __init__(self, *args, **kwargs):
+        """Инициализация сериализатора."""
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and request.user.role != "admin":
+            self.fields['user'].read_only = True
+
+    def validate(self, data):
+        """Валидация данных."""
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
         if not self.partial:
-            try:
-                contact = Contact(**data)
-                contact.clean()
-            except ValidationError as e:
-                raise serializers.ValidationError(e.message)
+            if user and user.role != "admin":
+                data['user'] = user
+                try:
+                    contact = Contact(**data)
+                    contact.clean()
+                except ValidationError as e:
+                    raise serializers.ValidationError(e.message)
+
+            user_id_in_request = self.initial_data.get('user')
+            if user_id_in_request is not None and str(user.id) != str(user_id_in_request):
+                raise serializers.ValidationError(
+                    {"user": "Вы не можете указывать другого пользователя."}
+                )
+
         return data
 
+    def create(self, validated_data):
+        """Создание контакта."""
+        user = self.context['request'].user
+        if user.role != "admin":
+            validated_data['user'] = user
+        return super().create(validated_data)
 
 class FileUploadSerializer(serializers.Serializer):
     """Сериализатор для загрузки файлов."""

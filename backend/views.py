@@ -160,7 +160,13 @@ class ContactViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [check_role_permission("customer", "admin", "supplier")]
-
+    
+    def get_queryset(self):
+        """Возвращает только контакты текущего пользователя."""
+        user = self.request.user
+        if user.role == "admin":
+            return Contact.objects.all()
+        return Contact.objects.filter(user=user)
 
 @SWAGGER_CONFIGS["disable_supplier_schema"]
 class ToggleSupplierActivityView(APIView):
