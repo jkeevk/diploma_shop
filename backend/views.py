@@ -488,5 +488,5 @@ class UserViewSet(ModelViewSet):
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [check_role_permission("customer", "admin", "supplier")]
+    permission_classes = [check_role_permission("admin", "supplier")]
     http_method_names = ["get", "put", "patch", "delete"]

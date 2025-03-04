@@ -10,22 +10,25 @@ from typing import Any
 class CheckRole(permissions.BasePermission):
     """
     Разрешение, которое проверяет, имеет ли пользователь хотя бы одну из указанных ролей.
-    Также проверяет, может ли пользователь изменять конкретный объект.
     """
-    def __init__(self, *required_roles: str) -> None:
+    def __init__(self, *required_roles: str, allow_safe_methods_for_all: bool = False) -> None:
         """
         Инициализация разрешения с ролями, которые требуются для доступа.
         """
         self.required_roles = required_roles
+        self.allow_safe_methods_for_all = allow_safe_methods_for_all
 
     def has_permission(self, request: Request, view: View) -> bool:
         """
         Глобальная проверка:
         - Пользователь должен быть аутентифицирован.
-        - Пользователь должен иметь одну из требуемых ролей.
+        - Для небезопасных методов пользователь должен иметь одну из требуемых ролей.
         """
         if not request.user.is_authenticated:
             raise PermissionDenied("Вы не авторизованы. Пожалуйста, войдите в систему.")
+
+        if self.allow_safe_methods_for_all and request.method in permissions.SAFE_METHODS:
+            return True
 
         if request.user.role not in self.required_roles:
             raise PermissionDenied("У вас недостаточно прав для выполнения этого действия.")
@@ -35,29 +38,12 @@ class CheckRole(permissions.BasePermission):
     def has_object_permission(self, request: Request, view: View, obj: Any) -> bool:
         """
         Объектная проверка:
-        - Пользователь может изменять только свои заказы, если он не админ.
-        - Только админ может изменять роль пользователя.
+        - По умолчанию разрешаем доступ к объекту, если пользователь имеет доступ на уровне представления.
         """
-        if request.user.role == 'admin':
-            return True
+        return True
 
-        if obj.user == request.user:
-            return True
-
-        if 'role' in request.data and request.data['role'] != obj.role:
-            raise PermissionDenied("Только администратор может изменять роль пользователя.")
-
-        return False
-
-    def check_user_active(self, user: Any) -> None:
-        """
-        Проверяет, активен ли пользователь.
-        """
-        if not user.is_active:
-            raise PermissionDenied("Пользователь неактивен и не может быть изменен.")
-
-def check_role_permission(*required_roles: str) -> Any:
+def check_role_permission(*required_roles: str, allow_safe_methods_for_all: bool = False) -> Any:
     """
     Функция для создания экземпляра CheckRole с нужными ролями.
     """
-    return lambda: CheckRole(*required_roles)
+    return lambda: CheckRole(*required_roles, allow_safe_methods_for_all=allow_safe_methods_for_all)

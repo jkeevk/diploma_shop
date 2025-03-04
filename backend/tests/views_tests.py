@@ -44,6 +44,7 @@ class CheckPytestTaskView(APIView):
     Представление для проверки статуса задачи pytest.
     Возвращает удобный для человека результат.
     """
+    permission_classes = [check_role_permission("admin")]
 
     def parse_pytest_output(self, output):
         """
