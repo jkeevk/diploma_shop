@@ -34,7 +34,7 @@ from backend.views import (
     PartnerOrders,
     PartnerImportView,
     ConfirmBasketView,
-    ToggleSupplierActivityView,
+    ToggleUserActivityView,
     ParameterViewSet,
 )
 from backend.tests.views_tests import RunPytestView, CheckPytestTaskView, RunCoverageTestsView
@@ -91,11 +91,7 @@ urlpatterns = (
         path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
         path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
-        path(
-            "user/<int:supplier_id>/disable-orders/",
-            ToggleSupplierActivityView.as_view(),
-            name="disable-user-orders",
-        ),
+        path('user/<int:user_id>/toggle-activity/', ToggleUserActivityView.as_view(), name='toggle-user-activity'),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

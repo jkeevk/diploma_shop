@@ -562,16 +562,18 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
-    "disable_supplier_schema": extend_schema(
+    "disable_toggle_user_activity_schema": extend_schema(
         summary="Переключить активность пользователя",
-        description="Позволяет администратору включить или отключить активность пользователя. "
-        "Если активность отключена, товары продавца не будут отображаться в поиске, а покупатель не сможет купить товары продавца.",
+        description="Позволяет администратору включить или отключить активность любого пользователя. "
+                    "Если активность отключена: "
+                    "- Для продавца: его товары не будут отображаться в поиске. "
+                    "- Для покупателя: он не сможет совершать покупки.",
         parameters=[
             OpenApiParameter(
-                name="supplier_id",
+                name="user_id",
                 type=int,
                 location=OpenApiParameter.PATH,
-                description="ID продавца (пользователя с ролью supplier).",
+                description="ID пользователя, активность которого нужно изменить.",
             ),
         ],
         responses={
@@ -579,7 +581,17 @@ SWAGGER_CONFIGS = {
                 "description": "Активность пользователя успешно изменена.",
                 "examples": {
                     "application/json": {
-                        "message": "Активность магазина Магазин 1 изменена на False"
+                        "message": "Активность пользователя user@example.com изменена на False",
+                        "user_id": 1,
+                        "new_status": False
+                    }
+                },
+            },
+            403: {
+                "description": "Запрещено изменять активность своего аккаунта.",
+                "examples": {
+                    "application/json": {
+                        "error": "Вы не можете изменить активность своего аккаунта."
                     }
                 },
             },
@@ -591,13 +603,22 @@ SWAGGER_CONFIGS = {
         examples=[
             OpenApiExample(
                 name="Успешный запрос",
-                value={"message": "Активность магазина Магазин 1 изменена на False"},
+                value={
+                    "message": "Активность пользователя user@example.com изменена на False",
+                    "user_id": 1,
+                    "new_status": False
+                },
                 status_codes=["200"],
             ),
             OpenApiExample(
-                name="Продавец не найден",
+                name="Пользователь не найден",
                 value={"detail": "Not found."},
                 status_codes=["404"],
+            ),
+            OpenApiExample(
+                name="Запрет на изменение своего аккаунта",
+                value={"error": "Вы не можете изменить активность своего аккаунта."},
+                status_codes=["403"],
             ),
         ],
     ),

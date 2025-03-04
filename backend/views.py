@@ -168,26 +168,36 @@ class ContactViewSet(ModelViewSet):
             return Contact.objects.all()
         return Contact.objects.filter(user=user)
 
-@SWAGGER_CONFIGS["disable_supplier_schema"]
-class ToggleSupplierActivityView(APIView):
+@SWAGGER_CONFIGS["disable_toggle_user_activity_schema"]
+class ToggleUserActivityView(APIView):
     """
-    Представление для включения/отключения активности пользователя.
+    Представление для включения/отключения активности любого пользователя.
     Доступно только администраторам.
     """
 
     permission_classes = [check_role_permission("admin")]
 
-    def post(self, request: Any, supplier_id: int) -> Response:
+    def post(self, request: Any, user_id: int) -> Response:
         """
-        Переключает статус активности пользователя.
+        Переключает статус активности пользователя по его ID.
         """
-        user = get_object_or_404(User, id=supplier_id)
+        user = get_object_or_404(User, id=user_id)
+
+        if user == request.user:
+            return Response(
+                {"error": "Вы не можете изменить активность своего аккаунта."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         user.is_active = not user.is_active
         user.save()
 
         return Response(
-            {"message": f"Активность пользователя {user.email} изменена на {user.is_active}"},
+            {
+                "message": f"Активность пользователя {user.email} (ID={user.id}) изменена на {user.is_active}",
+                "user_id": user.id,
+                "new_status": user.is_active
+            },
             status=status.HTTP_200_OK,
         )
 
