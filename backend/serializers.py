@@ -139,19 +139,26 @@ class OrderSerializer(serializers.ModelSerializer):
         """Создание нового заказа с элементами заказа."""
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
-
-        for item_data in order_items_data:
-            shop = item_data.get("shop")
-            if shop and not shop.user.is_active:
-                raise serializers.ValidationError(
-                    f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
-                )
-
+        
         for item_data in order_items_data:
             product = item_data.get("product")
             shop = item_data.get("shop")
             quantity = item_data.get("quantity")
 
+            if not shop:
+                raise serializers.ValidationError(
+                    f"Для товара {item_data.get('product')} не указан магазин"
+                )
+                
+            if not shop.user:
+                raise serializers.ValidationError(
+                    f"Магазин {shop.name} (ID={shop.id}) не привязан к пользователю"
+                )
+            
+            if not shop.user.is_active:
+                raise serializers.ValidationError(
+                    f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
+                )
             product_info = ProductInfo.objects.filter(
                 product=product, shop=shop
             ).first()
@@ -179,19 +186,56 @@ class OrderSerializer(serializers.ModelSerializer):
             ).first()
 
             if existing_item:
-                existing_item.quantity += quantity
-                existing_item.save()
+                    new_quantity = existing_item.quantity + quantity
+                    if new_quantity > product_info.quantity:
+                        raise serializers.ValidationError(
+                            f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {quantity}."
+                        )
+                    existing_item.quantity = new_quantity
+                    existing_item.save()
             else:
                 OrderItem.objects.create(
                     order=order, product=product, shop=shop, quantity=quantity
                 )
 
-            product_info = ProductInfo.objects.get(product=product, shop=shop)
-            product_info.quantity -= quantity
-            product_info.save()
-
         return order
 
+
+    def update(self, instance: Order, validated_data: Dict[str, Any]) -> Order:
+        order_items_data = validated_data.pop("order_items", [])
+        instance.dt = validated_data.get("dt", instance.dt)
+        instance.status = validated_data.get("status", instance.status)
+        instance.save()
+
+        for item_data in order_items_data:
+            product = item_data["product"]
+            shop = item_data["shop"]
+            quantity = item_data["quantity"]
+
+            existing_item = instance.order_items.filter(product=product, shop=shop).first()
+
+            product_info = product.product_infos.filter(shop=shop).first()
+            if not product_info:
+                raise serializers.ValidationError(
+                    f"Информация о товаре {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}) не найдена."
+                )
+
+            if product_info.quantity < quantity:
+                raise serializers.ValidationError(
+                    f"Недостаточно товара {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}). "
+                    f"Доступно: {product_info.quantity}, запрошено: {quantity}."
+                )
+
+            if existing_item:
+                existing_item.quantity = quantity
+                existing_item.save()
+            else:
+                raise serializers.ValidationError(
+                    f"Товар с ID продукта {product.id} и ID магазина {shop.id} не существует в этом заказе."
+                )
+
+        return instance
+    
 
 class OrderWithContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Order с указанием контактной информации."""
@@ -323,6 +367,10 @@ class ProductSerializer(serializers.ModelSerializer):
                 parameters_data = product_info_data.pop("parameters", [])
                 shop_data = product_info_data.get("shop")
 
+                # Если shop_data не передано, используем текущий магазин
+                if shop_data is None:
+                    shop_data = instance.product_infos.first().shop if instance.product_infos.exists() else None
+
                 product_info_id = product_info_data.get("id", None)
                 if product_info_id:
                     product_info = ProductInfo.objects.get(
@@ -347,7 +395,6 @@ class ProductSerializer(serializers.ModelSerializer):
                     )
 
         return instance
-
 
 class ShopSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Shop."""

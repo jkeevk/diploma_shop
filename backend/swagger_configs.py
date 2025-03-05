@@ -539,6 +539,20 @@ SWAGGER_CONFIGS = {
             },
         },
     ),
+    "user_orders_schema": extend_schema(
+        summary="Получить подтвержденные заказы для покупателя",
+        description="Возвращает список подтвержденных заказов для покупателя со статусом confirmed.",
+        responses={
+            200: {
+                "description": "Список подтвержденных заказов",
+                "content": {
+                    "application/json": {
+                        "example": [{"id": 1, "status": "confirmed", "items": []}]
+                    }
+                },
+            },
+        },
+    ),
     "confirm_basket_schema": extend_schema(
         summary="Подтвердить корзину",
         description="Изменяет статус заказа на 'подтвержден' и использует ID контакта для подтверждения.",

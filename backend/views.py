@@ -59,16 +59,6 @@ class BasketViewSet(ModelViewSet):
         """
         return Order.objects.filter(user=self.request.user, status="new")
 
-    def perform_create(self, serializer: OrderSerializer) -> None:
-        """
-        Создает новый заказ или использует существующий заказ со статусом "new".
-        """
-        user = self.request.user
-        order = Order.objects.filter(user=user, status="new").first()
-        if not order:
-            order = Order.objects.create(user=user, status="new")
-        serializer.save(user=user, status="new", id=order.id)
-
 
 @SWAGGER_CONFIGS["category_viewset_schema"]
 class CategoryViewSet(ModelViewSet):
@@ -490,3 +480,26 @@ class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [check_role_permission("admin", "supplier")]
     http_method_names = ["get", "put", "patch", "delete"]
+
+
+@SWAGGER_CONFIGS["user_orders_schema"]
+class UserOrdersView(APIView):
+    """
+    Представление для получения заказов для покупателя поступивших в обработку.
+    """
+
+    permission_classes = [check_role_permission("customer", "admin")]
+
+    def get(self, request: Any) -> Response:
+        """
+        Возвращает список заказов со статусом "confirmed".
+        """
+        if request.user.is_anonymous:
+            return Response(
+                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+
+        orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
+        order_serializer = OrderSerializer(orders, many=True)
+        return Response(order_serializer.data)
