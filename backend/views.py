@@ -55,9 +55,9 @@ class BasketViewSet(ModelViewSet):
 
     def get_queryset(self) -> List[Order]:
         """
-        Возвращает только заказы текущего пользователя со статусом "new".
+        Возвращает только заказы текущего пользователя.
         """
-        return Order.objects.filter(user=self.request.user, status="new")
+        return Order.objects.filter(user=self.request.user)
 
 
 @SWAGGER_CONFIGS["category_viewset_schema"]
