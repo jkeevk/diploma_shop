@@ -36,8 +36,9 @@ from backend.views import (
     ConfirmBasketView,
     ToggleUserActivityView,
     ParameterViewSet,
+    UserOrdersView
 )
-from backend.tests.views_tests import RunPytestView, CheckPytestTaskView, RunCoverageTestsView
+from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -67,7 +68,6 @@ urlpatterns = (
             CheckPytestTaskView.as_view(),
             name="check_pytest_task",
         ),
-        path("tests/run-tests-coverage/", RunCoverageTestsView.as_view(), name="run-tests-coverage"),
         path("", include(router.urls)),
         path("", include(user_router.urls)),
         path("user/register", RegisterView.as_view(), name="user-register"),
@@ -92,6 +92,7 @@ urlpatterns = (
         path("shops", ShopView.as_view(), name="shops"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path('user/<int:user_id>/toggle-activity/', ToggleUserActivityView.as_view(), name='toggle-user-activity'),
+        path('user/orders', UserOrdersView.as_view(), name='user-orders'),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

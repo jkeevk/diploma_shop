@@ -1,89 +1,114 @@
 import pytest
-from backend.models import Order, User
-from django.core.exceptions import ValidationError
+from django.urls import reverse
+from rest_framework import status
+from backend.models import OrderItem, ProductInfo
 
 @pytest.mark.django_db
-class TestOrderModel:
+class TestBasketAPI:
     """
-    Тесты для модели Order.
+    Тесты для API корзины (/basket)
     """
 
-    def test_create_order(self, customer):
+    def test_get_basket_unauthenticated(self, api_client):
         """
-        Тест создания заказа для клиента.
+        Неавторизованный доступ к корзине
         """
-        order = Order.objects.create(user=customer, status="new")
-        assert order.user == customer
-        assert order.status == "new"
-        assert order.id is not None
+        url = reverse("basket-list")
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    def test_get_basket_authenticated(self, api_client, customer, order):
+        """
+        Получение корзины для авторизованного пользователя
+        """
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        response = api_client.get(url)
 
-    def test_create_order_as_supplier(self, supplier):
-        """
-        Тест создания заказа для поставщика.
-        """
-        order = Order.objects.create(user=supplier, status="new")
-        assert order.user == supplier
-        assert order.status == "new"
-        assert order.id is not None
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.data, list)
+        assert len(response.data) > 0
+        assert 'order_items' in response.data[0]
+        assert isinstance(response.data[0]['order_items'], list) 
 
-    def test_create_order_as_admin(self, admin):
-        """
-        Тест создания заказа для администратора.
-        """
-        order = Order.objects.create(user=admin, status="new")
-        assert order.user == admin
-        assert order.status == "new"
-        assert order.id is not None
-
-    def test_order_status_update(self, customer):
-        """
-        Тест обновления статуса заказа.
-        """
-        order = Order.objects.create(user=customer, status="new")
-        order.status = "processed"
-        order.save()
-        updated_order = Order.objects.get(id=order.id)
-        assert updated_order.status == "processed"
-
-    def test_order_create_invalid_status(self, customer):
-        """
-        Тест создания заказа с некорректным статусом.
-        """
-        with pytest.raises(ValidationError):
-            order = Order(user=customer, status="invalid_status")
-            order.full_clean() 
-
-    def test_order_assigned_to_correct_user(self, customer, admin):
-        """
-        Тест, чтобы заказ был привязан к правильному пользователю.
-        """
-        order = Order.objects.create(user=customer, status="new")
-        assert order.user == customer
-        assert order.user != admin
-
-    def test_multiple_orders_for_user(self, customer):
-        """
-        Тест, чтобы пользователь мог иметь несколько заказов.
-        """
-        order1 = Order.objects.create(user=customer, status="new")
-        order2 = Order.objects.create(user=customer, status="processed")
-        assert order1.user == customer
-        assert order2.user == customer
-        assert order1.id != order2.id
-
-    @pytest.mark.parametrize("user_role", ["supplier", "customer"])
-    def test_order_creation_with_user_roles(self, user_role):
-        """
-        Тест, чтобы проверить создание заказа с разными ролями пользователей.
-        """
-        user = User.objects.create_user(
-            email=f"{user_role}@example.com",
-            password="password",
-            first_name=f"{user_role.capitalize()}",
-            last_name="User",
-            role=user_role,
+    def test_create_basket_item_as_customer(self, api_client, customer, product, shop):
+        """Создание элемента корзины с валидными данными"""
+        ProductInfo.objects.create(
+            product=product,
+            shop=shop,
+            quantity=10,
+            price=100,
+            price_rrc=120
         )
 
-        order = Order.objects.create(user=user, status="new")
-        assert order.user == user
-        assert order.status == "new"
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        
+        data = {
+            "user": customer.id,
+            "order_items": [{
+                "product": product.id,
+                "shop": shop.id,
+                "quantity": 2
+            }]
+        }
+        
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert OrderItem.objects.count() == 1
+        assert OrderItem.objects.first().quantity == 2
+
+    def test_add_to_basket_invalid_quantity(self, api_client, customer, product, shop):
+        """
+        Попытка добавить товар в количестве, превышающем доступное
+        """
+        ProductInfo.objects.create(
+            product=product,
+            shop=shop,
+            quantity=5,
+            price=100,
+            price_rrc=120
+        )
+
+        api_client.force_authenticate(user=customer)
+        response = api_client.post(reverse("basket-list"), {
+            "user": customer.id,
+            "order_items": [{
+                "product": product.id,
+                "shop": shop.id,
+                "quantity": 10
+            }]
+        }, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Недостаточно товара" in response.content.decode('utf-8')
+
+    def test_update_basket_item_quantity(self, api_client, customer, order_item):
+        """
+        Обновление количества товара в корзине
+        """
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-detail", args=[order_item.id])
+        
+        new_data = {
+            "order_items": [{
+                "product": order_item.product.id,
+                "shop": order_item.shop.id,
+                "quantity": 5
+            }]
+        }
+        
+        response = api_client.patch(url, new_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        order_item.refresh_from_db()
+        assert order_item.quantity == 5
+
+    def test_clear_basket(self, api_client, customer, order):
+        """
+        Очистка корзины через DELETE запрос
+        """
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-detail", args=[order.id])
+        response = api_client.delete(url)
+        
+        assert response.status_code == status.HTTP_204_NO_CONTENT

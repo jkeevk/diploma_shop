@@ -36,28 +36,29 @@ def import_products_task() -> dict:
         return {"error": str(e)}
 
 @shared_task
-def run_pytest() -> dict:
+def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False) -> dict:
     """
-    Асинхронно запускает команду pytest и возвращает результат.
+    Универсальная задача для запуска pytest с разными параметрами
     """
+    command = [
+        "pytest",
+        "--create-db",
+        "--no-migrations",
+        "--disable-warnings",
+        "--tb=short",
+        "-v", 
+        test_path
+    ]
+    
+    if enable_coverage:
+        command += ["--cov=backend", "--cov-report=term", "--cov-report=html"]
+
     try:
-        logger.info("Запуск pytest...")
-        
         result = subprocess.run(
-            [
-                "pytest",
-                "--create-db",
-                "--no-migrations",
-                "--disable-warnings",
-                "--tb=short",
-                "-v",
-                "backend/tests/"
-            ],
+            command,
             capture_output=True,
             text=True,
         )
-
-        logger.info(f"Результат pytest: {result}")
 
         output = result.stdout + "\n" + result.stderr
         
@@ -65,20 +66,22 @@ def run_pytest() -> dict:
         failed = len(re.findall(r'FAILED', output))
         errors = len(re.findall(r'ERROR', output))
         
-        failed_tests = re.findall(
-            r'(FAILED|ERROR) \[.*?\] (.*?)(?=\n\S+|\Z)', 
-            output
-        )
+        coverage_data = {}
+        if enable_coverage:
+            total_coverage = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+%)', output)
+            coverage_data["total"] = total_coverage.group(1) if total_coverage else "0%"
 
         return {
             "passed": passed,
             "failed": failed,
             "errors": errors,
-            "failed_tests": [f"{res[0]}: {res[1]}" for res in failed_tests],
             "output": output,
+            "coverage": coverage_data if enable_coverage else None
         }
     except Exception as e:
         logger.error(f"Ошибка при запуске pytest: {e}", exc_info=True)
+        return {"error": str(e)}
+    
 
 @shared_task
 def send_confirmation_email_async(user_id: int, token: str) -> None:
