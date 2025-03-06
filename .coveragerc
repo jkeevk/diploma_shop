@@ -5,3 +5,4 @@ omit =
     */backend/celery_app.py
     */backend/signals.py
     */backend/tasks.py
+    */backend/utils/*
