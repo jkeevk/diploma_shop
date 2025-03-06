@@ -33,6 +33,8 @@
 - Мониторинг заказов и их статусов.
 - Импорт и экспорт данных о товарах.
 - Настройка параметров системы (например, настройка email-уведомлений).
+- Полный контроль через админку.
+- Запуск тестов и проверка покрытия кода тестами.
 
 ## Технологии
 
@@ -65,8 +67,9 @@
    ```git clone https://github.com/jkeevk/diploma_shop.git```
 
    ```cd diploma_shop```
-
-2. Запустить контейнеры с помощью Docker Compose:
+2. Файл .env.example переименовать в .env и заполнить значения переменных окружения для отправки почты.
+   
+3. Запустить контейнеры с помощью Docker Compose:
 
     ```docker-compose up -d --build```
 
@@ -87,7 +90,6 @@
 Документация API доступна в следующих форматах:
 
 Swagger: http://127.0.0.1/swagger
-
 Redoc: http://127.0.0.1/redoc
 
 
@@ -96,7 +98,7 @@ Redoc: http://127.0.0.1/redoc
 Если у вас есть вопросы или предложения, свяжитесь со мной:
 
 Email: jkeevk@yandex.ru
-
+TG: [jkeeincredible](https://t.me/jkeeincredible)
 GitHub: [jkeevk](https://github.com/jkeevk/)
 
 Ссылка на задание дипломного проекта: [Диплом](https://github.com/netology-code/python-final-diplom)
