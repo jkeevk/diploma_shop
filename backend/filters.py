@@ -1,8 +1,13 @@
 # Django
 from django_filters import rest_framework as filters
+from django.db.models import QuerySet
 
 # Local imports
 from .models import Product, Shop, Category
+
+# Standard library imports
+from django.db.models import QuerySet
+from typing import Optional
 
 class ProductFilter(filters.FilterSet):
     """
@@ -15,7 +20,7 @@ class ProductFilter(filters.FilterSet):
         model = Product
         fields = ['category']
 
-    def filter_shop(self, queryset, name, value):
+    def filter_shop(self, queryset: QuerySet[Product], name: str, value: Optional[Shop]) -> QuerySet[Product]:
         """
         Фильтрует продукты по выбранному магазину.
         

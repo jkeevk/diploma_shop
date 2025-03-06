@@ -55,10 +55,10 @@
 
 ### Предварительные требования
 
-1. Убедитесь, что у вас установлена ОС Linux или MacOS. (опционально)
-2. Установите Python 3.10 или новее. (опционально)
-3. Установите IDE с поддержкой Python (например, PyCharm, VS Code). (опционально)
-4. Установите [Docker](https://www.docker.com/) и [Docker Compose](https://docs.docker.com/compose/install/).
+1. Установить [Docker](https://www.docker.com/) и [Docker Compose](https://docs.docker.com/compose/install/).
+2. Убедиться, что у вас установлена ОС Linux или MacOS. (опционально)
+3. Установить Python 3.10 или новее. (опционально)
+4. Установить IDE с поддержкой Python (например, PyCharm, VS Code). (опционально)
 
 ### Порядок запуска
 
@@ -92,6 +92,7 @@
 Swagger: http://127.0.0.1/swagger
 Redoc: http://127.0.0.1/redoc
 
+Примеры и формат данных для обновления прайса поставщиков в data/
 
 ### Контакты:
 

@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import QuerySet
 
 # Rest Framework
 from rest_framework import status
@@ -151,7 +152,7 @@ class ContactViewSet(ModelViewSet):
     serializer_class = ContactSerializer
     permission_classes = [check_role_permission("customer", "admin", "supplier")]
     
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Contact]:
         """Возвращает только контакты текущего пользователя."""
         user = self.request.user
         if user.role == "admin":
@@ -285,7 +286,7 @@ class PartnerImportView(APIView):
     """
     permission_classes = [check_role_permission("admin", "supplier")]
 
-    def get(self, request):
+    def get(self, request) -> Response:
         task = import_products_task.delay()
         return Response(
             {"task_id": task.id}, 
@@ -299,7 +300,7 @@ class PartnerImportStatusView(APIView):
     """
     permission_classes = [check_role_permission("admin", "supplier")]
 
-    def get(self, request, task_id):
+    def get(self, request, task_id) -> Response:
         task_result = AsyncResult(task_id)
         response_data = {"status": task_result.status}
         

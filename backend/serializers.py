@@ -1,5 +1,5 @@
 # Standard library imports
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Django
 from django.contrib.auth import authenticate
@@ -27,6 +27,7 @@ from .models import (
     User,
     UserRole,
 )
+
 # Rest Framework
 from rest_framework import serializers
 
@@ -41,6 +42,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Contact."""
+
     class Meta:
         model = Contact
         fields = "__all__"
@@ -48,37 +50,40 @@ class ContactSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         """Инициализация сериализатора."""
         super().__init__(*args, **kwargs)
-        request = self.context.get('request')
+        request = self.context.get("request")
         if request and request.user.role != "admin":
-            self.fields['user'].read_only = True
+            self.fields["user"].read_only = True
 
-    def validate(self, data):
+    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Валидация данных."""
-        request = self.context.get('request')
-        user = getattr(request, 'user', None)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
 
         if not self.partial:
             if user and user.role != "admin":
-                data['user'] = user
+                data["user"] = user
                 try:
                     contact = Contact(**data)
                     contact.clean()
                 except ValidationError as e:
                     raise serializers.ValidationError(e.message)
-                user_id_in_request = self.initial_data.get('user')
-                if user_id_in_request is not None and str(user.id) != str(user_id_in_request):
+                user_id_in_request = self.initial_data.get("user")
+                if user_id_in_request is not None and str(user.id) != str(
+                    user_id_in_request
+                ):
                     raise serializers.ValidationError(
                         {"user": "Вы не можете указывать другого пользователя."}
                     )
 
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: Dict[str, Any]) -> Contact:
         """Создание контакта."""
-        user = self.context['request'].user
+        user = self.context["request"].user
         if user.role != "admin":
-            validated_data['user'] = user
+            validated_data["user"] = user
         return super().create(validated_data)
+
 
 class FileUploadSerializer(serializers.Serializer):
     """Сериализатор для загрузки файлов."""
@@ -138,7 +143,7 @@ class OrderSerializer(serializers.ModelSerializer):
         """Создание нового заказа с элементами заказа."""
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
-        
+
         for item_data in order_items_data:
             product = item_data.get("product")
             shop = item_data.get("shop")
@@ -148,12 +153,12 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f"Для товара {item_data.get('product')} не указан магазин"
                 )
-                
+
             if not shop.user:
                 raise serializers.ValidationError(
                     f"Магазин {shop.name} (ID={shop.id}) не привязан к пользователю"
                 )
-            
+
             if not shop.user.is_active:
                 raise serializers.ValidationError(
                     f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
@@ -185,20 +190,19 @@ class OrderSerializer(serializers.ModelSerializer):
             ).first()
 
             if existing_item:
-                    new_quantity = existing_item.quantity + quantity
-                    if new_quantity > product_info.quantity:
-                        raise serializers.ValidationError(
-                            f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {quantity}."
-                        )
-                    existing_item.quantity = new_quantity
-                    existing_item.save()
+                new_quantity = existing_item.quantity + quantity
+                if new_quantity > product_info.quantity:
+                    raise serializers.ValidationError(
+                        f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {quantity}."
+                    )
+                existing_item.quantity = new_quantity
+                existing_item.save()
             else:
                 OrderItem.objects.create(
                     order=order, product=product, shop=shop, quantity=quantity
                 )
 
         return order
-
 
     def update(self, instance: Order, validated_data: Dict[str, Any]) -> Order:
         order_items_data = validated_data.pop("order_items", [])
@@ -211,7 +215,9 @@ class OrderSerializer(serializers.ModelSerializer):
             shop = item_data["shop"]
             quantity = item_data["quantity"]
 
-            existing_item = instance.order_items.filter(product=product, shop=shop).first()
+            existing_item = instance.order_items.filter(
+                product=product, shop=shop
+            ).first()
 
             product_info = product.product_infos.filter(shop=shop).first()
             if not product_info:
@@ -234,7 +240,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
 
         return instance
-    
+
 
 class OrderWithContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Order с указанием контактной информации."""
@@ -367,7 +373,11 @@ class ProductSerializer(serializers.ModelSerializer):
                 shop_data = product_info_data.get("shop")
 
                 if shop_data is None:
-                    shop_data = instance.product_infos.first().shop if instance.product_infos.exists() else None
+                    shop_data = (
+                        instance.product_infos.first().shop
+                        if instance.product_infos.exists()
+                        else None
+                    )
 
                 product_info_id = product_info_data.get("id", None)
                 if product_info_id:
@@ -393,6 +403,7 @@ class ProductSerializer(serializers.ModelSerializer):
                     )
 
         return instance
+
 
 class ShopSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Shop."""
@@ -506,7 +517,7 @@ class PasswordResetSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise ValidationError(
                 {"email": ["Пользователь с таким email не найден."]},
-                code="user_not_found"
+                code="user_not_found",
             )
         return value
 

@@ -10,6 +10,9 @@ from django.db import models
 from django.utils.text import slugify
 
 class UserRole(Enum):
+    """
+    Роль пользователя в системе.
+    """
     CUSTOMER = "customer"
     SUPPLIER = "supplier"
     ADMIN = "admin"
@@ -289,6 +292,9 @@ class ProductInfo(models.Model):
 
 
 class ProductParameter(models.Model):
+    """
+    Модель параметра товара. Содержит информацию о товаре, параметре и его значении.
+    """
     product_info = models.ForeignKey(
         'ProductInfo', verbose_name="Информация о товаре", related_name="product_parameters", on_delete=models.CASCADE
     )
