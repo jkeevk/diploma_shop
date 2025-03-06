@@ -109,8 +109,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "user": "20/minute",
-        "anon": "10/minute",
+        "user": "200/minute",
+        "anon": "100/minute",
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

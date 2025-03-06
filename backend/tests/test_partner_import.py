@@ -1,7 +1,8 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import uuid
 
 
 @pytest.mark.django_db
@@ -17,13 +18,17 @@ class TestPartnerImportView:
         """
         api_client.force_authenticate(user=admin)
 
-        mock_import_task.return_value = {"message": "Данные успешно импортированы"}
+        mock_task = MagicMock()
+        mock_task.id = str(uuid.uuid4())
 
-        url = reverse("partner-export")
+        mock_import_task.return_value = mock_task
+
+        url = reverse("partner-import")
         response = api_client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {"message": "Задача на импорт данных поставлена в очередь"}
+        assert response.status_code == status.HTTP_202_ACCEPTED
+        assert isinstance(response.data["task_id"], str)
+        assert len(response.data["task_id"]) > 0
         mock_import_task.assert_called_once()
 
     @patch("backend.views.import_products_task.delay")
@@ -35,7 +40,7 @@ class TestPartnerImportView:
 
         mock_import_task.side_effect = Exception("Ошибка при запуске задачи")
 
-        url = reverse("partner-export")
+        url = reverse("partner-import")
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -48,7 +53,7 @@ class TestPartnerImportView:
         """
         api_client.force_authenticate(user=customer)
 
-        url = reverse("partner-export")
+        url = reverse("partner-import")
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN

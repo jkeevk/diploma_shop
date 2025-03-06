@@ -287,11 +287,17 @@ class PartnerImportView(APIView):
     permission_classes = [check_role_permission("admin", "supplier")]
 
     def get(self, request) -> Response:
-        task = import_products_task.delay()
-        return Response(
-            {"task_id": task.id}, 
-            status=status.HTTP_202_ACCEPTED
-        )
+        try:
+            task = import_products_task.delay()
+            return Response(
+                {"task_id": task.id}, 
+                status=status.HTTP_202_ACCEPTED
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @SWAGGER_CONFIGS["check_partner_import_schema"] 
 class PartnerImportStatusView(APIView):
