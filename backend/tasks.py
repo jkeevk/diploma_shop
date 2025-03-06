@@ -14,6 +14,7 @@ from celery import shared_task
 
 # Local imports
 from .models import Order, Shop, User
+from backend.utils.exporters import generate_import_data
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,10 @@ def export_products_task(file_path: str) -> dict:
 def import_products_task() -> dict:
     """Асинхронно импортирует данные о продуктах."""
     try:
-        call_command("import_products")
-        return {"message": "Данные успешно импортированы"}
+        data = generate_import_data()
+        return {"status": "success", "data": data}
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": "error", "message": str(e)}
 
 @shared_task
 def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False) -> dict:

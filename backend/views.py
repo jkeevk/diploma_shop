@@ -40,7 +40,7 @@ from .serializers import (
 )
 from .swagger_configs import SWAGGER_CONFIGS
 from .tasks import export_products_task, import_products_task
-
+from celery.result import AsyncResult
 
 @SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
@@ -252,28 +252,6 @@ class ParameterViewSet(ModelViewSet):
     permission_classes = [check_role_permission("admin", "supplier")]
 
 
-@SWAGGER_CONFIGS["partner_import_schema"]
-class PartnerImportView(APIView):
-    """
-    Представление для импорта данных поставщика в файл.
-    """
-
-    permission_classes = [check_role_permission("admin", "supplier")]
-
-    def get(self, request: Any, *args: Any, **kwargs: Any) -> Response:
-        """
-        Запускает задачу на импорт данных поставщика.
-        """
-        try:
-            import_products_task.delay()
-            return Response(
-                {"message": "Задача на импорт данных поставлена в очередь"},
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @SWAGGER_CONFIGS["partner_orders_schema"]
 class PartnerOrders(APIView):
     """
@@ -300,6 +278,43 @@ class PartnerOrders(APIView):
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
 
+@SWAGGER_CONFIGS["partner_import_schema"]
+class PartnerImportView(APIView):
+    """
+    Представление для создания задачи на импорт данных поставщика.
+    """
+    permission_classes = [check_role_permission("admin", "supplier")]
+
+    def get(self, request):
+        task = import_products_task.delay()
+        return Response(
+            {"task_id": task.id}, 
+            status=status.HTTP_202_ACCEPTED
+        )
+
+@SWAGGER_CONFIGS["check_partner_import_schema"] 
+class PartnerImportStatusView(APIView):
+    """
+    Представление для получения результата выполнения задачи на импорт данных поставщика.
+    """
+    permission_classes = [check_role_permission("admin", "supplier")]
+
+    def get(self, request, task_id):
+        task_result = AsyncResult(task_id)
+        response_data = {"status": task_result.status}
+        
+        if task_result.ready():
+            if task_result.successful():
+                result = task_result.result
+                if result["status"] == "success":
+                    response_data["data"] = result["data"]
+                else:
+                    response_data["error"] = result.get("message", "Unknown error")
+            else:
+                response_data["error"] = "Task failed"
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+    
 
 @SWAGGER_CONFIGS["partner_update_schema"]
 class PartnerUpdateView(APIView):
@@ -366,7 +381,7 @@ class PasswordResetConfirmView(GenericAPIView):
         try:
             user = User.objects.get(pk=uid)
         except User.DoesNotExist:
-            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
         if not default_token_generator.check_token(user, token):
             return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
