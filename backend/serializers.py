@@ -65,12 +65,11 @@ class ContactSerializer(serializers.ModelSerializer):
                     contact.clean()
                 except ValidationError as e:
                     raise serializers.ValidationError(e.message)
-
-            user_id_in_request = self.initial_data.get('user')
-            if user_id_in_request is not None and str(user.id) != str(user_id_in_request):
-                raise serializers.ValidationError(
-                    {"user": "Вы не можете указывать другого пользователя."}
-                )
+                user_id_in_request = self.initial_data.get('user')
+                if user_id_in_request is not None and str(user.id) != str(user_id_in_request):
+                    raise serializers.ValidationError(
+                        {"user": "Вы не можете указывать другого пользователя."}
+                    )
 
         return data
 
@@ -367,7 +366,6 @@ class ProductSerializer(serializers.ModelSerializer):
                 parameters_data = product_info_data.pop("parameters", [])
                 shop_data = product_info_data.get("shop")
 
-                # Если shop_data не передано, используем текущий магазин
                 if shop_data is None:
                     shop_data = instance.product_infos.first().shop if instance.product_infos.exists() else None
 
@@ -506,7 +504,10 @@ class PasswordResetSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=value)
         except User.DoesNotExist:
-            raise serializers.ValidationError("Пользователь с таким email не найден.")
+            raise ValidationError(
+                {"email": ["Пользователь с таким email не найден."]},
+                code="user_not_found"
+            )
         return value
 
     def save(self) -> None:

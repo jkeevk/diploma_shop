@@ -22,43 +22,39 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
-    ParameterSerializer
+    ParameterSerializer,
 )
 
 SWAGGER_CONFIGS = {
     "login_schema": extend_schema(
         summary="Авторизация",
-        description="Эндпоинт для авторизации пользователя с помощью электронной почты и пароля. Пользователь получает доступ к API, используя токен.",
+        description="Эндпоинт для авторизации пользователя с помощью электронной почты и пароля. Пользователь получает JWT-токены для дальнейшего использования API.",
         request=LoginSerializer,
         responses={
             200: {
                 "description": "Успешная авторизация",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "user_id": 1,
-                            "email": "user@example.com",
-                            "access_token": "string",
-                            "refresh_token": "string",
-                        }
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
                 "description": "Неверные данные запроса",
-                "content": {
-                    "application/json": {
-                        "example": {"non_field_errors": ["Invalid credentials."]}
-                    }
-                },
-            },
-            401: {
-                "description": "Неавторизованный доступ",
-                "content": {
-                    "application/json": {"example": {"detail": "Unauthorized"}}
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Успешная авторизация",
+                value={
+                    "email": "user@example.com",
+                    "password": "string"
+                },
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Неверные данные запроса",
+                value={"email": "user@example.com", "password": ""},
+                status_codes=["400"],
+            ),
+        ],
     ),
     "password_reset_schema": extend_schema(
         summary="Сброс пароля",
@@ -67,27 +63,34 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Ссылка для сброса пароля отправлена на email.",
-                "content": {
-                    "application/json": {
-                        "example": {"message": "Password reset link sent to email."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
-                "description": "Неверный или отсутствующий токен",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "Invalid or missing token."}
-                    }
-                },
+                "description": "Неверный формат почты.",
+                "content": {"application/json": {}},
             },
-            404: {
-                "description": "Пользователь не найден",
-                "content": {
-                    "application/json": {"example": {"detail": "User not found."}}
-                },
+            400: {
+                "description": "Пользователь с таким email не найден.",
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Ссылка для сброса пароля отправлена",
+                value={"email": "user@example.com"},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Неверный формат почты",
+                value={"email": "userexample.com"},
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Пользователь не найден",
+                value={"email": "us@erexample.com"},
+                status_codes=["404"],
+            ),
+        ],
     ),
     "password_reset_confirm_schema": extend_schema(
         summary="Подтверждение нового пароля",
@@ -96,27 +99,25 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Пароль успешно изменён.",
-                "content": {
-                    "application/json": {
-                        "example": {"message": "Password reset successful."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
                 "description": "Недействительный токен или пользователь не найден.",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "Invalid token or user not found."}
-                    }
-                },
-            },
-            404: {
-                "description": "Пользователь не найден",
-                "content": {
-                    "application/json": {"example": {"detail": "User not found."}}
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Пароль успешно изменён",
+                value={"new_password": "string"},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Недействительный токен или пользователь не найден",
+                value={"new_password": "string"},
+                status_codes=["400"],
+            ),
+        ],
     ),
     "partner_update_schema": extend_schema(
         summary="Обновление каталога поставщика",
@@ -159,7 +160,7 @@ SWAGGER_CONFIGS = {
     ),
     "partner_import_schema": extend_schema(
         summary="Импорт данных поставщика",
-        description="Эндпоинт для импорта данных поставщика. Возвращает JSON-файл с данными о товарах, категориях и магазине. Доступен только для авторизованных пользователей, связанных с магазином.",
+        description="Эндпоинт для импорта данных поставщика. Возвращает ID задачи.",
         responses={
             200: {
                 "description": "Задача на импорт данных поставлена в очередь",
@@ -219,6 +220,85 @@ SWAGGER_CONFIGS = {
             ),
         ],
     ),
+    "check_partner_import_schema": extend_schema(
+        summary="Проверка статуса задачи на импорт данных поставщика",
+        description="Эндпоинт для проверки статуса задачи импорта. Возвращает текущий статус и результат выполнения.",
+        responses={
+            200: {
+                "description": "Статус задачи",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "SUCCESS",
+                            "data": {"message": "Данные успешно импортированы"},
+                        }
+                    }
+                },
+            },
+            400: {
+                "description": "Неверный формат task_id",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Неверный формат идентификатора задачи"}
+                    }
+                },
+            },
+            401: {
+                "description": "Пользователь не авторизован",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "Пожалуйста, войдите в систему."}
+                    }
+                },
+            },
+            404: {
+                "description": "Задача не найдена",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Задача с указанным ID не найдена"}
+                    }
+                },
+            },
+            500: {
+                "description": "Ошибка сервера",
+                "content": {
+                    "application/json": {
+                        "example": {"error": "Внутренняя ошибка сервера"}
+                    }
+                },
+            },
+        },
+        examples=[
+            OpenApiExample(
+                name="Успешное выполнение",
+                value={
+                    "status": "SUCCESS",
+                    "data": {"message": "Данные успешно импортированы"},
+                },
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Задача в процессе",
+                value={"status": "PENDING"},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка выполнения",
+                value={"status": "FAILURE", "error": "Ошибка валидации данных"},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Неверный формат ID",
+                value={"error": "Неверный формат идентификатора задачи"},
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Задача не найдена",
+                value={"error": "Задача с указанным ID не найдена"},
+                status_codes=["404"],
+            ),
+        ],
+    ),
     "product_viewset_schema": extend_schema_view(
         list=extend_schema(
             description="Получить список всех товаров. Фильтрация возможна по категории, имени товара и модели.",
@@ -261,21 +341,33 @@ SWAGGER_CONFIGS = {
         responses={
             201: {
                 "description": "Пользователь успешно зарегистрирован и email подтверждён",
-                "content": {
-                    "application/json": {
-                        "example": {"message": "User registered successfully."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
                 "description": "Пользователь с таким email уже существует",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "User with this email already exists."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Пользователь успешно создан. Пожалуйста, проверьте вашу почту для подтверждения регистрации",
+                value={
+                    "email": "asdsd@akdskaskd2.com",
+                    "password": "sasdaSASD@d22",
+                    "role": "customer"
+                    },
+                status_codes=["201"],
+            ),
+            OpenApiExample(
+                name="Пользователь с таким email уже существует",
+                value={
+                    "email": "admin@admin.com",
+                    "password": "admin",
+                    "role": "admin"
+                },
+                status_codes=["400"],
+            ),
+        ],
     ),
     "category_viewset_schema": extend_schema_view(
         list=extend_schema(
@@ -318,26 +410,25 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Аккаунт успешно активирован",
-                "content": {
-                    "application/json": {
-                        "example": {"message": "Account activated successfully."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             404: {
-                "description": "Пользователь не найден или неверный токен",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "User not found or invalid token."}
-                    }
-                },
+                "description": "Пользователь не найден",
+                "content": {"application/json": {}},
             },
         },
-    ),
-    "category_schema": extend_schema(
-        summary="Список всех категорий",
-        description="Возвращает список всех доступных категорий товаров в магазине.",
-        responses={200: CategorySerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name="Аккаунт успешно активирован",
+                value={"message": "Account activated successfully."},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Пользователь не найден",
+                value={"detail": "Not found."},
+                status_codes=["404"],
+            ),
+        ],
     ),
     "shop_schema": extend_schema_view(
         get=extend_schema(
@@ -523,21 +614,25 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Список подтвержденных заказов",
-                "content": {
-                    "application/json": {
-                        "example": [{"id": 1, "status": "confirmed", "items": []}]
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
                 "description": "Ошибка, если пользователь не связан с магазином.",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "User is not associated with a shop."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Список подтвержденных заказов",
+                value=[{"id": 1, "status": "confirmed", "items": []}],
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка, если пользователь не связан с магазином",
+                value={"detail": "User is not associated with a shop."},
+                status_codes=["400"],
+            ),
+        ],
     ),
     "user_orders_schema": extend_schema(
         summary="Получить подтвержденные заказы для покупателя",
@@ -545,13 +640,25 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Список подтвержденных заказов",
-                "content": {
-                    "application/json": {
-                        "example": [{"id": 1, "status": "confirmed", "items": []}]
-                    }
-                },
+                "content": {"application/json": {}},
             },
+            403: {
+                "description": "Ошибка, если пользователь не авторизован.",
+                "content": {"application/json": {}},
+            }
         },
+        examples=[
+            OpenApiExample(
+                name="Список подтвержденных заказов",
+                value=[{"id": 1, "status": "confirmed", "items": []}],
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка, если пользователь не авторизован",
+                value={"detail": "Вы не авторизованы. Пожалуйста, войдите в систему."},
+                status_codes=["403"],
+            ),
+        ],  
     ),
     "confirm_basket_schema": extend_schema(
         summary="Подтвердить корзину",
@@ -560,28 +667,32 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Корзина успешно подтверждена",
-                "content": {
-                    "application/json": {
-                        "example": {"message": "Basket confirmed successfully."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             400: {
                 "description": "Ошибка, если корзина пуста или ID контакта некорректен.",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "Basket is empty or invalid contact ID."}
-                    }
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Корзина успешно подтверждена",
+                value={"message": "Basket confirmed successfully."},
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка, если корзина пуста или ID контакта некорректен",
+                value={"detail": "Basket is empty or invalid contact ID."},
+                status_codes=["400"],
+            ),
+        ],
     ),
     "disable_toggle_user_activity_schema": extend_schema(
         summary="Переключить активность пользователя",
         description="Позволяет администратору включить или отключить активность любого пользователя. "
-                    "Если активность отключена: "
-                    "- Для продавца: его товары не будут отображаться в поиске. "
-                    "- Для покупателя: он не сможет совершать покупки.",
+        "Если активность отключена: "
+        "- Для продавца: его товары не будут отображаться в поиске. "
+        "- Для покупателя: он не сможет совершать покупки.",
         parameters=[
             OpenApiParameter(
                 name="user_id",
@@ -597,7 +708,7 @@ SWAGGER_CONFIGS = {
                     "application/json": {
                         "message": "Активность пользователя user@example.com изменена на False",
                         "user_id": 1,
-                        "new_status": False
+                        "new_status": False,
                     }
                 },
             },
@@ -620,7 +731,7 @@ SWAGGER_CONFIGS = {
                 value={
                     "message": "Активность пользователя user@example.com изменена на False",
                     "user_id": 1,
-                    "new_status": False
+                    "new_status": False,
                 },
                 status_codes=["200"],
             ),
@@ -642,23 +753,25 @@ SWAGGER_CONFIGS = {
         responses={
             202: {
                 "description": "Задача на выполнение pytest успешно создана.",
-                "content": {
-                    "application/json": {
-                        "example": {"task_id": "550e8400-e29b-41d4-a716-446655440000"}
-                    }
-                },
+                "content": {"application/json": {}},
             },
             403: {
                 "description": "Доступ запрещен. Требуются права администратора.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "detail": "You do not have permission to perform this action."
-                        }
-                    }
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Задача на выполнение pytest успешно создана",
+                value={"task_id": "550e8400-e29b-41d4-a716-446655440000"},
+                status_codes=["202"],
+            ),
+            OpenApiExample(
+                name="Доступ запрещен",
+                value={"detail": "You do not have permission to perform this action."},
+                status_codes=["403"],
+            ),
+        ],
     ),
     "check_pytest_task_schema": extend_schema(
         summary="Проверка статуса задачи pytest",
@@ -674,44 +787,43 @@ SWAGGER_CONFIGS = {
         responses={
             200: {
                 "description": "Результат выполнения тестов.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "SUCCESS",
-                            "summary": {
-                                "passed": 5,
-                                "failed": 1,
-                                "errors": 0,
-                            },
-                            "successful_tests": ["test_example_1", "test_example_2"],
-                            "failed_tests": ["test_example_3"],
-                        }
-                    }
-                },
+                "content": {"application/json": {}},
             },
             202: {
                 "description": "Задача ещё выполняется.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "PENDING",
-                            "message": "Задача ещё выполняется.",
-                        }
-                    }
-                },
+                "content": {"application/json": {}},
             },
             500: {
                 "description": "Ошибка при выполнении задачи.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "FAILURE",
-                            "message": "Задача завершилась с ошибкой.",
-                        }
-                    }
-                },
+                "content": {"application/json": {}},
             },
         },
+        examples=[
+            OpenApiExample(
+                name="Результат выполнения тестов",
+                value={
+                    "status": "SUCCESS",
+                    "summary": {
+                        "passed": 5,
+                        "failed": 1,
+                        "errors": 0,
+                    },
+                    "successful_tests": ["test_example_1", "test_example_2"],
+                    "failed_tests": ["test_example_3"],
+                },
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Задача ещё выполняется",
+                value={"status": "PENDING", "message": "Задача ещё выполняется."},
+                status_codes=["202"],
+            ),
+            OpenApiExample(
+                name="Ошибка при выполнении задачи",
+                value={"status": "FAILURE", "message": "Задача завершилась с ошибкой."},
+                status_codes=["500"],
+            ),
+        ],
     ),
     "run_coverage_pytest_schema": extend_schema(
         summary="Запуск pytest с измерением покрытия",
