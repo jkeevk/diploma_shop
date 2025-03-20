@@ -63,7 +63,7 @@ urlpatterns = (
         path("user/login", LoginView.as_view(), name="login"),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         path("admin/", admin.site.urls, name="admin"),
-        path("tests/run-pytest/", RunPytestView.as_view(), name="run_pytest"),
+        path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
         path(
             "tests/check-pytest-task/<str:task_id>/",
             CheckPytestTaskView.as_view(),
@@ -80,7 +80,7 @@ urlpatterns = (
         path(
             "user/password_reset",
             PasswordResetView.as_view(),
-            name="password_reset",
+            name="password-reset",
         ),
         path(
             "user/password_reset/confirm/<str:uidb64>/<str:token>",

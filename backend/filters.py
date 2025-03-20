@@ -13,7 +13,11 @@ class ProductFilter(filters.FilterSet):
     """
     Фильтр для модели Product, позволяющий фильтровать продукты по магазину и категории.
     """
-    shop = filters.ModelChoiceFilter(queryset=Shop.objects.all(), method='filter_shop', required=False)
+    shop = filters.NumberFilter(
+        field_name="product_infos__shop", 
+        method="filter_shop",
+        required=False
+    )
     category = filters.ModelChoiceFilter(queryset=Category.objects.all(), required=False)
 
     class Meta:

@@ -110,11 +110,7 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     "Не удалось войти с предоставленными учетными данными."
                 )
-        else:
-            raise serializers.ValidationError(
-                "Необходимо указать 'email' и 'password'."
-            )
-
+            
         data["user"] = user
         return data
 
@@ -185,19 +181,19 @@ class OrderSerializer(serializers.ModelSerializer):
             shop = item_data.get("shop")
             quantity = item_data.get("quantity")
 
-            existing_item = OrderItem.objects.filter(
-                order=order, product=product, shop=shop
-            ).first()
+            existing_item = OrderItem.objects.filter(order=order, product=product, shop=shop).first()
 
             if existing_item:
                 new_quantity = existing_item.quantity + quantity
-                if new_quantity > product_info.quantity:
+                # Проверяем, достаточно ли товара для обновления
+                if product_info.quantity < new_quantity:
                     raise serializers.ValidationError(
-                        f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {quantity}."
+                        f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {new_quantity}."
                     )
                 existing_item.quantity = new_quantity
                 existing_item.save()
             else:
+                # Если элемента нет, создаем новый
                 OrderItem.objects.create(
                     order=order, product=product, shop=shop, quantity=quantity
                 )
@@ -246,38 +242,19 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Order с указанием контактной информации."""
 
     contact_id = serializers.PrimaryKeyRelatedField(
-        source="contact", queryset=Contact.objects.all(), required=False
+        queryset=Contact.objects.all(), required=True
     )
 
     class Meta:
         model = Order
         fields = ["contact_id"]
 
-    def create(self, validated_data: Dict[str, Any]) -> Order:
-        """Создание нового заказа с указанием контактной информации."""
-        order_items_data = validated_data.pop("order_items", [])
-        user = validated_data.pop("user", self.context["request"].user)
-
-        order, created = Order.objects.get_or_create(user=user, status="new")
-
-        for item_data in order_items_data:
-            product = item_data.get("product")
-            shop = item_data.get("shop")
-            quantity = item_data.get("quantity")
-
-            existing_item = OrderItem.objects.filter(
-                order=order, product=product, shop=shop
-            ).first()
-
-            if existing_item:
-                existing_item.quantity += quantity
-                existing_item.save()
-            else:
-                OrderItem.objects.create(
-                    order=order, product=product, shop=shop, quantity=quantity
-                )
-
-        return order
+    def validate_contact_id(self, value):
+        """Проверка, что контакт принадлежит текущему пользователю."""
+        user = self.context['request'].user
+        if not Contact.objects.filter(id=value.id, user=user).exists():
+            raise serializers.ValidationError("Контакт не найден.")
+        return value
 
 
 class ParameterSerializer(serializers.ModelSerializer):
@@ -372,26 +349,24 @@ class ProductSerializer(serializers.ModelSerializer):
                 parameters_data = product_info_data.pop("parameters", [])
                 shop_data = product_info_data.get("shop")
 
-                if shop_data is None:
-                    shop_data = (
-                        instance.product_infos.first().shop
-                        if instance.product_infos.exists()
-                        else None
-                    )
-
                 product_info_id = product_info_data.get("id", None)
                 if product_info_id:
                     product_info = ProductInfo.objects.get(
                         id=product_info_id, product=instance
                     )
+                    # Update the shop only if it's different
+                    if product_info.shop.id != shop_data:
+                        product_info.shop = Shop.objects.get(id=shop_data)
                     for attr, value in product_info_data.items():
                         setattr(product_info, attr, value)
                     product_info.save()
                 else:
+                    # Handle creation of new ProductInfo if needed
                     product_info, _ = ProductInfo.objects.get_or_create(
                         product=instance, shop=shop_data, defaults=product_info_data
                     )
 
+                # Update parameters as before
                 for param_data in parameters_data:
                     parameter_name = param_data.get("parameter")
                     value = param_data.get("value")

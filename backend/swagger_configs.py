@@ -666,26 +666,26 @@ SWAGGER_CONFIGS = {
         request=OrderWithContactSerializer,
         responses={
             200: {
-                "description": "Корзина успешно подтверждена",
-                "content": {"application/json": {}},
+                "description": "Корзина успешно подтверждена.",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "detail": "Заказ успешно подтвержден."
+                        }
+                    }
+                },
             },
             400: {
                 "description": "Ошибка, если корзина пуста или ID контакта некорректен.",
-                "content": {"application/json": {}},
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "detail": "Корзина пуста."
+                        }
+                    }
+                },
             },
         },
-        examples=[
-            OpenApiExample(
-                name="Корзина успешно подтверждена",
-                value={"message": "Basket confirmed successfully."},
-                status_codes=["200"],
-            ),
-            OpenApiExample(
-                name="Ошибка, если корзина пуста или ID контакта некорректен",
-                value={"detail": "Basket is empty or invalid contact ID."},
-                status_codes=["400"],
-            ),
-        ],
     ),
     "disable_toggle_user_activity_schema": extend_schema(
         summary="Переключить активность пользователя",

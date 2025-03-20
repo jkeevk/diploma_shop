@@ -1,9 +1,18 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from backend.models import Category, Shop, Product, Contact, ProductInfo, OrderItem, Order
+from backend.models import (
+    Category,
+    Shop,
+    Product,
+    Contact,
+    ProductInfo,
+    OrderItem,
+    Order,
+)
 
 User = get_user_model()
+
 
 @pytest.fixture
 def api_client():
@@ -14,6 +23,7 @@ def api_client():
     """
     return APIClient()
 
+
 @pytest.fixture
 def supplier():
     """Фикстура для создания пользователя - поставщика."""
@@ -23,8 +33,9 @@ def supplier():
         first_name="Supplier",
         last_name="User",
         role="supplier",
-        is_active=True
+        is_active=True,
     )
+
 
 @pytest.fixture
 def admin():
@@ -35,8 +46,9 @@ def admin():
         first_name="Admin",
         last_name="User",
         role="admin",
-        is_active=True
+        is_active=True,
     )
+
 
 @pytest.fixture
 def customer():
@@ -47,13 +59,15 @@ def customer():
         first_name="Customer",
         last_name="User",
         role="customer",
-        is_active=True
+        is_active=True,
     )
+
 
 @pytest.fixture
 def category():
     """Фикстура для создания категории."""
     return Category.objects.create(name="Test Category")
+
 
 @pytest.fixture
 def shop(supplier):
@@ -64,6 +78,7 @@ def shop(supplier):
         user=supplier,
     )
 
+
 @pytest.fixture
 def product(category):
     """Фикстура для создания продукта."""
@@ -72,6 +87,17 @@ def product(category):
         model="Test Model",
         category=category,
     )
+
+
+@pytest.fixture
+def another_product(category):
+    """Фикстура для создания 2 продукта."""
+    return Product.objects.create(
+        name="Test2 Product",
+        model="Test2 Model",
+        category=category,
+    )
+
 
 @pytest.fixture
 def contact(customer):
@@ -87,47 +113,39 @@ def contact(customer):
         phone="+79991234567",
     )
 
+
 @pytest.fixture
 def order_item(customer, product, shop):
     """Фикстура для создания заказа."""
-    ProductInfo.objects.create(product=product, shop=shop, quantity=10, price=100, price_rrc=120)
-    order = Order.objects.create(user=customer, status="new")
-    return OrderItem.objects.create(
-        order=order,
-        product=product,
-        shop=shop,
-        quantity=3
+    ProductInfo.objects.create(
+        product=product, shop=shop, quantity=10, price=100, price_rrc=120
     )
+    order = Order.objects.create(user=customer, status="new")
+    return OrderItem.objects.create(order=order, product=product, shop=shop, quantity=3)
+
 
 @pytest.fixture
 def shops(supplier):
     """Фикстура для создания магазинов."""
     return [
         Shop.objects.create(name="Shop 1", user=supplier),
-        Shop.objects.create(name="Shop 2", user=supplier)
+        Shop.objects.create(name="Shop 2", user=supplier),
     ]
+
 
 @pytest.fixture
 def product_info(product, shop):
     """Фикстура для создания информации о товаре в магазине."""
     return ProductInfo.objects.create(
-        product=product,
-        shop=shop,
-        quantity=10,
-        price=100,
-        price_rrc=120
+        product=product, shop=shop, quantity=10, price=100, price_rrc=120
     )
+
 
 @pytest.fixture
 def order(customer, product, shop, product_info):
     """Фикстура для создания заказа с одним товаром."""
     order = Order.objects.create(user=customer)
-    OrderItem.objects.create(
-        order=order,
-        product=product,
-        shop=shop,
-        quantity=2
-    )
+    OrderItem.objects.create(order=order, product=product, shop=shop, quantity=2)
     return order
 
 
@@ -140,5 +158,5 @@ def other_customer():
         first_name="Customer",
         last_name="User",
         role="customer",
-        is_active=True
+        is_active=True,
     )

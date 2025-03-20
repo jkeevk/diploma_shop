@@ -28,7 +28,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT"))
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
-MAIL_BACKEND = "path.to.CustomEmailBackend"
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 BACKEND_URL = "http://localhost:8000"

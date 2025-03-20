@@ -66,6 +66,28 @@ class TestUserContacts:
         assert contact.house == "10"
         assert contact.phone == "+79991234567"
 
+    def test_create_contact_for_wrong_user(self, api_client, customer, supplier):
+        """
+        Тест создания контакта для другого пользователя.
+        """
+        api_client.force_authenticate(user=customer)
+
+        data = {
+            "city": "Moscow",
+            "street": "Lenina",
+            "house": "10",
+            "phone": "+79991234567",
+            "user": supplier.id,
+        }
+
+        url = reverse("user-contacts-list")
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert (
+            response.data["user"][0] == "Вы не можете указывать другого пользователя."
+        )
+
     def test_create_contact_with_invalid_phone(self, api_client, customer):
         """
         Тест создания контакта с неверным номером телефона.
