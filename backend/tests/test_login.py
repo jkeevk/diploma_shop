@@ -9,7 +9,7 @@ class TestUserLogin:
     Тесты для авторизации пользователя.
     """
 
-    def test_successful_login(self, api_client, customer):
+    def test_successful_login(self, api_client, customer_login):
         """Тест успешной авторизации пользователя."""
         url = reverse("login")
         data = {"email": "customer@example.com", "password": "strongpassword123"}
@@ -19,10 +19,10 @@ class TestUserLogin:
         assert response.status_code == status.HTTP_200_OK
         assert "access_token" in response.data
         assert "refresh_token" in response.data
-        assert response.data["user_id"] == customer.id
-        assert response.data["email"] == customer.email
+        assert response.data["user_id"] == customer_login.id
+        assert response.data["email"] == customer_login.email
 
-    def test_invalid_password(self, api_client, customer):
+    def test_invalid_password(self, api_client, customer_login):
         """Тест авторизации с неправильным паролем."""
         url = reverse("login")
         data = {"email": "customer@example.com", "password": "wrongpassword123"}
@@ -48,11 +48,11 @@ class TestUserLogin:
             "Не удалось войти с предоставленными учетными данными."
         ]
 
-    def test_inactive_user(self, api_client, supplier):
+    def test_inactive_user(self, api_client, customer_login):
         """Тест попытки авторизации для неактивного пользователя."""
         url = reverse("login")
-        supplier.is_active = False
-        supplier.save()
+        customer_login.is_active = False
+        customer_login.save()
 
         data = {"email": "supplier@example.com", "password": "strongpassword123"}
 

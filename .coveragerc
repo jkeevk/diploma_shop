@@ -9,5 +9,4 @@ omit =
     */backend/tasks.py
     */backend/apps.py
     */backend/utils/*
-    */backend/admin.py
     manage.py

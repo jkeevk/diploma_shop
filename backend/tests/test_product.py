@@ -69,47 +69,47 @@ class TestProductAPI:
         assert response.data["product_infos"][0]["quantity"] == 10
 
     def test_update_product_with_updated_product_info(self, api_client, supplier, shop):
-        """
-        Тест на обновление продукта с изменением информации о продукте через API.
-        """
-        api_client.force_authenticate(user=supplier)
-        category = Category.objects.create(name="Test Category")
-        new_shop = Shop.objects.create(id=100, name="New Shop")
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        update_data = {
-            "product_infos": [
-                {
-                    "id": product_info.id,
-                    "shop": new_shop.id,
-                    "quantity": 20,
-                    "price": 200.00,
-                    "price_rrc": 220.00,
-                }
-            ],
-        }
-
-        url = reverse("product-detail", kwargs={"pk": product.id})
-        response = api_client.patch(url, update_data, format="json")
-        assert response.status_code == status.HTTP_200_OK
-
-        updated_info = ProductInfo.objects.get(product=product, shop=new_shop)
-        assert updated_info.shop.id == new_shop.id
-        assert updated_info.quantity == 20
-
+         """
+         Тест на обновление продукта с изменением информации о продукте через API.
+         """
+         api_client.force_authenticate(user=supplier)
+         category = Category.objects.create(name="Test Category")
+         new_shop = Shop.objects.create(id=100, name="New Shop")
+ 
+         product = Product.objects.create(
+             name="Test Product",
+             model="Test Model",
+             category=category,
+         )
+ 
+         product_info = ProductInfo.objects.create(
+             product=product,
+             shop=shop,
+             quantity=10,
+             price=100.00,
+             price_rrc=120.00,
+         )
+ 
+         update_data = {
+             "product_infos": [
+                 {
+                     "id": product_info.id,
+                     "shop": new_shop.id,
+                     "quantity": 20,
+                     "price": 200.00,
+                     "price_rrc": 220.00,
+                 }
+             ],
+         }
+ 
+         url = reverse("product-detail", kwargs={"pk": product.id})
+         response = api_client.patch(url, update_data, format="json")
+         assert response.status_code == status.HTTP_200_OK
+ 
+         updated_info = ProductInfo.objects.get(product=product, shop=new_shop)
+         assert updated_info.shop.id == new_shop.id
+         assert updated_info.quantity == 20
+        
     def test_filter_by_shop(self, api_client, product, supplier, shop, category):
         """
         Тест фильтрации продуктов по магазину через API.

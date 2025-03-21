@@ -10,7 +10,7 @@ from backend.models import (
     OrderItem,
     Order,
 )
-
+import uuid
 User = get_user_model()
 
 
@@ -28,7 +28,7 @@ def api_client():
 def supplier():
     """Фикстура для создания пользователя - поставщика."""
     return User.objects.create_user(
-        email="supplier@example.com",
+        email=f"example-{uuid.uuid4()}@example.com",
         password="strongpassword123",
         first_name="Supplier",
         last_name="User",
@@ -41,7 +41,7 @@ def supplier():
 def admin():
     """Фикстура для создания пользователя - администратора."""
     return User.objects.create_user(
-        email="admin@example.com",
+        email=f"example-{uuid.uuid4()}@example.com",
         password="strongpassword123",
         first_name="Admin",
         last_name="User",
@@ -49,12 +49,23 @@ def admin():
         is_active=True,
     )
 
-
+@pytest.fixture
+def customer_login():
+    """Фикстура для создания пользователя - клиента для теста авторизации."""
+    return User.objects.create_user(
+        email="customer@example.com",
+        password="strongpassword123",
+        first_name="Customer",
+        last_name="User",
+        role="customer",
+        is_active=True,
+    )
+    
 @pytest.fixture
 def customer():
     """Фикстура для создания пользователя - клиента."""
     return User.objects.create_user(
-        email="customer@example.com",
+        email=f"example-{uuid.uuid4()}@example.com",
         password="strongpassword123",
         first_name="Customer",
         last_name="User",
@@ -153,7 +164,7 @@ def order(customer, product, shop, product_info):
 def other_customer():
     """Фикстура для создания пользователя - клиента."""
     return User.objects.create_user(
-        email="customer2@example.com",
+        email=f"example-{uuid.uuid4()}@example.com",
         password="strongpassword1234",
         first_name="Customer",
         last_name="User",

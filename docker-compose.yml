@@ -31,14 +31,19 @@ services:
       - net
     volumes:
       - ./data/:/app/data/
+      - ./coverage:/app/coverage
     command: >
       bash -c "
+        while ! nc -z db 5432; do
+          echo 'Waiting for PostgreSQL to be ready...'
+          sleep 2
+        done &&
         python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         uvicorn orders.asgi:application --host 0.0.0.0 --port 8000 --reload
-        "
-  
+      "
+
   db:
     env_file:
       - .env
@@ -53,7 +58,8 @@ services:
       - "5431:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
+      test:
+        ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
       interval: 30s
       retries: 3
       start_period: 10s
@@ -128,7 +134,7 @@ services:
       - ./coverage:/app/coverage
     networks:
       - net
-  
+
 networks:
   net:
     driver: bridge
