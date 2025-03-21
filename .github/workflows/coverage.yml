@@ -1,0 +1,25 @@
+name: 'coverage'
+on:
+    pull_request:
+        branches:
+            - master
+            - main
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Badge
+        uses: orgoro/coverage@v3.2
+        with:
+          coverageFile: ./coverage/coverage.xml
+          outputPath: badges/coverage.svg
+      - name: Commit Badge
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add badges/coverage.svg
+          git commit -m "Update coverage badge" || echo "No changes"
+          git push

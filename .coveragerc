@@ -1,8 +1,13 @@
 [run]
+branch = True
+source = backend
 omit =
     */backend/migrations/*
     */backend/tests/*
     */backend/celery_app.py
     */backend/signals.py
     */backend/tasks.py
+    */backend/apps.py
     */backend/utils/*
+    */backend/admin.py
+    manage.py

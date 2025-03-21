@@ -36,7 +36,6 @@ services:
         python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        python manage.py create_superuser_with_password --email admin@admin.com --password admin --role admin &&
         uvicorn orders.asgi:application --host 0.0.0.0 --port 8000 --reload
         "
   
@@ -105,6 +104,31 @@ services:
     restart: unless-stopped
     command: ["/bin/bash", "-c", "nginx -g 'daemon off;'"]
 
+  tests:
+    build: .
+    env_file:
+      - .env
+    command: >
+      bash -c "
+        echo '=== WAITING FOR DATABASE ==='
+        while ! nc -z db 5432; do sleep 2; done
+        
+        echo '=== APPLYING MIGRATIONS ==='
+        python manage.py makemigrations backend &&
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput
+        
+        echo '=== RUNNING TESTS ==='
+        pytest --cov=backend --cov-report=xml:/app/coverage/coverage.xml
+        "
+    depends_on:
+      - app
+      - db
+    volumes:
+      - ./coverage:/app/coverage
+    networks:
+      - net
+  
 networks:
   net:
     driver: bridge

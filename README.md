@@ -88,7 +88,10 @@
 Запуск тестов командой:
 
 ```docker-compose exec app pytest```
-    
+
+![Coverage](https://raw.githubusercontent.com/jkeevk/diploma_shop/main/badges/coverage.svg)
+
+
 ### Документация API
 
 Документация API доступна в следующих форматах:

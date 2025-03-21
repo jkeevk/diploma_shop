@@ -16,7 +16,7 @@ from .tasks import (
 )
 from .models import User, Order
 
-TESTING = os.getenv('DJANGO_TESTING', 'False') == 'True'
+TESTING = os.getenv('DJANGO_TESTING', False) == False
 
 @receiver(post_save, sender=User)
 def send_confirmation_email(sender: Any, instance: User, created: bool, **kwargs: Any) -> None:
