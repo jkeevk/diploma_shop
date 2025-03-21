@@ -24,6 +24,14 @@ jobs:
           coverageFile: ./coverage/coverage.xml
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create badges directory
+        run: |
+          mkdir -p badges
+
+      - name: Move badge to badges directory
+        run: |
+          mv coverage.svg badges/coverage.svg || echo "Badge not generated"
+          
       - name: Commit and push badge
         run: |
           git config --global user.name "GitHub Actions"
