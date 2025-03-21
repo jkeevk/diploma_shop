@@ -10,7 +10,7 @@ click-didyoumean==0.3.1
 click-plugins==1.1.1
 click-repl==0.3.0
 colorama==0.4.6
-coverage==7.6.12
+coverage==7.6.1
 debugpy==1.8.12
 Django==5.1.4
 django-filter==24.3
