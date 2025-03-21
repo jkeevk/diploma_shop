@@ -83,13 +83,15 @@
 
 - запущены серверы Django, Celery, Redis и Nginx;
 
-После успешного запуска сервер будет доступен по адресу: http://127.0.0.1/.
+После успешного запуска сервер будет доступен по адресу: http://127.0.0.1/
 
 Запуск тестов командой:
 
 ```docker-compose exec app pytest```
 
-![Coverage](https://raw.githubusercontent.com/jkeevk/diploma_shop/main/badges/coverage.svg)
+Покрытие кода тестами:
+
+[![Coverage Status](https://coveralls.io/repos/github/jkeevk/diploma_shop/badge.svg?branch=main)](https://coveralls.io/github/jkeevk/diploma_shop?branch=main)
 
 
 ### Документация API

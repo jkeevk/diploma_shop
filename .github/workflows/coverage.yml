@@ -81,5 +81,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./coverage.xml
+          
       - name: Shutdown Docker Compose
         run: docker-compose down
