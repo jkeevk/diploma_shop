@@ -15,7 +15,7 @@ jobs:
         uses: orgoro/coverage@v3.2
         with:
           coverageFile: ./coverage/coverage.xml
-          outputPath: badges/coverage.svg
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit Badge
         run: |
           git config --global user.name "GitHub Actions"
