@@ -37,7 +37,8 @@ from backend.views import (
     ConfirmBasketView,
     ToggleUserActivityView,
     ParameterViewSet,
-    UserOrdersView
+    UserOrdersView,
+    VKAuthView,
 )
 from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
 
@@ -61,6 +62,7 @@ urlpatterns = (
             name="swagger-ui",
         ),
         path("user/login", LoginView.as_view(), name="login"),
+        path('vk-auth/', VKAuthView.as_view(), name='vk_auth'),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         path("admin/", admin.site.urls, name="admin"),
         path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),

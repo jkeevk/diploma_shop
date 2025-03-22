@@ -10,6 +10,8 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
+from django.views.generic import TemplateView
+from django.conf import settings
 
 # Rest Framework
 from rest_framework import status
@@ -525,3 +527,15 @@ class UserOrdersView(APIView):
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
+
+class VKAuthView(TemplateView):
+    template_name = 'vk_auth.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        context.update({
+            'VK_APP_ID': settings.VK_APP_ID,
+            'VK_REDIRECT_URI': settings.VK_REDIRECT_URI
+        })
+        return context
