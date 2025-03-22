@@ -15,10 +15,9 @@ from datetime import timedelta
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
-
+# Database settings
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "12341")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "diploma_shop")
@@ -26,6 +25,7 @@ POSTGRES_HOST = os.getenv("POSTGRES_HOST", "db")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_ENGINE = os.getenv("POSTGRES_ENGINE", "django.db.backends.postgresql")
 
+# Email settings
 EMAIL_HOST = os.getenv("EMAIL_HOST", "user@user.user")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "smtp.yandex.ru")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "123")
@@ -35,9 +35,13 @@ EMAIL_USE_SSL = True
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-BACKEND_URL = "http://localhost:8000"
+VK_APP_ID = os.getenv("VK_APP_ID")
+VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")
+VK_REDIRECT_URI = 'https://oauth.vk.com/blank.html'
 
+BACKEND_URL = "http://localhost:8000"
 LOGIN_REDIRECT_URL = "/"
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -51,7 +55,7 @@ SECRET_KEY = "123"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -67,9 +71,22 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "rest_framework_simplejwt",
     "django_filters",
+    "django_extensions",
     "backend",
-    'drf_spectacular',
+    "drf_spectacular",
+    "social_django",
 ]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = ['https://localhost']
+CORS_ALLOW_ALL_ORIGINS = True
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.vk.VKOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -96,6 +113,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                'social_django.context_processors.backends',
+
             ],
         },
     },
