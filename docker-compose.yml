@@ -20,6 +20,8 @@ services:
       CELERY_BROKER_URL: ${REDIS_URL}
       CELERY_RESULT_BACKEND: ${REDIS_URL}
       REDIS_URL: ${REDIS_URL}
+      DJANGO_SETTINGS_MODULE: "orders.settings"
+      PYTHONPATH: "/app"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]
       interval: 30s
@@ -41,7 +43,9 @@ services:
         python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        uvicorn orders.asgi:application --host 0.0.0.0 --port 8000 --reload
+        python scripts/create_superuser.py
+
+        uvicorn orders.asgi:application --host 0.0.0.0 --port 8000
       "
 
   db:
@@ -103,8 +107,10 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./staticfiles:/staticfiles
+      - ./nginx/ssl:/etc/nginx/ssl
     ports:
       - "80:80"
+      - "443:443"
     networks:
       - net
     restart: unless-stopped
@@ -123,7 +129,7 @@ services:
         python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput
-        
+
         echo '=== RUNNING TESTS ==='
         pytest --cov=backend --cov-report=xml:/app/coverage/coverage.xml
         "

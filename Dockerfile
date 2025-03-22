@@ -1,6 +1,7 @@
 FROM python:3.12
 
 WORKDIR /app
+ENV PYTHONPATH "${PYTHONPATH}:/app"
 
 COPY requirements.txt /app/
 
@@ -14,6 +15,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
     
 COPY . /app/
-COPY .env /app/
+
+COPY ./nginx/ssl/localhost.crt /etc/nginx/ssl/localhost.crt
+COPY ./nginx/ssl/localhost.key /etc/nginx/ssl/localhost.key
 
 CMD ["uvicorn", "orders.asgi:application", "--host", "0.0.0.0", "--port", "8000"]
