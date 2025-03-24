@@ -1,9 +1,6 @@
 import pytest
 from django.db import IntegrityError
-from backend.models import (
-    Category, Shop, Product, ProductInfo, Parameter, ProductParameter
-)
-
+from backend.models import ProductParameter
 
 @pytest.mark.django_db
 class TestProductParameter:
@@ -11,39 +8,10 @@ class TestProductParameter:
     Тесты для модели ProductParameter.
     """
 
-    def test_create_product_parameter(self, supplier):
+    def test_create_product_parameter(self, product_info, parameter):
         """
         Тест создания параметра товара.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="Test Description",
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        parameter = Parameter.objects.create(
-            name="Test Parameter",
-        )
-
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
             parameter=parameter,
@@ -54,38 +22,10 @@ class TestProductParameter:
         assert product_parameter.parameter == parameter
         assert product_parameter.value == "Test Value"
 
-    def test_update_product_parameter(self, supplier):
+    def test_update_product_parameter(self, product_info, parameter):
         """
         Тест обновления параметра товара.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="Test Description",
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        parameter = Parameter.objects.create(
-            name="Test Parameter",
-        )
 
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
@@ -98,38 +38,10 @@ class TestProductParameter:
 
         assert product_parameter.value == "Updated Value"
 
-    def test_delete_product_parameter(self, supplier):
+    def test_delete_product_parameter(self, product_info, parameter):
         """
         Тест удаления параметра товара.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="Test Description",
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        parameter = Parameter.objects.create(
-            name="Test Parameter",
-        )
 
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
@@ -142,38 +54,10 @@ class TestProductParameter:
 
         assert not ProductParameter.objects.filter(id=product_parameter_id).exists()
 
-    def test_create_product_parameter_without_required_fields(self, supplier):
+    def test_create_product_parameter_without_required_fields(self, product_info, parameter):
         """
         Тест создания параметра товара без обязательных полей.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="Test Description",
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        parameter = Parameter.objects.create(
-            name="Test Parameter",
-        )
 
         with pytest.raises(Exception):
             ProductParameter.objects.create(
@@ -181,38 +65,10 @@ class TestProductParameter:
                 value="Test Value",
             )
 
-    def test_create_duplicate_product_parameter(self, supplier):
+    def test_create_duplicate_product_parameter(self, product_info, parameter):
         """
         Тест создания дубликата параметра товара.
         """
-        shop = Shop.objects.create(
-            name="Supplier Shop",
-            url="http://supplier.com",
-            user=supplier,
-        )
-
-        category = Category.objects.create(
-            name="Test Category",
-        )
-
-        product = Product.objects.create(
-            name="Test Product",
-            model="Test Model",
-            category=category,
-        )
-
-        product_info = ProductInfo.objects.create(
-            product=product,
-            shop=shop,
-            description="Test Description",
-            quantity=10,
-            price=100.00,
-            price_rrc=120.00,
-        )
-
-        parameter = Parameter.objects.create(
-            name="Test Parameter",
-        )
 
         ProductParameter.objects.create(
             product_info=product_info,
@@ -226,3 +82,10 @@ class TestProductParameter:
                 parameter=parameter,
                 value="Test Value",
             )
+
+    def test_product_parameter_str_method(self, product_parameter):
+        """
+        Проверяет, что метод __str__ у параметра возвращает ожидаемую строку.
+        Ожидается, что строковое представление параметра равно "Test Parameter".
+        """        
+        assert str(product_parameter) == f"{product_parameter.parameter.name}: {product_parameter.value}"

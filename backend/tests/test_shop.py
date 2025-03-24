@@ -93,4 +93,9 @@ class TestShopView:
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
-        
+
+    def test_shop_str_method(self, shop):
+        """
+        Тест строкового представления магазина.
+        """
+        assert str(shop) == "Supplier Shop"

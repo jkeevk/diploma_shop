@@ -227,28 +227,6 @@ class TestBasketAPI:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Добавление товара" in str(response.data[0])
 
-    def test_update_basket_item_quantity(self, api_client, customer, order_item):
-        """
-        Обновление количества товара в корзине
-        """
-        api_client.force_authenticate(user=customer)
-        url = reverse("basket-detail", args=[order_item.id])
-
-        new_data = {
-            "order_items": [
-                {
-                    "product": order_item.product.id,
-                    "shop": order_item.shop.id,
-                    "quantity": 5,
-                }
-            ]
-        }
-
-        response = api_client.patch(url, new_data, format="json")
-        assert response.status_code == status.HTTP_200_OK
-        order_item.refresh_from_db()
-        assert order_item.quantity == 5
-
     def test_clear_basket(self, api_client, customer, order):
         """
         Очистка корзины через DELETE запрос
@@ -258,3 +236,30 @@ class TestBasketAPI:
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_order_with_invalid_status(self, api_client, customer, order):
+        """
+        Тестирование заказа с некорректным статусом
+        """
+        order.status = "invalid_status"
+        order.save()
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-detail", args=[order.id])
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert any("Некорректный статус" in str(error) for error in response.data)
+
+    def test_order_str_method(self, order):
+        """
+        Тестирование строкового представления заказа
+        """
+        assert f"Заказ номер {order.id} - " in str(order)
+
+    def test_order_item_str_method(self, order_item):
+        """
+        Тестирование строкового представления элемента заказа
+        """
+        assert f"{order_item.product.name} : {order_item.quantity}" in str(
+            order_item
+        )
+

@@ -315,6 +315,7 @@ class TestUserManager:
         self.user_manager = User.objects
 
     def test_create_user_with_email(self):
+        """Тест создания пользователя с email."""
         user = self.user_manager.create_user(
             email="test@example.com", password="password123"
         )
@@ -324,10 +325,12 @@ class TestUserManager:
         assert not user.is_superuser
 
     def test_create_user_without_email(self):
+        """Тест создания пользователя без email."""
         with pytest.raises(ValueError, match="Поле Email должно быть заполнено"):
             self.user_manager.create_user(email="", password="password123")
 
     def test_create_superuser(self):
+        """Тест создания суперпользователя."""
         superuser = self.user_manager.create_superuser(
             email="admin@example.com", password="adminpass"
         )
@@ -337,6 +340,7 @@ class TestUserManager:
         assert superuser.is_superuser
 
     def test_create_superuser_without_is_staff(self):
+        """Тест создания суперпользователя без is_staff."""
         with pytest.raises(
             ValueError, match="Суперпользователь должен иметь is_staff=True."
         ):
@@ -345,9 +349,14 @@ class TestUserManager:
             )
 
     def test_create_superuser_without_is_superuser(self):
+        """Тест создания суперпользователя без is_superuser."""
         with pytest.raises(
             ValueError, match="Суперпользователь должен иметь is_superuser=True."
         ):
             self.user_manager.create_superuser(
                 email="admin@example.com", password="adminpass", is_superuser=False
             )
+
+    def test_user_str_method(self, customer_login):
+        """Тест строкового представления пользователя."""
+        assert str(customer_login) == "customer@example.com"

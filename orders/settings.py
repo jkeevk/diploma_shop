@@ -35,6 +35,7 @@ EMAIL_USE_SSL = True
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+ # Social Auth settings
 VK_APP_ID = os.getenv("VK_APP_ID")
 VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")
 VK_REDIRECT_URI = 'https://oauth.vk.com/blank.html'
@@ -126,6 +127,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
+        'rest_framework.filters.SearchFilter'
     ],
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",

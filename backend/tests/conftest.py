@@ -9,10 +9,11 @@ from backend.models import (
     ProductInfo,
     OrderItem,
     Order,
+    Parameter,
+    ProductParameter
 )
 import uuid
 User = get_user_model()
-
 
 @pytest.fixture
 def api_client():
@@ -25,29 +26,47 @@ def api_client():
 
 
 @pytest.fixture
-def supplier():
-    """Фикстура для создания пользователя - поставщика."""
-    return User.objects.create_user(
-        email=f"example-{uuid.uuid4()}@example.com",
-        password="strongpassword123",
-        first_name="Supplier",
-        last_name="User",
-        role="supplier",
-        is_active=True,
-    )
+def user_factory():
+    """
+    Фикстура для создания пользователей.
 
+    Возвращает функцию, которая создает пользователя с заданными параметрами.
+    """
+    def create_user(role, email=None):
+        """
+        Создает пользователя с заданными параметрами.
+        """
+        return User.objects.create_user(
+            email=email or f"example-{uuid.uuid4()}@example.com",
+            password="strongpassword123",
+            first_name="User",
+            last_name="User",
+            role=role,
+            is_active=True,
+        )
+    return create_user
 
 @pytest.fixture
-def admin():
-    """Фикстура для создания пользователя - администратора."""
-    return User.objects.create_user(
-        email=f"example-{uuid.uuid4()}@example.com",
-        password="strongpassword123",
-        first_name="Admin",
-        last_name="User",
-        role="admin",
-        is_active=True,
-    )
+def supplier(user_factory):
+    """
+    Фикстура для создания пользователя-поставщика.
+    """
+    return user_factory(role="supplier")
+
+@pytest.fixture
+def admin(user_factory):
+    """
+    Фикстура для создания пользователя-администратора.
+    """
+    return user_factory(role="admin")
+
+@pytest.fixture
+def customer(user_factory):
+    """
+    Фикстура для создания пользователя-клиента.
+    """
+    return user_factory(role="customer")
+
 
 @pytest.fixture
 def customer_login():
@@ -61,18 +80,6 @@ def customer_login():
         is_active=True,
     )
     
-@pytest.fixture
-def customer():
-    """Фикстура для создания пользователя - клиента."""
-    return User.objects.create_user(
-        email=f"example-{uuid.uuid4()}@example.com",
-        password="strongpassword123",
-        first_name="Customer",
-        last_name="User",
-        role="customer",
-        is_active=True,
-    )
-
 
 @pytest.fixture
 def category():
@@ -109,6 +116,14 @@ def another_product(category):
         category=category,
     )
 
+@pytest.fixture
+def product_parameter(product_info, parameter):
+    """Фикстура для создания параметра продукта."""
+    return ProductParameter.objects.create(
+        product_info=product_info,
+        parameter=parameter,
+        value="Test Value",
+    )
 
 @pytest.fixture
 def contact(customer):
@@ -129,7 +144,11 @@ def contact(customer):
 def order_item(customer, product, shop):
     """Фикстура для создания заказа."""
     ProductInfo.objects.create(
-        product=product, shop=shop, quantity=10, price=100, price_rrc=120
+        product=product,
+        shop=shop,
+        quantity=10, 
+        price=100, 
+        price_rrc=120
     )
     order = Order.objects.create(user=customer, status="new")
     return OrderItem.objects.create(order=order, product=product, shop=shop, quantity=3)
@@ -161,13 +180,16 @@ def order(customer, product, shop, product_info):
 
 
 @pytest.fixture
-def other_customer():
-    """Фикстура для создания пользователя - клиента."""
-    return User.objects.create_user(
-        email=f"example-{uuid.uuid4()}@example.com",
-        password="strongpassword1234",
-        first_name="Customer",
-        last_name="User",
-        role="customer",
-        is_active=True,
-    )
+def parameter():
+    """Базовая фикстура для параметра"""
+    return Parameter.objects.create(name="Test Parameter")
+
+@pytest.fixture
+def old_parameter():
+    """Фикстура для параметра с именем 'Old Parameter'"""
+    return Parameter.objects.create(name="Old Parameter")
+
+@pytest.fixture
+def deletable_parameter():
+    """Фикстура для параметра который будем удалять"""
+    return Parameter.objects.create(name="Parameter to delete")

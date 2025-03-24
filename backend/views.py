@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework.exceptions import ValidationError
 # Local imports
 from .filters import ProductFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
@@ -56,6 +56,15 @@ class BasketViewSet(ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [check_role_permission("customer", "admin")]
 
+    def retrieve(self, request, *args, **kwargs):
+        order = self.get_object()
+
+        if order.status not in dict(Order.STATUS_CHOICES):
+            raise ValidationError(f"Некорректный статус: {order.status}. Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}")
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data)
+    
     def get_queryset(self) -> List[Order]:
         """
         Возвращает только заказы текущего пользователя.
