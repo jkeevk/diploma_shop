@@ -9,29 +9,37 @@ from .models import Product, Shop, Category
 from django.db.models import QuerySet
 from typing import Optional
 
+
 class ProductFilter(filters.FilterSet):
     """
     Фильтр для модели Product, позволяющий фильтровать продукты по магазину и категории.
     """
-    shop = filters.NumberFilter(
-        field_name="product_infos__shop", 
+
+    shop = filters.CharFilter(
         method="filter_shop",
-        required=False
+        required=False,
     )
-    category = filters.ModelChoiceFilter(queryset=Category.objects.all(), required=False)
+    category = filters.ModelChoiceFilter(
+        queryset=Category.objects.all(), required=False
+    )
 
     class Meta:
         model = Product
-        fields = ['category']
+        fields = ["category"]
 
-    def filter_shop(self, queryset: QuerySet[Product], name: str, value: Optional[Shop]) -> QuerySet[Product]:
+    def filter_shop(
+        self, queryset: QuerySet[Product], name: str, value: Optional[Shop]
+    ) -> QuerySet[Product]:
         """
         Фильтрует продукты по выбранному магазину.
-        
+
         Если значение магазина указано, возвращает только те продукты,
         которые связаны с указанным магазином. В противном случае возвращает
         исходный queryset.
         """
-        if value:
-            return queryset.filter(product_infos__shop=value)
-        return queryset
+
+        try:
+            shop_id = int(value)
+            return queryset.filter(product_infos__shop_id=shop_id)
+        except ValueError:
+            return queryset

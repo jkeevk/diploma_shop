@@ -189,8 +189,8 @@ class Order(models.Model):
             raise ValidationError(
                 f"Некорректный статус: {self.status}. Доступные статусы: {', '.join(dict(self.STATUS_CHOICES).keys())}"
             )
-
-
+            
+            
 class OrderItem(models.Model):
     """
     Модель позиции заказа. Содержит информацию о товаре, магазине и количестве.
@@ -271,7 +271,7 @@ class ProductInfo(models.Model):
         max_digits=10, decimal_places=2, verbose_name="Цена", validators=[MinValueValidator(0.01)]
     )
     price_rrc = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Рекомендуемая розничная цена", validators=[MinValueValidator(0.01)]
+        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Рекомендуемая розничная цена", validators=[MinValueValidator(0.01)]
     )
 
     class Meta:

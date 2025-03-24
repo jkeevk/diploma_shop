@@ -185,7 +185,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
             if existing_item:
                 new_quantity = existing_item.quantity + quantity
-                # Проверяем, достаточно ли товара для обновления
                 if product_info.quantity < new_quantity:
                     raise serializers.ValidationError(
                         f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {new_quantity}."
@@ -193,7 +192,6 @@ class OrderSerializer(serializers.ModelSerializer):
                 existing_item.quantity = new_quantity
                 existing_item.save()
             else:
-                # Если элемента нет, создаем новый
                 OrderItem.objects.create(
                     order=order, product=product, shop=shop, quantity=quantity
                 )
@@ -267,7 +265,7 @@ class ParameterSerializer(serializers.ModelSerializer):
 
 class ProductInfoSerializer(serializers.ModelSerializer):
     """Сериализатор для модели ProductInfo с дополнительным полем parameters."""
-
+    shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all())
     parameters = serializers.SerializerMethodField()
 
     class Meta:
@@ -282,8 +280,9 @@ class ProductInfoSerializer(serializers.ModelSerializer):
 
 
 class ProductParameterSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели ProductParameter."""
-
+    """
+    Сериализатор для модели ProductParameter.
+    """
     parameter = serializers.SlugRelatedField(
         slug_field="name", queryset=Parameter.objects.all()
     )
@@ -294,8 +293,9 @@ class ProductParameterSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Product с вложенными сериализаторами для категории и информации о продукте."""
-
+    """
+    Сериализатор для модели Product с вложенными сериализаторами для категории и информации о продукте.
+    """
     category = CategorySerializer()
     product_infos = ProductInfoSerializer(many=True)
 
@@ -304,7 +304,9 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "model", "category", "product_infos"]
 
     def create(self, validated_data: Dict[str, Any]) -> Product:
-        """Создание нового продукта с учетом вложенных данных."""
+        """
+        Создание нового продукта с учетом вложенных данных.
+        """
         category_data = validated_data.pop("category")
         product_infos_data = validated_data.pop("product_infos")
 
@@ -332,44 +334,42 @@ class ProductSerializer(serializers.ModelSerializer):
         return product
 
     def update(self, instance: Product, validated_data: Dict[str, Any]) -> Product:
-        """Обновление существующего продукта с учетом вложенных данных."""
-        category_data = validated_data.pop("category", None)
-        product_infos_data = validated_data.pop("product_infos", None)
-
-        if category_data:
-            category, created = Category.objects.get_or_create(**category_data)
+        """
+        Обновление продукта с учётом вложенных данных.
+        """
+        if "category" in validated_data:
+            category_data = validated_data.pop("category")
+            category, _ = Category.objects.get_or_create(**category_data)
             instance.category = category
 
         instance.name = validated_data.get("name", instance.name)
         instance.model = validated_data.get("model", instance.model)
         instance.save()
 
-        if product_infos_data is not None:
+        if "product_infos" in validated_data:
+            product_infos_data = validated_data.pop("product_infos")
             for product_info_data in product_infos_data:
+                shop = product_info_data.get("shop")
                 parameters_data = product_info_data.pop("parameters", [])
-                shop_data = product_info_data.get("shop")
-
-                product_info_id = product_info_data.get("id", None)
-                if product_info_id:
+                if "id" in product_info_data:
                     product_info = ProductInfo.objects.get(
-                        id=product_info_id, product=instance
+                        id=product_info_data["id"], 
+                        product=instance
                     )
-                    # Update the shop only if it's different
-                    if product_info.shop.id != shop_data:
-                        product_info.shop = Shop.objects.get(id=shop_data)
-                    for attr, value in product_info_data.items():
-                        setattr(product_info, attr, value)
+                    if product_info.shop.id != shop.id:
+                        product_info.shop = shop
+                    for key, value in product_info_data.items():
+                        if key not in ["id", "shop"]:
+                            setattr(product_info, key, value)
                     product_info.save()
+                
                 else:
-                    # Handle creation of new ProductInfo if needed
-                    product_info, _ = ProductInfo.objects.get_or_create(
-                        product=instance, shop=shop_data, defaults=product_info_data
-                    )
+                    product_info = ProductInfo.objects.create(product=instance, **{k: v for k, v in product_info_data.items() if k != 'id'})
 
-                # Update parameters as before
+
                 for param_data in parameters_data:
-                    parameter_name = param_data.get("parameter")
-                    value = param_data.get("value")
+                    parameter_name = param_data["parameter"]
+                    value = param_data["value"]
                     parameter, _ = Parameter.objects.get_or_create(name=parameter_name)
                     ProductParameter.objects.update_or_create(
                         product_info=product_info,
@@ -378,8 +378,8 @@ class ProductSerializer(serializers.ModelSerializer):
                     )
 
         return instance
-
-
+    
+    
 class ShopSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Shop."""
 
