@@ -1,3 +1,12 @@
+[![Python](https://img.shields.io/badge/python-3.12.8-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/django-5.1.7-green?logo=django)](https://www.djangoproject.com/)
+[![PyPI Version](https://img.shields.io/pypi/v/djangorestframework.svg)](https://pypi.org/project/djangorestframework/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/jkeevk/diploma_shop/coverage.yml?branch=main&label=tests&logo=github)](https://github.com/jkeevk/diploma_shop/actions/workflows/coverage.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jkeevk/diploma_shop/badge.svg)](https://coveralls.io/github/jkeevk/diploma_shop)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Last Commit](https://img.shields.io/github/last-commit/jkeevk/diploma_shop.svg)](https://github.com/your-username/your-repo/commits)
+[![Open Issues](https://img.shields.io/github/issues-raw/jkeevk/diploma_shop.svg)](https://github.com/your-username/your-repo/issues)
+[![License](https://img.shields.io/github/license/jkeevk/diploma_shop)](https://github.com/jkeevk/diploma_shop/blob/main/LICENSE)
 # Дипломный проект: Backend-приложение для автоматизации закупок
 
 ## Описание проекта
