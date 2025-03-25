@@ -64,6 +64,8 @@ urlpatterns = (
         path("user/login", LoginView.as_view(), name="login"),
         path('vk-auth/', VKAuthView.as_view(), name='vk_auth'),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+        path(r'jet/', include('jet.urls', 'jet')),
+        path(r'jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
         path("admin/", admin.site.urls, name="admin"),
         path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
         path(

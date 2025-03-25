@@ -42,18 +42,6 @@ class CustomUserChangeForm(UserChangeForm):
         model = User
         fields = "__all__"
 
-    def save(self, commit=True):
-        """
-        Сохраняет пользователя, хэшируя пароль только если он был изменен.
-        Если пароль не был изменен, оставляем его без изменений.
-        """
-        user = super().save(commit=False)
-        if self.cleaned_data["password"]:
-            user.set_password(self.cleaned_data["password"])
-        if commit:
-            user.save()
-        return user
-
 
 class OrderItemInline(admin.TabularInline):
     """
@@ -118,14 +106,19 @@ class UserAdmin(admin.ModelAdmin):
         Если пароль не был изменен, оставляем его без изменений.
         """
         if change:
-            if form.cleaned_data.get("password"):
-                obj.set_password(form.cleaned_data["password"])
+            if form.cleaned_data.get('password'):
+                obj.set_password(form.cleaned_data['password'])
             else:
                 obj.password = User.objects.get(pk=obj.pk).password
         else:
-            if obj.password:
-                obj.set_password(obj.password)
-
+            password = form.cleaned_data.get('password1')
+            if password:
+                obj.set_password(password)
+        obj.first_name = form.cleaned_data.get('first_name', obj.first_name)
+        obj.last_name = form.cleaned_data.get('last_name', obj.last_name)
+        obj.email = form.cleaned_data.get('email', obj.email)
+        obj.role = form.cleaned_data.get('role', obj.role)
+        
         super().save_model(request, obj, form, change)
 
 
@@ -134,8 +127,8 @@ class ShopAdmin(admin.ModelAdmin):
     Интерфейс админки для управления магазинами.
     Отображает название магазина и URL с возможностью поиска по имени.
     """
-    list_display = ("name", "url")
-    search_fields = ("name",)
+    list_display = ("name", "url", "user")
+    search_fields = ("name", "user")
     list_filter = ("name",)
 
 
@@ -267,6 +260,7 @@ class ContactAdmin(admin.ModelAdmin):
                     "structure",
                     "building",
                     "apartment",
+                    "user",
                 )
             },
         ),
