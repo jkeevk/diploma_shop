@@ -20,7 +20,7 @@ class TestBasketAPI_GET:
         """
         url = reverse("basket-list")
         response = api_client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_basket_authenticated(self, api_client, customer, order):
         """
@@ -47,6 +47,19 @@ class TestBasketAPI_GET:
         response = api_client.get(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert any("Некорректный статус" in str(error) for error in response.data)
+
+    def test_retrieve_basket_with_valid_status(self, api_client, customer, order):
+        """
+        Проверяем успешное получение корзины с валидным статусом (например, "new").
+        """
+
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-detail", kwargs={"pk": order.id})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["id"] == order.id
+        assert response.data["status"] == "new"
 
 
 @pytest.mark.django_db

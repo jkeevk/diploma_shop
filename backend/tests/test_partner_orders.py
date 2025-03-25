@@ -33,11 +33,8 @@ class TestPartnerOrders:
         Тест получения заказов анонимным пользователем.
         """
         response = api_client.get(reverse("partner-orders"))
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert (
-            response.data["detail"]
-            == "Вы не авторизованы. Пожалуйста, войдите в систему."
-        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.data["detail"] == "Пожалуйста, войдите в систему."
 
     def test_get_orders_as_non_supplier(self, api_client, customer):
         """

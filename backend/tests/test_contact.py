@@ -2,6 +2,8 @@ import pytest
 from backend.models import Contact
 from backend.serializers import ContactSerializer
 from rest_framework.exceptions import ErrorDetail
+from django.urls import reverse
+from rest_framework import status
 
 
 @pytest.mark.django_db
@@ -12,7 +14,7 @@ class TestContactSerializer:
 
     def test_serializer_auto_set_user_for_non_admin(self, customer):
         """
-        Тест автоматического назначения пользователя при создании (не админ).
+        Тест автоматического назначения пользователя при создании (не администратор).
         """
         data = {
             "city": "Moscow",
@@ -31,7 +33,7 @@ class TestContactSerializer:
 
     def test_serializer_validate_user_mismatch(self, customer, supplier):
         """
-        Тест валидации при несовпадении пользователя (не админ).
+        Тест валидации при несовпадении пользователя (не администратор).
         """
         data = {
             "city": "Moscow",
@@ -135,3 +137,40 @@ class TestContactSerializer:
         Тестирование строкового представления контакта.
         """
         assert f"{contact.city} {contact.street} {contact.house}" == str(contact)
+
+
+@pytest.mark.django_db
+class TestContactViewSet:
+    """
+    Тесты для ContactViewSet.
+    """
+
+    def test_admin_sees_all_contacts(self, api_client, admin, customer, supplier):
+        """
+        Проверяем, что администратор получает все контакты.
+        """
+        Contact.objects.create(user=customer, city="Moscow", street="Lenina", house="1")
+        Contact.objects.create(user=supplier, city="SPb", street="Nevsky", house="5")
+
+        api_client.force_authenticate(user=admin)
+        response = api_client.get(reverse("user-contacts-list"))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+
+    def test_non_admin_sees_only_own_contacts(self, api_client, customer, supplier):
+        """
+        Проверяем, что не-администратор (customer/supplier) видит только свои контакты.
+        """
+        Contact.objects.create(user=customer, city="Moscow", street="Arbat", house="10")
+        Contact.objects.create(user=supplier, city="SPb", street="Main", house="3")
+
+        api_client.force_authenticate(user=customer)
+        response = api_client.get(reverse("user-contacts-list"))
+        assert len(response.data) == 1
+        assert response.data[0]["user"] == customer.id
+
+        api_client.force_authenticate(user=supplier)
+        response = api_client.get(reverse("user-contacts-list"))
+        assert len(response.data) == 1
+        assert response.data[0]["user"] == supplier.id

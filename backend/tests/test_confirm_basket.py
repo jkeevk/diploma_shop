@@ -32,17 +32,18 @@ class TestConfirmBasket:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"detail": "Корзина пуста."}
 
-    def test_confirm_basket_missing_contact_id(self, api_client, customer):
+    def test_confirm_basket_missing_contact_id(self, api_client, customer, order):
         """
-        Проверяем ошибку при отсутствии contact_id в запросе.
+        Проверяем ошибку при отсутствии contact_id.
         """
+        order.refresh_from_db()
         api_client.force_authenticate(user=customer)
         url = reverse("confirm-basket")
         data = {}
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {"detail": "Корзина пуста."}
+        assert response.data == {"detail": "ID контакта обязателен."}
 
     def test_confirm_basket_invalid_contact_id(self, api_client, customer):
         """
@@ -55,3 +56,15 @@ class TestConfirmBasket:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"detail": "Корзина пуста."}
+
+    def test_confirm_basket_contact_not_found(self, api_client, customer, order):
+        """
+        Проверяем ошибку при передаче несуществующего contact_id при наличии заказа.
+        """
+        api_client.force_authenticate(user=customer)
+        url = reverse("confirm-basket")
+        data = {"contact_id": 999}
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data == {"detail": "Контакт не найден."}

@@ -14,11 +14,11 @@ class TestParameterViewSet:
     def test_list_parameters_unauthenticated(self, api_client):
         """
         Проверяет, что неаутентифицированный пользователь не может получить список параметров.
-        Ожидается статус 403 Forbidden.
+        Ожидается статус 401 Forbidden.
         """
         url = reverse("parameter-list")
         response = api_client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_product_info_serialization(self, product_info):
         """

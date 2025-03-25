@@ -56,13 +56,13 @@ class TestCategoryViewSet:
     def test_create_category_unauthenticated(self, api_client):
         """
         Тест создания категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         data = {"name": "New Category"}
         url = reverse("category-list")
         response = api_client.post(url, data, format="json")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_create_category_invalid_data(self, api_client, admin):
         """
@@ -111,13 +111,13 @@ class TestCategoryViewSet:
     def test_update_category_unauthenticated(self, api_client, category):
         """
         Тест обновления категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         data = {"name": "Updated Category"}
         url = reverse("category-detail", args=[category.id])
         response = api_client.put(url, data, format="json")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_delete_category_as_admin(self, api_client, admin, category):
         """
@@ -149,12 +149,12 @@ class TestCategoryViewSet:
     def test_delete_category_unauthenticated(self, api_client, category):
         """
         Тест удаления категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         url = reverse("category-detail", args=[category.id])
         response = api_client.delete(url)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_category_str_method(self, category):
         """

@@ -297,11 +297,9 @@ class TestUserOrdersView:
         """Тест получения заказов для анонимного пользователя."""
         response = api_client.get(reverse("user-orders"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["detail"].code == "permission_denied"
-        assert "Вы не авторизованы. Пожалуйста, войдите в систему." in str(
-            response.data["detail"]
-        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.data["detail"].code == "not_authenticated"
+        assert "Пожалуйста, войдите в систему." == response.data["detail"]
 
 
 @pytest.mark.django_db
