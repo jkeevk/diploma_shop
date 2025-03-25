@@ -69,6 +69,17 @@ class BasketViewSet(ModelViewSet):
         serializer = self.get_serializer(order)
         return Response(serializer.data)
 
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+
+        serializer = self.get_serializer(
+            order, data=request.data, partial=True
+        )  # partial=True для частичного обновления
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
+
     def get_queryset(self) -> List[Order]:
         """
         Возвращает только заказы текущего пользователя.
