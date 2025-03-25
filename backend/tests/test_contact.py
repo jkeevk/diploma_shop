@@ -129,3 +129,9 @@ class TestContactSerializer:
         updated_contact = serializer.save()
         assert updated_contact.user == contact.user
         assert updated_contact.phone == new_phone
+
+    def test_contact_str_method(self, contact):
+        """
+        Тестирование строкового представления контакта.
+        """
+        assert f"{contact.city} {contact.street} {contact.house}" == str(contact)

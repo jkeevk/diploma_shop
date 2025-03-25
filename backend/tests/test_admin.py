@@ -1,45 +1,11 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.contrib.admin.sites import AdminSite
 from django import forms
-from backend.admin import UserAdmin, ProductParameterAdmin, OrderAdmin, OrderItemAdmin
-from backend.models import User, ProductParameter, Order, OrderItem
+import pytest
+from rest_framework.test import APIRequestFactory
+from backend.permissions import CheckRole
 
 User = get_user_model()
-
-
-@pytest.fixture
-def user_admin():
-    admin_site = AdminSite()
-    return UserAdmin(User, admin_site)
-
-
-@pytest.fixture
-def sample_user():
-    return User.objects.create_user(
-        email="test@example.com",
-        password="initial_password",
-        first_name="John",
-        last_name="Doe",
-    )
-
-
-@pytest.fixture
-def product_parameter_admin(user_admin):
-    """Фикстура для создания экземпляра ProductParameterAdmin."""
-    return ProductParameterAdmin(ProductParameter, user_admin)
-
-
-@pytest.fixture
-def order_admin(user_admin):
-    """Фикстура для создания экземпляра OrderAdmin."""
-    return OrderAdmin(Order, user_admin)
-
-
-@pytest.fixture
-def order_item_admin(user_admin):
-    """Фикстура для создания экземпляра OrderItemAdmin."""
-    return OrderItemAdmin(OrderItem, user_admin)
 
 
 @pytest.mark.django_db
@@ -170,3 +136,25 @@ class TestOrderItemAdmin:
         """
         actual_output = order_item_admin.cost(order_item)
         assert actual_output == 100 * 3
+
+    def test_check_role_allow_safe_methods_for_all(self):
+        """
+        Проверяет, что при allow_safe_methods_for_all=True и безопасном методе запроса
+        разрешение возвращает True независимо от роли пользователя.
+        """
+        user = User.objects.create_user(
+            email="test@example.com",
+            password="testpass123",
+            role="any_role",
+            is_active=True,
+        )
+
+        permission = CheckRole(
+            "required_role1", "required_role2", allow_safe_methods_for_all=True
+        )
+
+        factory = APIRequestFactory()
+        request = factory.get("/some-url/")
+        request.user = user
+
+        assert permission.has_permission(request, None) is True
