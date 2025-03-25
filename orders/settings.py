@@ -142,13 +142,29 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Документация API",
-    "DESCRIPTION": "API для автоматизации покупок в розничной сети. Данный API предоставляет возможности для управления товарами и обработки заказов.",
-    "VERSION": "0.1.0",
+    "TITLE": "Retail Automation API",
+    "DESCRIPTION": "Сервис для автоматизации процессов интернет-магазина и розничной сети.\n\nПозволяет управлять товарами, заказами, поставщиками и клиентами через единое API.\n\nПоддерживает интеграцию с внешними системами, email-уведомления и аналитику продаж.\n\n\n[Панель администратора](http://localhost/admin/)\n\n[GitHub](https://github.com/jkeevk/diploma_shop)",
+    "VERSION": "0.1.1",
+    "CONTACT": {
+        "name": "jkeevk@yandex.ru",
+        "email": "jkeevk@yandex.ru",
+    },
+    "LICENSE": {
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api",
     "DEFAULT_AUTO_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "SWAGGER_UI_SETTINGS": {
+        "filter": True,
+    },
+    "TAGS": [
+        {
+            "name": "user",
+        },
+    ],
 }
 
 
