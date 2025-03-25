@@ -1,6 +1,6 @@
 # Rest Framework
 from rest_framework import permissions
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotAuthenticated
 from rest_framework.request import Request
 from rest_framework.views import View
 
@@ -29,7 +29,7 @@ class CheckRole(permissions.BasePermission):
         - Для небезопасных методов пользователь должен иметь одну из требуемых ролей.
         """
         if not request.user.is_authenticated:
-            raise PermissionDenied("Вы не авторизованы. Пожалуйста, войдите в систему.")
+            raise NotAuthenticated("Пожалуйста, войдите в систему.")
 
         if (
             self.allow_safe_methods_for_all

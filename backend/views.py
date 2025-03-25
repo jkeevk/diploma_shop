@@ -302,11 +302,6 @@ class PartnerOrders(APIView):
         """
         Возвращает список заказов, связанных с магазином поставщика.
         """
-        if request.user.is_anonymous:
-            return Response(
-                {"detail": "Пожалуйста, войдите в систему."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
 
         shop = Shop.objects.filter(user=request.user).first()
 
