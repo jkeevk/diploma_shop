@@ -2,6 +2,8 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from backend.models import Product, Category, Shop, ProductInfo
+from backend.serializers import ProductSerializer
+
 
 @pytest.mark.django_db
 class TestProductAPI:
@@ -373,3 +375,24 @@ class TestProductAPI:
         """
         assert str(product) == "Test Product"
 
+    def test_update_skips_product_infos_block(self, supplier):
+        """Тест: Обновление продукта без передачи product_infos -> пропуск блока."""
+        category = Category.objects.create(name="Test Category")
+        product = Product.objects.create(
+            name="Original Name",
+            model="Original Model",
+            category=category
+        )
+
+        update_data = {
+            "name": "Updated Name",
+            "model": "Updated Model"
+        }
+
+        serializer = ProductSerializer()
+        updated_instance = serializer.update(product, update_data)
+
+        assert updated_instance.name == "Updated Name"
+        assert updated_instance.model == "Updated Model"
+        
+        assert updated_instance.product_infos.count() == 0

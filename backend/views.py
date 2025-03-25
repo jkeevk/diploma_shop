@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import ValidationError
+
 # Local imports
 from .filters import ProductFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
@@ -87,6 +88,7 @@ class CategoryViewSet(ModelViewSet):
         """
         Настраивает права доступа в зависимости от действия.
         """
+        permission_classes = []
         if self.action in ["list", "retrieve"]:
             permission_classes = []
         elif self.action in ["create", "update", "partial_update", "destroy"]:

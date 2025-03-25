@@ -101,6 +101,7 @@ class LoginSerializer(serializers.Serializer):
         """Проверка учетных данных пользователя."""
         email = data.get("email")
         password = data.get("password")
+        user = None
 
         if email and password:
             user = authenticate(

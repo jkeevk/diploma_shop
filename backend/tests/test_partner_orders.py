@@ -1,8 +1,7 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from backend.models import Order, OrderItem, ProductInfo, User
-from backend.serializers import OrderSerializer
+from backend.models import Order, OrderItem
 from django.core.exceptions import ValidationError
 
 

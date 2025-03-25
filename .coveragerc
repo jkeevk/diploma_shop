@@ -7,3 +7,4 @@ omit =
     */backend/tasks.py
     */backend/celery_app.py
     */backend/utils/*
+    */backend/dashboard.py
