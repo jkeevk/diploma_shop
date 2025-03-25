@@ -57,7 +57,9 @@ class TestPartnerImportView:
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     @patch("backend.views.AsyncResult")
     def test_partner_import_status_success(self, mock_async_result, api_client, admin):
@@ -67,15 +69,12 @@ class TestPartnerImportView:
         api_client.force_authenticate(user=admin)
 
         mock_task_id = str(uuid.uuid4())
-        mock_result = {
-            "status": "success",
-            "data": {"some_key": "some_value"}
-        }
+        mock_result = {"status": "success", "data": {"some_key": "some_value"}}
         mock_async_result.return_value = MagicMock(
             status="SUCCESS",
             ready=lambda: True,
             successful=lambda: True,
-            result=mock_result
+            result=mock_result,
         )
 
         url = reverse("import-status", args=[mock_task_id])
@@ -94,15 +93,12 @@ class TestPartnerImportView:
         api_client.force_authenticate(user=admin)
 
         mock_task_id = str(uuid.uuid4())
-        mock_result = {
-            "status": "error",
-            "message": "Some error occurred"
-        }
+        mock_result = {"status": "error", "message": "Some error occurred"}
         mock_async_result.return_value = MagicMock(
             status="FAILURE",
             ready=lambda: True,
             successful=lambda: False,
-            result=mock_result
+            result=mock_result,
         )
 
         url = reverse("import-status", args=[mock_task_id])
@@ -120,16 +116,13 @@ class TestPartnerImportView:
         api_client.force_authenticate(user=admin)
 
         mock_task_id = str(uuid.uuid4())
-        mock_result = {
-            "status": "PENDING",
-            "data": {"some_key": "some_value"}
-        }
+        mock_result = {"status": "PENDING", "data": {"some_key": "some_value"}}
 
         mock_async_result.return_value = MagicMock(
             status="PENDING",
             ready=lambda: False,
             successful=lambda: False,
-            result=mock_result
+            result=mock_result,
         )
         url = reverse("import-status", args=[mock_task_id])
         response = api_client.get(url)

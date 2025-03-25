@@ -46,6 +46,7 @@ from .swagger_configs import SWAGGER_CONFIGS
 from .tasks import export_products_task, import_products_task
 from celery.result import AsyncResult
 
+
 @SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
     """
@@ -61,11 +62,13 @@ class BasketViewSet(ModelViewSet):
         order = self.get_object()
 
         if order.status not in dict(Order.STATUS_CHOICES):
-            raise ValidationError(f"Некорректный статус: {order.status}. Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}")
+            raise ValidationError(
+                f"Некорректный статус: {order.status}. Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}"
+            )
 
         serializer = self.get_serializer(order)
         return Response(serializer.data)
-    
+
     def get_queryset(self) -> List[Order]:
         """
         Возвращает только заказы текущего пользователя.
@@ -111,22 +114,31 @@ class ConfirmBasketView(APIView):
         order = Order.objects.filter(user=request.user, status="new").first()
 
         if not order:
-            return Response({"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         contact_id = request.data.get("contact_id")
         if not contact_id:
-            return Response({"detail": "ID контакта обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "ID контакта обязателен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             contact = Contact.objects.get(id=contact_id, user=request.user)
         except Contact.DoesNotExist:
-            return Response({"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         order.status = "confirmed"
         order.contact = contact
         order.save()
 
-        return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK
+        )
 
 
 @SWAGGER_CONFIGS["confirm_registration_schema"]
@@ -164,13 +176,14 @@ class ContactViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [check_role_permission("customer", "admin", "supplier")]
-    
+
     def get_queryset(self) -> QuerySet[Contact]:
         """Возвращает только контакты текущего пользователя."""
         user = self.request.user
         if user.role == "admin":
             return Contact.objects.all()
         return Contact.objects.filter(user=user)
+
 
 @SWAGGER_CONFIGS["disable_toggle_user_activity_schema"]
 class ToggleUserActivityView(APIView):
@@ -200,7 +213,7 @@ class ToggleUserActivityView(APIView):
             {
                 "message": f"Активность пользователя {user.email} (ID={user.id}) изменена на {user.is_active}",
                 "user_id": user.id,
-                "new_status": user.is_active
+                "new_status": user.is_active,
             },
             status=status.HTTP_200_OK,
         )
@@ -280,49 +293,55 @@ class PartnerOrders(APIView):
         """
         if request.user.is_anonymous:
             return Response(
-                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": "Пожалуйста, войдите в систему."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         shop = Shop.objects.filter(user=request.user).first()
 
         if not shop:
-            return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Вы не связаны с магазином."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
+        orders = Order.objects.filter(
+            order_items__shop=shop, status="confirmed"
+        ).distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
+
 
 @SWAGGER_CONFIGS["partner_import_schema"]
 class PartnerImportView(APIView):
     """
     Представление для создания задачи на импорт данных поставщика.
     """
+
     permission_classes = [check_role_permission("admin", "supplier")]
 
     def get(self, request) -> Response:
         try:
             task = import_products_task.delay()
-            return Response(
-                {"task_id": task.id}, 
-                status=status.HTTP_202_ACCEPTED
-            )
+            return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-@SWAGGER_CONFIGS["check_partner_import_schema"] 
+
+@SWAGGER_CONFIGS["check_partner_import_schema"]
 class PartnerImportStatusView(APIView):
     """
     Представление для получения результата выполнения задачи на импорт данных поставщика.
     """
+
     permission_classes = [check_role_permission("admin", "supplier")]
 
     def get(self, request, task_id) -> Response:
         task_result = AsyncResult(task_id)
         response_data = {"status": task_result.status}
-        
+
         if task_result.ready():
             if task_result.successful():
                 result = task_result.result
@@ -332,9 +351,9 @@ class PartnerImportStatusView(APIView):
                     response_data["error"] = result.get("message", "Unknown error")
             else:
                 response_data["error"] = "Task failed"
-        
+
         return Response(response_data, status=status.HTTP_200_OK)
-    
+
 
 @SWAGGER_CONFIGS["partner_update_schema"]
 class PartnerUpdateView(APIView):
@@ -354,7 +373,9 @@ class PartnerUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         if "file" not in request.FILES or not request.FILES["file"]:
-            return Response({"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         uploaded_file = request.FILES.get("file")
         file_path = os.path.join("data", uploaded_file.name)
@@ -401,10 +422,15 @@ class PasswordResetConfirmView(GenericAPIView):
         try:
             user = User.objects.get(pk=uid)
         except User.DoesNotExist:
-            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         if not default_token_generator.check_token(user, token):
-            return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Недействительный токен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -412,7 +438,9 @@ class PasswordResetConfirmView(GenericAPIView):
         user.set_password(serializer.validated_data["new_password"])
         user.save()
 
-        return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK
+        )
 
 
 @SWAGGER_CONFIGS["password_reset_schema"]
@@ -531,22 +559,25 @@ class UserOrdersView(APIView):
         """
         if request.user.is_anonymous:
             return Response(
-                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": "Пожалуйста, войдите в систему."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
-
 
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
 
+
 class VKAuthView(TemplateView):
-    template_name = 'vk_auth.html'
-    
+    template_name = "vk_auth.html"
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        context.update({
-            'VK_APP_ID': settings.VK_APP_ID,
-            'VK_REDIRECT_URI': settings.VK_REDIRECT_URI
-        })
+
+        context.update(
+            {
+                "VK_APP_ID": settings.VK_APP_ID,
+                "VK_REDIRECT_URI": settings.VK_REDIRECT_URI,
+            }
+        )
         return context

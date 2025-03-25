@@ -2,6 +2,7 @@ import json
 from django.core.management.base import BaseCommand
 from backend.utils.exporters import generate_import_data
 
+
 class Command(BaseCommand):
     help = "Экспорт данных в JSON-файл"
 

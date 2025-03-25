@@ -3,9 +3,11 @@ from rest_framework import status
 from django.urls import reverse
 from django.core.cache import cache
 
+
 @pytest.mark.django_db
 class TestThrottle:
     """Тесты для проверки механизма троттлинга в API."""
+
     @pytest.fixture(autouse=True)
     def clear_cache(self):
         """Сбрасывает кэш перед каждым тестом."""

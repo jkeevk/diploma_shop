@@ -111,7 +111,7 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     "Не удалось войти с предоставленными учетными данными."
                 )
-            
+
         data["user"] = user
         return data
 
@@ -182,7 +182,9 @@ class OrderSerializer(serializers.ModelSerializer):
             shop = item_data.get("shop")
             quantity = item_data.get("quantity")
 
-            existing_item = OrderItem.objects.filter(order=order, product=product, shop=shop).first()
+            existing_item = OrderItem.objects.filter(
+                order=order, product=product, shop=shop
+            ).first()
 
             if existing_item:
                 new_quantity = existing_item.quantity + quantity
@@ -250,7 +252,7 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
 
     def validate_contact_id(self, value):
         """Проверка, что контакт принадлежит текущему пользователю."""
-        user = self.context['request'].user
+        user = self.context["request"].user
         if not Contact.objects.filter(id=value.id, user=user).exists():
             raise serializers.ValidationError("Контакт не найден.")
         return value
@@ -266,6 +268,7 @@ class ParameterSerializer(serializers.ModelSerializer):
 
 class ProductInfoSerializer(serializers.ModelSerializer):
     """Сериализатор для модели ProductInfo с дополнительным полем parameters."""
+
     shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all())
     parameters = serializers.SerializerMethodField()
 
@@ -284,6 +287,7 @@ class ProductParameterSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели ProductParameter.
     """
+
     parameter = serializers.SlugRelatedField(
         slug_field="name", queryset=Parameter.objects.all()
     )
@@ -297,6 +301,7 @@ class ProductSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели Product с вложенными сериализаторами для категории и информации о продукте.
     """
+
     category = CategorySerializer()
     product_infos = ProductInfoSerializer(many=True)
 
@@ -354,8 +359,7 @@ class ProductSerializer(serializers.ModelSerializer):
                 parameters_data = product_info_data.pop("parameters", [])
                 if "id" in product_info_data:
                     product_info = ProductInfo.objects.get(
-                        id=product_info_data["id"], 
-                        product=instance
+                        id=product_info_data["id"], product=instance
                     )
                     if product_info.shop.id != shop.id:
                         product_info.shop = shop
@@ -363,10 +367,12 @@ class ProductSerializer(serializers.ModelSerializer):
                         if key not in ["id", "shop"]:
                             setattr(product_info, key, value)
                     product_info.save()
-                
-                else:
-                    product_info = ProductInfo.objects.create(product=instance, **{k: v for k, v in product_info_data.items() if k != 'id'})
 
+                else:
+                    product_info = ProductInfo.objects.create(
+                        product=instance,
+                        **{k: v for k, v in product_info_data.items() if k != "id"},
+                    )
 
                 for param_data in parameters_data:
                     parameter_name = param_data["parameter"]
@@ -379,8 +385,8 @@ class ProductSerializer(serializers.ModelSerializer):
                     )
 
         return instance
-    
-    
+
+
 class ShopSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Shop."""
 

@@ -1,9 +1,17 @@
-from backend.models import Shop, Category, Product, ProductInfo, Parameter, ProductParameter
+from backend.models import (
+    Shop,
+    Category,
+    Product,
+    ProductInfo,
+    Parameter,
+    ProductParameter,
+)
 from typing import List, Dict
+
 
 def generate_import_data() -> List[Dict[str, List[Dict]]]:
     """
-    Генерирует данные для импорта из базы данных для различных сущностей: магазинов, категорий, товаров, 
+    Генерирует данные для импорта из базы данных для различных сущностей: магазинов, категорий, товаров,
     информации о товарах, параметров и параметров товаров.
     """
     data = []
@@ -13,7 +21,9 @@ def generate_import_data() -> List[Dict[str, List[Dict]]]:
     data.append({"shops": shop_data})
 
     categories = Category.objects.all()
-    category_data = [{"id": category.id, "name": category.name} for category in categories]
+    category_data = [
+        {"id": category.id, "name": category.name} for category in categories
+    ]
     data.append({"categories": category_data})
 
     products = Product.objects.all()

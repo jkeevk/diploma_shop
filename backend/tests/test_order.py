@@ -259,7 +259,4 @@ class TestBasketAPI:
         """
         Тестирование строкового представления элемента заказа
         """
-        assert f"{order_item.product.name} : {order_item.quantity}" in str(
-            order_item
-        )
-
+        assert f"{order_item.product.name} : {order_item.quantity}" in str(order_item)

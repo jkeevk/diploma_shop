@@ -49,7 +49,9 @@ class TestCategoryViewSet:
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_create_category_unauthenticated(self, api_client):
         """
@@ -102,7 +104,9 @@ class TestCategoryViewSet:
         response = api_client.put(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_update_category_unauthenticated(self, api_client, category):
         """
@@ -138,7 +142,9 @@ class TestCategoryViewSet:
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_delete_category_unauthenticated(self, api_client, category):
         """

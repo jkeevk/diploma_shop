@@ -16,10 +16,13 @@ from .tasks import (
 )
 from .models import User, Order
 
-TESTING = os.getenv('DJANGO_TESTING', False) == False
+TESTING = os.getenv("DJANGO_TESTING", False) == False
+
 
 @receiver(post_save, sender=User)
-def send_confirmation_email(sender: Any, instance: User, created: bool, **kwargs: Any) -> None:
+def send_confirmation_email(
+    sender: Any, instance: User, created: bool, **kwargs: Any
+) -> None:
     """
     Отправляет письмо для подтверждения регистрации пользователя.
     """
@@ -29,6 +32,7 @@ def send_confirmation_email(sender: Any, instance: User, created: bool, **kwargs
         instance.save()
 
         send_confirmation_email_async.delay(instance.id, token)
+
 
 @receiver(post_save, sender=User)
 def send_password_reset_email(sender: Any, instance: User, **kwargs: Any) -> None:
@@ -41,6 +45,7 @@ def send_password_reset_email(sender: Any, instance: User, **kwargs: Any) -> Non
 
         send_password_reset_email_async.delay(instance.id, token, uid)
 
+
 @receiver(post_save, sender=Order)
 def send_email_to_host(sender: Any, instance: Order, **kwargs: Any) -> None:
     """
@@ -52,6 +57,7 @@ def send_email_to_host(sender: Any, instance: Order, **kwargs: Any) -> None:
         for shop in shops:
             if shop and shop.user.email:
                 send_email_to_host_async.delay(shop.user.email, instance.id, shop.id)
+
 
 @receiver(post_save, sender=Order)
 def send_email_to_customer(sender: Any, instance: Order, **kwargs: Any) -> None:

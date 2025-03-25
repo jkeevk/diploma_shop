@@ -14,49 +14,51 @@ from rest_framework.views import APIView
 
 class BaseTaskView(APIView):
     task_model = None
-    
+
     def get_task_response(self, task_id):
         task = AsyncResult(task_id)
         if not task.ready():
             return Response(
                 {"status": "PENDING", "message": "Задача ещё выполняется."},
-                status.HTTP_202_ACCEPTED
+                status.HTTP_202_ACCEPTED,
             )
-        
+
         if task.failed():
             return Response(
                 {"status": "ERROR", "message": str(task.result)},
-                status.HTTP_500_INTERNAL_SERVER_ERROR
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        
+
         return self.handle_success(task.result)
 
     def handle_success(self, result):
         raise NotImplementedError
-    
-    
+
+
 @SWAGGER_CONFIGS["run_pytest_schema"]
 class RunPytestView(APIView):
     permission_classes = [check_role_permission("admin")]
 
     def get(self, request):
-            task = run_pytest.delay(enable_coverage=True)
-            return Response({"task_id": task.id}, status.HTTP_202_ACCEPTED)
-    
+        task = run_pytest.delay(enable_coverage=True)
+        return Response({"task_id": task.id}, status.HTTP_202_ACCEPTED)
+
 
 @SWAGGER_CONFIGS["check_pytest_task_schema"]
 class CheckPytestTaskView(BaseTaskView):
     permission_classes = [check_role_permission("admin")]
-    
+
     def handle_success(self, result):
         response_data = {
-            "status": "SUCCESS" if result['failed'] + result['errors'] == 0 else "HAS_ISSUES",
+            "status": (
+                "SUCCESS" if result["failed"] + result["errors"] == 0 else "HAS_ISSUES"
+            ),
             "summary": {
-                "passed": result['passed'],
-                "failed": result['failed'],
-                "errors": result['errors']
+                "passed": result["passed"],
+                "failed": result["failed"],
+                "errors": result["errors"],
             },
-            "coverage": result.get('coverage')
+            "coverage": result.get("coverage"),
         }
         return Response(response_data, status.HTTP_200_OK)
 

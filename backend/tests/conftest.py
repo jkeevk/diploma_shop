@@ -10,10 +10,12 @@ from backend.models import (
     OrderItem,
     Order,
     Parameter,
-    ProductParameter
+    ProductParameter,
 )
 import uuid
+
 User = get_user_model()
+
 
 @pytest.fixture
 def api_client():
@@ -32,6 +34,7 @@ def user_factory():
 
     Возвращает функцию, которая создает пользователя с заданными параметрами.
     """
+
     def create_user(role, email=None):
         """
         Создает пользователя с заданными параметрами.
@@ -44,7 +47,9 @@ def user_factory():
             role=role,
             is_active=True,
         )
+
     return create_user
+
 
 @pytest.fixture
 def supplier(user_factory):
@@ -53,12 +58,14 @@ def supplier(user_factory):
     """
     return user_factory(role="supplier")
 
+
 @pytest.fixture
 def admin(user_factory):
     """
     Фикстура для создания пользователя-администратора.
     """
     return user_factory(role="admin")
+
 
 @pytest.fixture
 def customer(user_factory):
@@ -79,7 +86,7 @@ def customer_login():
         role="customer",
         is_active=True,
     )
-    
+
 
 @pytest.fixture
 def category():
@@ -116,6 +123,7 @@ def another_product(category):
         category=category,
     )
 
+
 @pytest.fixture
 def product_parameter(product_info, parameter):
     """Фикстура для создания параметра продукта."""
@@ -124,6 +132,7 @@ def product_parameter(product_info, parameter):
         parameter=parameter,
         value="Test Value",
     )
+
 
 @pytest.fixture
 def contact(customer):
@@ -144,11 +153,7 @@ def contact(customer):
 def order_item(customer, product, shop):
     """Фикстура для создания заказа."""
     ProductInfo.objects.create(
-        product=product,
-        shop=shop,
-        quantity=10, 
-        price=100, 
-        price_rrc=120
+        product=product, shop=shop, quantity=10, price=100, price_rrc=120
     )
     order = Order.objects.create(user=customer, status="new")
     return OrderItem.objects.create(order=order, product=product, shop=shop, quantity=3)
@@ -184,10 +189,12 @@ def parameter():
     """Базовая фикстура для параметра"""
     return Parameter.objects.create(name="Test Parameter")
 
+
 @pytest.fixture
 def old_parameter():
     """Фикстура для параметра с именем 'Old Parameter'"""
     return Parameter.objects.create(name="Old Parameter")
+
 
 @pytest.fixture
 def deletable_parameter():

@@ -43,10 +43,7 @@ SWAGGER_CONFIGS = {
         examples=[
             OpenApiExample(
                 name="Успешная авторизация",
-                value={
-                    "email": "user@example.com",
-                    "password": "string"
-                },
+                value={"email": "user@example.com", "password": "string"},
                 status_codes=["200"],
             ),
             OpenApiExample(
@@ -354,8 +351,8 @@ SWAGGER_CONFIGS = {
                 value={
                     "email": "asdsd@akdskaskd2.com",
                     "password": "sasdaSASD@d22",
-                    "role": "customer"
-                    },
+                    "role": "customer",
+                },
                 status_codes=["201"],
             ),
             OpenApiExample(
@@ -363,7 +360,7 @@ SWAGGER_CONFIGS = {
                 value={
                     "email": "admin@admin.com",
                     "password": "admin",
-                    "role": "admin"
+                    "role": "admin",
                 },
                 status_codes=["400"],
             ),
@@ -645,7 +642,7 @@ SWAGGER_CONFIGS = {
             403: {
                 "description": "Ошибка, если пользователь не авторизован.",
                 "content": {"application/json": {}},
-            }
+            },
         },
         examples=[
             OpenApiExample(
@@ -658,7 +655,7 @@ SWAGGER_CONFIGS = {
                 value={"detail": "Вы не авторизованы. Пожалуйста, войдите в систему."},
                 status_codes=["403"],
             ),
-        ],  
+        ],
     ),
     "confirm_basket_schema": extend_schema(
         summary="Подтвердить корзину",
@@ -669,20 +666,14 @@ SWAGGER_CONFIGS = {
                 "description": "Корзина успешно подтверждена.",
                 "content": {
                     "application/json": {
-                        "example": {
-                            "detail": "Заказ успешно подтвержден."
-                        }
+                        "example": {"detail": "Заказ успешно подтвержден."}
                     }
                 },
             },
             400: {
                 "description": "Ошибка, если корзина пуста или ID контакта некорректен.",
                 "content": {
-                    "application/json": {
-                        "example": {
-                            "detail": "Корзина пуста."
-                        }
-                    }
+                    "application/json": {"example": {"detail": "Корзина пуста."}}
                 },
             },
         },

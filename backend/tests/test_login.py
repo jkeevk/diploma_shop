@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from backend.serializers import LoginSerializer
 
+
 @pytest.mark.django_db
 class TestUserLogin:
     """
@@ -85,12 +86,11 @@ class TestUserLogin:
         assert response.data["email"][0] == "This field may not be null."
         assert response.data["password"][0] == "This field may not be null."
 
-
     def test_force_validate_method(self):
         """Тест: Прямой вызов validate() с неполными данными."""
         serializer = LoginSerializer()
-        
+
         data = {"email": "", "password": "pass"}
         validated_data = serializer.validate(data)
-        
+
         assert validated_data["user"] is None

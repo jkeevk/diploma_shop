@@ -62,13 +62,10 @@ class TestPartnerOrders:
         """
         Тест расчета общей стоимости заказа если у заказа нет товаров.
         """
-        order_item = OrderItem.objects.create(order=order,
-                                                product=product, 
-                                                shop=shop, 
-                                                quantity=0
-                                                )
+        order_item = OrderItem.objects.create(
+            order=order, product=product, shop=shop, quantity=0
+        )
         assert order_item.cost() == 0
-
 
     def test_order_clean_invalid_status(self, order, supplier):
         """

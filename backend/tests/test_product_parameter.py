@@ -2,6 +2,7 @@ import pytest
 from django.db import IntegrityError
 from backend.models import ProductParameter
 
+
 @pytest.mark.django_db
 class TestProductParameter:
     """
@@ -54,7 +55,9 @@ class TestProductParameter:
 
         assert not ProductParameter.objects.filter(id=product_parameter_id).exists()
 
-    def test_create_product_parameter_without_required_fields(self, product_info, parameter):
+    def test_create_product_parameter_without_required_fields(
+        self, product_info, parameter
+    ):
         """
         Тест создания параметра товара без обязательных полей.
         """
@@ -87,5 +90,8 @@ class TestProductParameter:
         """
         Проверяет, что метод __str__ у параметра возвращает ожидаемую строку.
         Ожидается, что строковое представление параметра равно "Test Parameter".
-        """        
-        assert str(product_parameter) == f"{product_parameter.parameter.name}: {product_parameter.value}"
+        """
+        assert (
+            str(product_parameter)
+            == f"{product_parameter.parameter.name}: {product_parameter.value}"
+        )

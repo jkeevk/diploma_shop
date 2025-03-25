@@ -92,7 +92,9 @@ class TestShopView:
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_shop_str_method(self, shop):
         """

@@ -3,6 +3,7 @@ from backend.models import Contact
 from backend.serializers import ContactSerializer
 from rest_framework.exceptions import ErrorDetail
 
+
 @pytest.mark.django_db
 class TestContactSerializer:
     """
@@ -19,12 +20,11 @@ class TestContactSerializer:
             "house": "10",
             "phone": "+79991234567",
         }
-        
+
         serializer = ContactSerializer(
-            data=data,
-            context={"request": type("Request", (), {"user": customer})}
+            data=data, context={"request": type("Request", (), {"user": customer})}
         )
-        
+
         assert serializer.is_valid()
         contact = serializer.save()
         assert contact.user == customer
@@ -40,15 +40,19 @@ class TestContactSerializer:
             "phone": "+79991234567",
             "user": supplier.id,
         }
-        
+
         serializer = ContactSerializer(
-            data=data,
-            context={"request": type("Request", (), {"user": customer})}
+            data=data, context={"request": type("Request", (), {"user": customer})}
         )
-        
+
         assert not serializer.is_valid()
         assert serializer.errors == {
-            "user": [ErrorDetail(string="Вы не можете указывать другого пользователя.", code="invalid")]
+            "user": [
+                ErrorDetail(
+                    string="Вы не можете указывать другого пользователя.",
+                    code="invalid",
+                )
+            ]
         }
 
     def test_serializer_admin_can_set_any_user(self, admin, customer):
@@ -62,12 +66,11 @@ class TestContactSerializer:
             "phone": "+79991234567",
             "user": customer.id,
         }
-        
+
         serializer = ContactSerializer(
-            data=data,
-            context={"request": type("Request", (), {"user": admin})}
+            data=data, context={"request": type("Request", (), {"user": admin})}
         )
-        
+
         assert serializer.is_valid()
         contact = serializer.save()
         assert contact.user == customer
@@ -76,16 +79,19 @@ class TestContactSerializer:
         """
         Тест интеграции с моделью (вызов clean()).
         """
-        Contact.objects.bulk_create([
-            Contact(
-                user=customer,
-                city=f"City {i}",
-                street=f"Street {i}",
-                house=str(i),
-                phone=f"+7999123456{i}"
-            ) for i in range(5)
-        ])
-        
+        Contact.objects.bulk_create(
+            [
+                Contact(
+                    user=customer,
+                    city=f"City {i}",
+                    street=f"Street {i}",
+                    house=str(i),
+                    phone=f"+7999123456{i}",
+                )
+                for i in range(5)
+            ]
+        )
+
         data = {
             "city": "Moscow",
             "street": "Lenina",
@@ -93,18 +99,16 @@ class TestContactSerializer:
             "phone": "+79991234567",
             "user": customer.id,
         }
-        
+
         serializer = ContactSerializer(
-            data=data,
-            context={"request": type("Request", (), {"user": customer})}
+            data=data, context={"request": type("Request", (), {"user": customer})}
         )
-        
+
         assert not serializer.is_valid()
         assert serializer.errors == {
             "non_field_errors": [
                 ErrorDetail(
-                    string="Максимум 5 адресов на пользователя.", 
-                    code="invalid"
+                    string="Максимум 5 адресов на пользователя.", code="invalid"
                 )
             ]
         }
@@ -118,9 +122,9 @@ class TestContactSerializer:
             instance=contact,
             data={"phone": new_phone},
             partial=True,
-            context={"request": type("Request", (), {"user": customer})}
+            context={"request": type("Request", (), {"user": customer})},
         )
-        
+
         assert serializer.is_valid()
         updated_contact = serializer.save()
         assert updated_contact.user == contact.user

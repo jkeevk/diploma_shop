@@ -48,7 +48,7 @@ router.register(r"users", UserViewSet, basename="user")
 router.register(r"contacts", ContactViewSet, basename="user-contacts")
 router.register(r"basket", BasketViewSet, basename="basket")
 router.register(r"categories", CategoryViewSet, basename="category")
-router.register(r'parameters', ParameterViewSet, basename='parameter')
+router.register(r"parameters", ParameterViewSet, basename="parameter")
 
 user_router = NestedDefaultRouter(router, r"users", lookup="user")
 user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
@@ -62,10 +62,10 @@ urlpatterns = (
             name="swagger-ui",
         ),
         path("user/login", LoginView.as_view(), name="login"),
-        path('vk-auth/', VKAuthView.as_view(), name='vk_auth'),
+        path("vk-auth/", VKAuthView.as_view(), name="vk_auth"),
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path(r'jet/', include('jet.urls', 'jet')),
-        path(r'jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
+        path(r"jet/", include("jet.urls", "jet")),
+        path(r"jet/dashboard/", include("jet.dashboard.urls", "jet-dashboard")),
         path("admin/", admin.site.urls, name="admin"),
         path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
         path(
@@ -93,12 +93,20 @@ urlpatterns = (
         ),
         path("partner/update", PartnerUpdateView.as_view(), name="partner-update"),
         path("partner/import", PartnerImportView.as_view(), name="partner-import"),
-        path('partner/import/status/<str:task_id>/', PartnerImportStatusView.as_view(), name='import-status'),
+        path(
+            "partner/import/status/<str:task_id>/",
+            PartnerImportStatusView.as_view(),
+            name="import-status",
+        ),
         path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path("shops", ShopView.as_view(), name="shops"),
-        path('user/<int:user_id>/toggle-activity/', ToggleUserActivityView.as_view(), name='toggle-user-activity'),
-        path('user/orders', UserOrdersView.as_view(), name='user-orders'),
+        path(
+            "user/<int:user_id>/toggle-activity/",
+            ToggleUserActivityView.as_view(),
+            name="toggle-user-activity",
+        ),
+        path("user/orders", UserOrdersView.as_view(), name="user-orders"),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

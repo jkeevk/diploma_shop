@@ -9,10 +9,12 @@ from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
 
+
 class UserRole(Enum):
     """
     Роль пользователя в системе.
     """
+
     CUSTOMER = "customer"
     SUPPLIER = "supplier"
     ADMIN = "admin"
@@ -23,7 +25,9 @@ class UserManager(BaseUserManager):
     Менеджер для управления пользователями. Обеспечивает создание обычных пользователей и суперпользователей.
     """
 
-    def create_user(self, email: str, password: str = None, **extra_fields: dict) -> 'User':
+    def create_user(
+        self, email: str, password: str = None, **extra_fields: dict
+    ) -> "User":
         """
         Создает и сохраняет пользователя с указанным email и паролем. Если email не указан, выбрасывает исключение.
         """
@@ -35,7 +39,9 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email: str, password: str = None, **extra_fields: dict) -> 'User':
+    def create_superuser(
+        self, email: str, password: str = None, **extra_fields: dict
+    ) -> "User":
         """
         Создает и сохраняет суперпользователя с указанным email и паролем. Убеждается, что is_staff и is_superuser установлены в True.
         """
@@ -54,12 +60,13 @@ class User(AbstractUser):
     """
     Модель пользователя. Расширяет стандартную модель пользователя Django. Добавляет поля email, role из модели UserRole и confirmation_token.
     """
+
     email = models.EmailField(unique=True, verbose_name="Email", db_index=True)
     role = models.CharField(
         max_length=30,
         choices=[(role.value, role.name.capitalize()) for role in UserRole],
         default=UserRole.CUSTOMER.value,
-        verbose_name="Роль"
+        verbose_name="Роль",
     )
     confirmation_token = models.CharField(max_length=255, blank=True, null=True)
 
@@ -90,10 +97,13 @@ class Category(models.Model):
     """
     Модель категории. Содержит название категории и связь с магазинами.
     """
+
     shops = models.ManyToManyField(
-        'Shop', related_name="categories", blank=True, verbose_name="Магазины"
+        "Shop", related_name="categories", blank=True, verbose_name="Магазины"
     )
-    name = models.CharField(max_length=200, verbose_name="Название", db_index=True, unique=True)
+    name = models.CharField(
+        max_length=200, verbose_name="Название", db_index=True, unique=True
+    )
 
     class Meta:
         verbose_name = "Категория"
@@ -108,8 +118,12 @@ class Contact(models.Model):
     """
     Модель контакта. Содержит информацию о контактах пользователя, включая адрес и телефон.
     """
+
     user = models.ForeignKey(
-        'User', on_delete=models.CASCADE, verbose_name="Пользователь", related_name="contacts"
+        "User",
+        on_delete=models.CASCADE,
+        verbose_name="Пользователь",
+        related_name="contacts",
     )
     city = models.CharField(max_length=50, verbose_name="Город", blank=True)
     street = models.CharField(max_length=100, verbose_name="Улица", blank=True)
@@ -150,6 +164,7 @@ class Order(models.Model):
     """
     Модель заказа. Содержит информацию о пользователе, дате заказа и его статусе.
     """
+
     STATUS_CHOICES = [
         ("new", "Новый"),
         ("confirmed", "Подтвержден"),
@@ -160,7 +175,10 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(
-        'User', on_delete=models.CASCADE, verbose_name="Пользователь", related_name="orders"
+        "User",
+        on_delete=models.CASCADE,
+        verbose_name="Пользователь",
+        related_name="orders",
     )
     dt = models.DateTimeField(auto_now_add=True, verbose_name="Дата заказа")
     status = models.CharField(
@@ -189,17 +207,23 @@ class Order(models.Model):
             raise ValidationError(
                 f"Некорректный статус: {self.status}. Доступные статусы: {', '.join(dict(self.STATUS_CHOICES).keys())}"
             )
-            
-            
+
+
 class OrderItem(models.Model):
     """
     Модель позиции заказа. Содержит информацию о товаре, магазине и количестве.
     """
+
     order = models.ForeignKey(
-        'Order', on_delete=models.CASCADE, verbose_name="Заказ", related_name="order_items"
+        "Order",
+        on_delete=models.CASCADE,
+        verbose_name="Заказ",
+        related_name="order_items",
     )
-    product = models.ForeignKey('Product', on_delete=models.CASCADE, verbose_name="Продукт")
-    shop = models.ForeignKey('Shop', on_delete=models.CASCADE, verbose_name="Магазин")
+    product = models.ForeignKey(
+        "Product", on_delete=models.CASCADE, verbose_name="Продукт"
+    )
+    shop = models.ForeignKey("Shop", on_delete=models.CASCADE, verbose_name="Магазин")
     quantity = models.PositiveIntegerField(verbose_name="Количество")
 
     class Meta:
@@ -224,6 +248,7 @@ class Parameter(models.Model):
     """
     Модель параметра. Содержит название параметра.
     """
+
     name = models.CharField(max_length=200, verbose_name="Параметр", db_index=True)
 
     class Meta:
@@ -239,10 +264,14 @@ class Product(models.Model):
     """
     Модель товара. Содержит информацию о названии, модели и категории товара.
     """
+
     model = models.CharField(max_length=255, verbose_name="Модель", blank=True)
     name = models.CharField(max_length=80, verbose_name="Название", db_index=True)
     category = models.ForeignKey(
-        'Category', verbose_name="Категория", related_name="products", on_delete=models.CASCADE
+        "Category",
+        verbose_name="Категория",
+        related_name="products",
+        on_delete=models.CASCADE,
     )
 
     class Meta:
@@ -258,20 +287,37 @@ class ProductInfo(models.Model):
     """
     Модель информации о товаре. Содержит данные о товаре, магазине, количестве, цене и рекомендуемой розничной цене.
     """
+
     product = models.ForeignKey(
-        'Product', verbose_name="Продукт", related_name="product_infos", on_delete=models.CASCADE
+        "Product",
+        verbose_name="Продукт",
+        related_name="product_infos",
+        on_delete=models.CASCADE,
     )
     shop = models.ForeignKey(
-        'Shop', verbose_name="Магазин", related_name="product_infos", on_delete=models.CASCADE
+        "Shop",
+        verbose_name="Магазин",
+        related_name="product_infos",
+        on_delete=models.CASCADE,
     )
-    external_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Внешний ID")
+    external_id = models.CharField(
+        max_length=100, blank=True, null=True, verbose_name="Внешний ID"
+    )
     description = models.CharField(max_length=200, blank=True, verbose_name="Описание")
     quantity = models.PositiveIntegerField(verbose_name="Количество", default=0)
     price = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Цена", validators=[MinValueValidator(0.01)]
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Цена",
+        validators=[MinValueValidator(0.01)],
     )
     price_rrc = models.DecimalField(
-        max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Рекомендуемая розничная цена", validators=[MinValueValidator(0.01)]
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Рекомендуемая розничная цена",
+        validators=[MinValueValidator(0.01)],
     )
 
     class Meta:
@@ -295,11 +341,18 @@ class ProductParameter(models.Model):
     """
     Модель параметра товара. Содержит информацию о товаре, параметре и его значении.
     """
+
     product_info = models.ForeignKey(
-        'ProductInfo', verbose_name="Информация о товаре", related_name="product_parameters", on_delete=models.CASCADE
+        "ProductInfo",
+        verbose_name="Информация о товаре",
+        related_name="product_parameters",
+        on_delete=models.CASCADE,
     )
     parameter = models.ForeignKey(
-        'Parameter', verbose_name="Параметр", related_name="product_parameters", on_delete=models.CASCADE
+        "Parameter",
+        verbose_name="Параметр",
+        related_name="product_parameters",
+        on_delete=models.CASCADE,
     )
     value = models.CharField(verbose_name="Значение", max_length=200)
 
@@ -317,6 +370,7 @@ class Shop(models.Model):
     """
     Модель магазина. Содержит информацию о названии магазина, его URL и связанном пользователе.
     """
+
     name = models.CharField(max_length=100)
     url = models.URLField(blank=True, null=True)
     user = models.ForeignKey(
