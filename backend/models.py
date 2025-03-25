@@ -1,5 +1,6 @@
 # Standard library imports
 from enum import Enum
+from decimal import Decimal
 
 # Django
 from django.conf import settings
@@ -309,7 +310,7 @@ class ProductInfo(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Цена",
-        validators=[MinValueValidator(0.01)],
+        validators=[MinValueValidator(Decimal("0.01"))],
     )
     price_rrc = models.DecimalField(
         max_digits=10,
@@ -317,7 +318,7 @@ class ProductInfo(models.Model):
         blank=True,
         null=True,
         verbose_name="Рекомендуемая розничная цена",
-        validators=[MinValueValidator(0.01)],
+        validators=[MinValueValidator(Decimal("0.01"))],
     )
 
     class Meta:
