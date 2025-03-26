@@ -42,13 +42,93 @@ SWAGGER_CONFIGS = {
         },
         examples=[
             OpenApiExample(
-                name="Успешная авторизация",
+                name="Успешный запрос",
+                description="Пример запроса с корректными данными",
                 value={"email": "user@example.com", "password": "string"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Успешный ответ",
+                description="Пример ответа при успешной авторизации",
+                value={
+                    "user_id": 1,
+                    "email": "user@example.com",
+                    "access_token": "eyJhbGciOiJIUzI1NiIsInR5c.....",
+                    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5c.....",
+                },
+                response_only=True,
                 status_codes=["200"],
             ),
             OpenApiExample(
-                name="Неверные данные запроса",
+                name="Не указан пароль",
+                description="Пример запроса с пустым паролем",
                 value={"email": "user@example.com", "password": ""},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Не указан пароль",
+                description="Пример ответа при пустом поле пароля",
+                value={"password": ["This field may not be blank."]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Не указана почта",
+                description="Пример запроса с пустой почтой",
+                value={"email": "", "password": "string"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Не указана почта",
+                description="Пример ответа при пустой почте",
+                value={"email": ["This field may not be blank."]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Не указана почта и пароль",
+                description="Пример запроса с пустой почтой и пустым паролем",
+                value={"email": "", "password": ""},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Не указана почта и пароль",
+                description="Пример ответа при пустой почте и пустом пароле",
+                value={
+                    "email": ["This field may not be blank."],
+                    "password": ["This field may not be blank."],
+                },
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Неверный формат почты",
+                description="Пример запроса с неверным форматом почты",
+                value={"email": "exampleexample.com", "password": "string"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Неверный формат почты",
+                description="Пример ответа при неверном формате почты",
+                value={"email": ["Enter a valid email address."]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Неверные данные",
+                description="Пример запроса с неверными данными для авторизации",
+                value={"email": "user@example.com", "password": "misspelledpassword"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Неверные данные",
+                description="Пример ответа при неверных данных",
+                value={
+                    "non_field_errors": [
+                        "Не удалось войти с предоставленными учетными данными."
+                    ]
+                },
+                response_only=True,
                 status_codes=["400"],
             ),
         ],
@@ -59,59 +139,186 @@ SWAGGER_CONFIGS = {
         request=PasswordResetSerializer,
         responses={
             200: {
-                "description": "Ссылка для сброса пароля отправлена на email.",
+                "description": "Успешный ответ.",
                 "content": {"application/json": {}},
             },
             400: {
-                "description": "Неверный формат почты.",
-                "content": {"application/json": {}},
-            },
-            400: {
-                "description": "Пользователь с таким email не найден.",
+                "description": "Неверные данные.",
                 "content": {"application/json": {}},
             },
         },
         examples=[
             OpenApiExample(
-                name="Ссылка для сброса пароля отправлена",
+                name="Успешный запрос",
+                description="Пример запроса с корректными данными",
                 value={"email": "user@example.com"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Успешный ответ",
+                description="Пример успешного ответа",
+                value={"detail": "Ссылка для сброса пароля отправлена на email."},
+                response_only=True,
                 status_codes=["200"],
             ),
             OpenApiExample(
                 name="Неверный формат почты",
+                description="Пример запроса с ошибкой в email",
                 value={"email": "userexample.com"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Неверный формат почты",
+                description="Пример ответа при ошибке в email",
+                value={"email": ["Enter a valid email address."]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Пустая почта",
+                description="Пример запроса без email",
+                value={"email": ""},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Пустая почта",
+                description="Пример ответа при пустом email",
+                value={"email": ["This field may not be blank."]},
+                response_only=True,
                 status_codes=["400"],
             ),
             OpenApiExample(
                 name="Пользователь не найден",
+                description="Пример запроса с незарегистрированным email",
                 value={"email": "us@erexample.com"},
-                status_codes=["404"],
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Пользователь не найден",
+                description="Пример ответа при отсутствии пользователя",
+                value={"email": {"email": ["Пользователь с таким email не найден."]}},
+                response_only=True,
+                status_codes=["400"],
             ),
         ],
     ),
     "password_reset_confirm_schema": extend_schema(
         summary="Подтверждение нового пароля",
-        description="Эндпоинт для создания нового пароля с помощью предоставленного токена и uid пользователя.",
+        description="Эндпоинт для установки нового пароля с использованием токена из письма. Требует uid и token из ссылки.",
+        parameters=[
+            OpenApiParameter(
+                name="uidb64",
+                description="Base64-кодированный идентификатор пользователя",
+                required=True,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+            ),
+            OpenApiParameter(
+                name="token",
+                description="Токен для сброса пароля (временный)",
+                required=True,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
         request=PasswordResetConfirmSerializer,
         responses={
             200: {
-                "description": "Пароль успешно изменён.",
-                "content": {"application/json": {}},
+                "description": "Пароль успешно изменен",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "Пароль успешно изменен"}
+                    }
+                },
             },
             400: {
-                "description": "Недействительный токен или пользователь не найден.",
-                "content": {"application/json": {}},
+                "description": "Ошибки валидации данных",
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "InvalidToken": {
+                                "value": {
+                                    "token": ["Недействительный токен сброса пароля"]
+                                }
+                            },
+                            "InvalidUid": {
+                                "value": {
+                                    "uid": ["Недопустимый идентификатор пользователя"]
+                                }
+                            },
+                            "WeakPassword": {
+                                "value": {
+                                    "non_field_errors": [
+                                        "Пароль должен содержать минимум 8 символов",
+                                        "Пароль не может состоять только из цифр",
+                                    ]
+                                }
+                            },
+                        }
+                    }
+                },
             },
         },
         examples=[
             OpenApiExample(
-                name="Пароль успешно изменён",
-                value={"new_password": "string"},
+                name="Успешный запрос",
+                description="Пример запроса с валидным паролем",
+                value={"new_password": "SecurePass123!"},
+                request_only=True,
                 status_codes=["200"],
             ),
             OpenApiExample(
-                name="Недействительный токен или пользователь не найден",
-                value={"new_password": "string"},
+                name="Успешный ответ",
+                description="Пример ответа при успешной смене пароля",
+                value={"detail": "Пароль успешно изменен"},
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Неверный токен",
+                description="Пример ответа при истечении срока токена",
+                value={"token": ["Недействительный токен сброса пароля"]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Неверный идентификатор",
+                description="Пример ответа при поврежденной ссылке",
+                value={"uid": ["Недопустимый идентификатор пользователя"]},
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Короткий пароль",
+                description="Пример запроса с ненадежным паролем",
+                value={"new_password": "123"},
+                request_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Ошибка валидации",
+                description="Пример ответа для слабого пароля",
+                value={
+                    "non_field_errors": [
+                        "Пароль должен содержать минимум 8 символов",
+                        "Пароль должен содержать буквы и цифры",
+                    ]
+                },
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Пустой пароль",
+                description="Пример запроса без пароля",
+                value={"new_password": ""},
+                request_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Обязательное поле",
+                description="Пример ответа при отсутствии пароля",
+                value={"new_password": ["Это поле не может быть пустым."]},
+                response_only=True,
                 status_codes=["400"],
             ),
         ],
@@ -333,35 +540,128 @@ SWAGGER_CONFIGS = {
     ),
     "register_schema": extend_schema(
         summary="Регистрация аккаунта",
-        description="Регистрация нового пользователя с помощью электронной почты и пароля. Включает в себя подтверждение email для активации аккаунта.",
+        description="Регистрация нового пользователя с подтверждением email",
         request=UserRegistrationSerializer,
         responses={
             201: {
-                "description": "Пользователь успешно зарегистрирован и email подтверждён",
-                "content": {"application/json": {}},
+                "description": "Успешная регистрация",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "status": "success",
+                            "message": "Регистрация успешна. Проверьте email для активации",
+                        }
+                    }
+                },
             },
             400: {
-                "description": "Пользователь с таким email уже существует",
-                "content": {"application/json": {}},
+                "description": "Ошибки валидации",
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "InvalidData": {
+                                "value": {
+                                    "status": "error",
+                                    "errors": {
+                                        "email": ["Введите корректный email адрес"],
+                                        "password": [
+                                            "This password is too short. It must contain at least 8 characters.",
+                                            "This password is too common.",
+                                            "This password is entirely numeric.",
+                                        ],
+                                        "role": [
+                                            "Неверная роль. Допустимые значения: customer, supplier, admin"
+                                        ],
+                                    },
+                                }
+                            },
+                            "EmailExists": {
+                                "value": {
+                                    "status": "error",
+                                    "errors": {
+                                        "email": [
+                                            "Пользователь с таким email уже существует"
+                                        ]
+                                    },
+                                }
+                            },
+                            "MissingFields": {
+                                "value": {
+                                    "status": "error",
+                                    "errors": {
+                                        "email": ["Email обязателен для заполнения"],
+                                        "password": ["Пароль не может быть пустым"],
+                                        "role": ["Роль обязательна для заполнения"],
+                                    },
+                                }
+                            },
+                        }
+                    }
+                },
             },
         },
         examples=[
             OpenApiExample(
-                name="Пользователь успешно создан. Пожалуйста, проверьте вашу почту для подтверждения регистрации",
+                name="Успешный запрос",
                 value={
-                    "email": "asdsd@akdskaskd2.com",
-                    "password": "sasdaSASD@d22",
+                    "email": "user@example.com",
+                    "password": "SecurePass123!",
+                    "first_name": "Иван",
+                    "last_name": "Иванов",
                     "role": "customer",
                 },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Успешный ответ",
+                description="Ответ после успешной регистрации",
+                value={
+                    "status": "success",
+                    "message": "Регистрация успешна. Проверьте email для активации",
+                },
+                response_only=True,
                 status_codes=["201"],
             ),
             OpenApiExample(
-                name="Пользователь с таким email уже существует",
+                name="Невалидные данные",
+                value={"email": "1", "password": "1", "role": "1"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Пример ответа с ошибками",
                 value={
-                    "email": "admin@admin.com",
-                    "password": "admin",
-                    "role": "admin",
+                    "status": "error",
+                    "errors": {
+                        "email": ["Введите корректный email адрес"],
+                        "password": [
+                            "This password is too short. It must contain at least 8 characters.",
+                            "This password is too common.",
+                            "This password is entirely numeric.",
+                        ],
+                        "role": [
+                            "Неверная роль. Допустимые значения: customer, supplier, admin"
+                        ],
+                    },
                 },
+                response_only=True,
+                status_codes=["400"],
+            ),
+            OpenApiExample(
+                name="Существующий email",
+                value={
+                    "email": "exists@example.com",
+                    "password": "SecurePass123!",
+                    "role": "customer",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Ответ для существующего email",
+                value={
+                    "status": "error",
+                    "errors": {"email": ["Пользователь с таким email уже существует"]},
+                },
+                response_only=True,
                 status_codes=["400"],
             ),
         ],
@@ -417,12 +717,15 @@ SWAGGER_CONFIGS = {
         examples=[
             OpenApiExample(
                 name="Аккаунт успешно активирован",
-                value={"message": "Account activated successfully."},
+                value={
+                    "Status": "success",
+                    "Message": "Ваш аккаунт успешно активирован.",
+                },
                 status_codes=["200"],
             ),
             OpenApiExample(
                 name="Пользователь не найден",
-                value={"detail": "Not found."},
+                value={"detail": "No User matches the given query."},
                 status_codes=["404"],
             ),
         ],
@@ -632,27 +935,95 @@ SWAGGER_CONFIGS = {
         ],
     ),
     "user_orders_schema": extend_schema(
-        summary="Получить подтвержденные заказы для покупателя",
-        description="Возвращает список подтвержденных заказов для покупателя со статусом confirmed.",
+        summary="Получить подтвержденные заказы пользователя",
+        description="Возвращает список заказов со статусом 'confirmed' для текущего пользователя. Требуется авторизация и права покупателя.",
         responses={
             200: {
                 "description": "Список подтвержденных заказов",
-                "content": {"application/json": {}},
+                "content": {
+                    "application/json": {
+                        "examples": {
+                            "WithOrders": {
+                                "value": [
+                                    {
+                                        "id": 1,
+                                        "user": 1,
+                                        "order_items": [
+                                            {
+                                                "id": 1,
+                                                "product": 1,
+                                                "shop": 1,
+                                                "quantity": 2,
+                                            }
+                                        ],
+                                        "dt": "2025-03-26T21:32:57.257443Z",
+                                        "status": "confirmed",
+                                    }
+                                ]
+                            },
+                            "EmptyList": {"value": []},
+                        }
+                    }
+                },
+            },
+            401: {
+                "description": "Пользователь не авторизован",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "Пожалуйста, войдите в систему."}
+                    }
+                },
             },
             403: {
-                "description": "Ошибка, если пользователь не авторизован.",
-                "content": {"application/json": {}},
+                "description": "Доступ запрещен",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "detail": "У вас недостаточно прав для выполнения этого действия."
+                        }
+                    }
+                },
             },
         },
         examples=[
             OpenApiExample(
-                name="Список подтвержденных заказов",
-                value=[{"id": 1, "status": "confirmed", "items": []}],
+                name="Успешный ответ с заказами",
+                description="Пример ответа с существующими заказами",
+                value=[
+                    {
+                        "id": 1,
+                        "user": 1,
+                        "order_items": [
+                            {"id": 1, "product": 1, "shop": 1, "quantity": 2}
+                        ],
+                        "dt": "2025-03-26T21:32:57.257443Z",
+                        "status": "confirmed",
+                    }
+                ],
+                response_only=True,
                 status_codes=["200"],
             ),
             OpenApiExample(
-                name="Ошибка, если пользователь не авторизован",
-                value={"detail": "Вы не авторизованы. Пожалуйста, войдите в систему."},
+                name="Пустой список",
+                description="Пример ответа когда заказов нет",
+                value=[],
+                response_only=True,
+                status_codes=["200"],
+            ),
+            OpenApiExample(
+                name="Ошибка авторизации",
+                description="Пример ответа для неавторизованного пользователя",
+                value={"detail": "Пожалуйста, войдите в систему."},
+                response_only=True,
+                status_codes=["401"],
+            ),
+            OpenApiExample(
+                name="Ошибка доступа",
+                description="Пример ответа при недостатке прав",
+                value={
+                    "detail": "У вас недостаточно прав для выполнения этого действия."
+                },
+                response_only=True,
                 status_codes=["403"],
             ),
         ],
@@ -680,61 +1051,108 @@ SWAGGER_CONFIGS = {
     ),
     "disable_toggle_user_activity_schema": extend_schema(
         summary="Переключить активность пользователя",
-        description="Позволяет администратору включить или отключить активность любого пользователя. "
-        "Если активность отключена: "
-        "- Для продавца: его товары не будут отображаться в поиске. "
-        "- Для покупателя: он не сможет совершать покупки.",
+        description="Позволяет администратору включить/отключить активность пользователя. "
+        "Требуются права администратора. Нельзя изменять свой аккаунт.",
         parameters=[
             OpenApiParameter(
                 name="user_id",
-                type=int,
+                type=OpenApiTypes.INT,
                 location=OpenApiParameter.PATH,
-                description="ID пользователя, активность которого нужно изменить.",
+                description="ID пользователя в системе",
             ),
         ],
         responses={
             200: {
-                "description": "Активность пользователя успешно изменена.",
-                "examples": {
+                "description": "Статус активности изменен",
+                "content": {
                     "application/json": {
-                        "message": "Активность пользователя user@example.com изменена на False",
-                        "user_id": 1,
-                        "new_status": False,
+                        "examples": {
+                            "Deactivated": {
+                                "value": {
+                                    "message": "Активность пользователя fleshdota2@yandex.ru (ID=2) изменена на False",
+                                    "user_id": 2,
+                                    "new_status": False,
+                                }
+                            },
+                            "Activated": {
+                                "value": {
+                                    "message": "Активность пользователя example@mail.com (ID=3) изменена на True",
+                                    "user_id": 3,
+                                    "new_status": True,
+                                }
+                            },
+                        }
                     }
                 },
             },
             403: {
-                "description": "Запрещено изменять активность своего аккаунта.",
-                "examples": {
+                "description": "Ошибки доступа",
+                "content": {
                     "application/json": {
-                        "error": "Вы не можете изменить активность своего аккаунта."
+                        "examples": {
+                            "SelfChange": {
+                                "value": {
+                                    "error": "Вы не можете изменить активность своего аккаунта."
+                                }
+                            },
+                            "NoPermissions": {
+                                "value": {
+                                    "detail": "У вас недостаточно прав для выполнения этого действия."
+                                }
+                            },
+                        }
                     }
                 },
             },
             404: {
-                "description": "Пользователь не найден.",
-                "examples": {"application/json": {"detail": "Not found."}},
+                "description": "Пользователь не найден",
+                "content": {
+                    "application/json": {
+                        "example": {"detail": "No User matches the given query."}
+                    }
+                },
             },
         },
         examples=[
             OpenApiExample(
-                name="Успешный запрос",
+                name="Успешная деактивация",
                 value={
-                    "message": "Активность пользователя user@example.com изменена на False",
-                    "user_id": 1,
+                    "message": "Активность пользователя test@example.com (ID=5) изменена на False",
+                    "user_id": 5,
                     "new_status": False,
                 },
+                response_only=True,
                 status_codes=["200"],
             ),
             OpenApiExample(
-                name="Пользователь не найден",
-                value={"detail": "Not found."},
-                status_codes=["404"],
+                name="Успешная активация",
+                value={
+                    "message": "Активность пользователя user@mail.org (ID=6) изменена на True",
+                    "user_id": 6,
+                    "new_status": True,
+                },
+                response_only=True,
+                status_codes=["200"],
             ),
             OpenApiExample(
-                name="Запрет на изменение своего аккаунта",
+                name="Попытка изменить свой аккаунт",
                 value={"error": "Вы не можете изменить активность своего аккаунта."},
+                response_only=True,
                 status_codes=["403"],
+            ),
+            OpenApiExample(
+                name="Недостаточно прав",
+                value={
+                    "detail": "У вас недостаточно прав для выполнения этого действия."
+                },
+                response_only=True,
+                status_codes=["403"],
+            ),
+            OpenApiExample(
+                name="Пользователь не найден",
+                value={"detail": "No User matches the given query."},
+                response_only=True,
+                status_codes=["404"],
             ),
         ],
     ),
