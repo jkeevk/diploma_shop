@@ -3,11 +3,8 @@ import os
 from typing import Any, List
 
 # Django
-from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
 from django.views.generic import TemplateView
@@ -19,6 +16,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -413,36 +411,18 @@ class PartnerUpdateView(APIView):
 @SWAGGER_CONFIGS["password_reset_confirm_schema"]
 class PasswordResetConfirmView(GenericAPIView):
     """
-    Представление для подтверждения сброса пароля. Позволяет установить новый пароль.
+    Представление для изменения пароля после сброса.
+    Сохраняет новый пароль при валидном токене.
     """
 
     serializer_class = PasswordResetConfirmSerializer
 
-    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
-        """
-        Подтверждает сброс пароля и устанавливает новый пароль.
-        """
-        uid = force_str(urlsafe_base64_decode(kwargs["uidb64"]))
-        token = kwargs["token"]
-
-        try:
-            user = User.objects.get(pk=uid)
-        except User.DoesNotExist:
-            return Response(
-                {"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        if not default_token_generator.check_token(user, token):
-            return Response(
-                {"detail": "Недействительный токен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request: Request, uidb64: str, token: str) -> Response:
+        serializer = self.get_serializer(
+            data=request.data, context={"uidb64": uidb64, "token": token}
+        )
         serializer.is_valid(raise_exception=True)
-
-        user.set_password(serializer.validated_data["new_password"])
-        user.save()
+        serializer.save()
 
         return Response(
             {"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK
@@ -452,7 +432,8 @@ class PasswordResetConfirmView(GenericAPIView):
 @SWAGGER_CONFIGS["password_reset_schema"]
 class PasswordResetView(GenericAPIView):
     """
-    Представление для сброса пароля. Отправляет ссылку для сброса на email пользователя.
+    Представление для сброса пароля.
+    Отправляет ссылку для сброса на email пользователя.
     """
 
     serializer_class = PasswordResetSerializer
@@ -487,37 +468,38 @@ class ProductViewSet(ModelViewSet):
 
 @SWAGGER_CONFIGS["register_schema"]
 class RegisterView(APIView):
-    """
-    Представление для регистрации нового пользователя.
-    """
+    """Представление для регистрации нового пользователя."""
 
     serializer_class = UserRegistrationSerializer
 
-    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
-        """
-        Регистрирует нового пользователя и отправляет подтверждение на email.
-        """
+    def post(self, request):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data.get("email")
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {
-                        "Status": "error",
-                        "Message": "Пользователь с таким email уже существует.",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
 
-            user = serializer.save()
+        if not serializer.is_valid():
             return Response(
-                {
-                    "Status": "success",
-                    "Message": "Пользователь успешно создан. Пожалуйста, проверьте вашу почту для подтверждения регистрации.",
-                },
-                status=status.HTTP_201_CREATED,
+                {"status": "error", "errors": self._clean_errors(serializer.errors)},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(
+            {
+                "status": "success",
+                "message": "Регистрация успешна. Проверьте email для активации",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _clean_errors(self, errors):
+        """Очистка и форматирование ошибок"""
+        clean_errors = {}
+        for field, messages in errors.items():
+            unique_messages = list(
+                dict.fromkeys([msg for msg in messages if not isinstance(msg, dict)])
+            )
+            if unique_messages:
+                clean_errors[field] = unique_messages
+        return clean_errors
 
 
 @SWAGGER_CONFIGS["shop_schema"]

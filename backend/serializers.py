@@ -9,6 +9,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 
 # DRF Spectacular
 from drf_spectacular.utils import extend_schema_field
@@ -486,60 +488,72 @@ class ShopSerializer(serializers.ModelSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Сериализатор для регистрации пользователя."""
+    """
+    Сериализатор для регистрации пользователя.
+    """
 
-    email = serializers.EmailField(validators=[EmailValidator()])
+    role = serializers.ChoiceField(
+        choices=[(role.value, role.name) for role in UserRole],
+        error_messages={
+            "invalid_choice": "Неверная роль. Допустимые значения: {allowed_roles}".format(
+                allowed_roles=", ".join([role.value for role in UserRole])
+            ),
+            "blank": "Роль обязательна для заполнения",
+        },
+    )
 
     class Meta:
         model = User
-        fields = [
-            "email",
-            "password",
-            "first_name",
-            "last_name",
-            "role",
-        ]
+        fields = ["email", "password", "first_name", "last_name", "role"]
         extra_kwargs = {
-            "password": {"write_only": True},
-            "email": {"required": True},
-            "role": {"required": True},
+            "password": {
+                "write_only": True,
+                "error_messages": {"blank": "Пароль не может быть пустым"},
+            },
+            "email": {
+                "validators": [],
+                "error_messages": {
+                    "invalid": "Введите корректный email адрес",
+                    "blank": "Email обязателен для заполнения",
+                },
+            },
         }
 
-    def validate_role(self, value: str) -> str:
-        """Проверка на корректность значения роли."""
-        if value not in [role.value for role in UserRole]:
-            raise serializers.ValidationError("Неверная роль пользователя.")
-        return value
-
-    def validate_email(self, value: str) -> str:
-        """Проверка уникальности email."""
+    def validate_email(self, value):
+        """Проверка существования пользователя с указанным email."""
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
             )
         return value
 
-    def validate_password(self, value: str) -> str:
+    def validate_password(self, value):
         """Проверка валидности пароля."""
+        if not value:
+            raise serializers.ValidationError("Пароль не может быть пустым")
+
         try:
             validate_password(value)
         except ValidationError as e:
-            raise serializers.ValidationError(
-                f"Ошибка валидации пароля: {', '.join(e.messages)}"
-            )
+            raise serializers.ValidationError(e.messages)
         return value
 
-    def create(self, validated_data: Dict[str, Any]) -> User:
-        """Создание нового пользователя."""
-        user = User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-            role=validated_data["role"],
-            is_active=False,
-        )
-        return user
+    def validate(self, data):
+        """Валидация данных."""
+        errors = {}
+
+        for field in ["email", "password", "role"]:
+            if field not in data:
+                errors[field] = [self.fields[field].error_messages["blank"]]
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return data
+
+    def create(self, validated_data):
+        """Создание пользователя с неактивным аккаунтом."""
+        return User.objects.create_user(is_active=False, **validated_data)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -584,14 +598,39 @@ class PasswordResetSerializer(serializers.Serializer):
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    """Сериализатор для подтверждения сброса пароля."""
+    """Сериализатор для подтверждения сброса пароля"""
 
     new_password = serializers.CharField(write_only=True)
 
-    def validate_new_password(self, value: str) -> str:
-        """Проверка валидности нового пароля."""
+    def validate(self, attrs):
+        """Проверка валидности данных."""
+        uidb64 = self.context.get("uidb64")
+        token = self.context.get("token")
+
+        if not uidb64 or not token:
+            raise serializers.ValidationError("Необходимые параметры отсутствуют")
+
         try:
-            validate_password(value)
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            self.user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError(
+                {"uid": ["Недопустимый идентификатор пользователя"]}
+            )
+
+        if not default_token_generator.check_token(self.user, token):
+            raise serializers.ValidationError(
+                {"token": ["Недействительный токен сброса пароля"]}
+            )
+
+        try:
+            validate_password(attrs["new_password"], self.user)
         except serializers.ValidationError as e:
-            raise serializers.ValidationError(list(e.messages))
-        return value
+            raise serializers.ValidationError({"new_password": e.messages})
+
+        return attrs
+
+    def save(self):
+        """Сохранение нового пароля пользователя."""
+        self.user.set_password(self.validated_data["new_password"])
+        self.user.save()
