@@ -40,6 +40,7 @@ google-api-python-client==2.165.0
 google-auth==2.38.0
 google-auth-httplib2==0.2.0
 googleapis-common-protos==1.69.2
+gunicorn==23.0.0
 h11==0.14.0
 httplib2==0.22.0
 identify==2.6.9
@@ -86,6 +87,7 @@ requests==2.32.3
 requests-oauthlib==2.0.0
 rpds-py==0.23.1
 rsa==4.9
+sentry-sdk==2.24.1
 setuptools==78.0.2
 six==1.17.0
 social-auth-app-django==5.4.3
@@ -97,7 +99,6 @@ tzdata==2025.1
 ujson==5.10.0
 uritemplate==4.1.1
 urllib3==2.3.0
-uvicorn==0.34.0
 vine==5.1.0
 virtualenv==20.29.3
 vk==3.0

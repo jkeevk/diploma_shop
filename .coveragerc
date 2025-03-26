@@ -8,3 +8,5 @@ omit =
     */backend/celery_app.py
     */backend/utils/*
     */backend/dashboard.py
+    */backend/migrations/*
+    */backend/__init__.py 
