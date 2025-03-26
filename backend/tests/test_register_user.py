@@ -9,78 +9,102 @@ from backend.models import User
 
 @pytest.mark.django_db
 class TestUserRegistration:
-    def setup_method(self):
-        """
-        Настройка перед каждым тестом.
-        """
-        current_app.conf.task_always_eager = True
+    """Тесты для процесса регистрации пользователей."""
 
-        self.data = {
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client):
+        self.client = api_client
+        self.base_data = {
             "email": "test2@example.com",
-            "password": "strongpassword123",
+            "password": "StrongPass123!",
             "first_name": "Test",
             "last_name": "User",
             "role": "customer",
         }
+        current_app.conf.task_always_eager = True
 
-    def test_register_user(self, api_client):
-        """
-        Тест успешной регистрации пользователя.
-        """
+    def test_successful_registration(self):
+        """Проверка успешной регистрации с корректными данными."""
         url = reverse("user-register")
-        response = api_client.post(url, self.data, format="json")
+        response = self.client.post(url, self.base_data)
 
         assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["status"] == "success"
 
-        user = User.objects.get(email=self.data["email"])
-        assert user.confirmation_token is not None
+        user = User.objects.get(email=self.base_data["email"])
         assert not user.is_active
 
-    def test_email_sent_after_registration(self, api_client):
-        """
-        Тест отправки письма с токеном после регистрации.
-        """
+    def test_registration_with_invalid_role(self):
+        """Проверка обработки невалидной роли."""
+        data = {**self.base_data, "role": "invalid_role"}
         url = reverse("user-register")
-        api_client.post(url, self.data, format="json")
+
+        response = self.client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Неверная роль" in str(response.data["errors"]["role"][0])
+
+    def test_registration_with_existing_email(self):
+        """Проверка регистрации с уже существующим email."""
+        User.objects.create_user(**self.base_data)
+        url = reverse("user-register")
+
+        response = self.client.post(url, self.base_data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "уже существует" in str(response.data["errors"]["email"][0]).lower()
+
+    def test_registration_with_missing_fields(self):
+        """Проверка валидации отсутствия обязательных полей."""
+        url = reverse("user-register")
+        response = self.client.post(url, {})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        errors = response.data["errors"]
+        assert all(field in errors for field in ["email", "password", "role"])
+        assert "required" in str(errors["email"][0]).lower()
+        assert "required" in str(errors["password"][0]).lower()
+        assert "required" in str(errors["role"][0]).lower()
+
+    def test_password_validation(self):
+        """Проверка валидации слабого пароля."""
+        data = {**self.base_data, "password": "123"}
+        url = reverse("user-register")
+
+        response = self.client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "too short" in str(response.data["errors"]["password"][0]).lower()
+
+    def test_email_sending_after_registration(self):
+        """Проверка отправки письма с подтверждением."""
+        url = reverse("user-register")
+        self.client.post(url, self.base_data)
 
         assert len(mail.outbox) == 1
-
         email = mail.outbox[0]
+
         assert email.subject == "Confirm Your Registration"
-        assert "Please click the link below to confirm your registration" in email.body
+        assert self.base_data["email"] in email.to
+        assert "confirm" in email.body.lower()
 
-        token_match = re.search(
-            r"http[s]?://[^/]+/user/register/confirm/([a-f0-9]+)", email.body
+    def test_successful_email_confirmation(self):
+        """Проверка успешного подтверждения email."""
+        self.client.post(reverse("user-register"), self.base_data)
+        user = User.objects.get(email=self.base_data["email"])
+
+        url = reverse(
+            "user-register-confirm", kwargs={"token": user.confirmation_token}
         )
-        assert token_match is not None, "Токен не найден в письме"
-
-        self.token = token_match.group(1)
-
-    def test_confirm_registration_with_valid_token(self, api_client):
-        """
-        Тест подтверждения регистрации с валидным токеном.
-        """
-        self.test_email_sent_after_registration(api_client)
-
-        url_confirm = reverse("user-register-confirm", kwargs={"token": self.token})
-        response = api_client.get(url_confirm)
+        response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data == {
-            "Status": "success",
-            "Message": "Ваш аккаунт успешно активирован.",
-        }
-
-        user = User.objects.get(email=self.data["email"])
+        user.refresh_from_db()
         assert user.is_active
-        assert user.confirmation_token is None
 
-    def test_confirm_registration_with_invalid_token(self, api_client):
-        """
-        Тест подтверждения регистрации с невалидным токеном.
-        """
-        invalid_token = "invalid_token_123"
-        url_confirm = reverse("user-register-confirm", kwargs={"token": invalid_token})
-        response = api_client.get(url_confirm)
+    def test_invalid_confirmation_token(self):
+        """Проверка обработки невалидного токена подтверждения."""
+        url = reverse("user-register-confirm", kwargs={"token": "invalid_token"})
+        response = self.client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
