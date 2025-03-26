@@ -14,6 +14,8 @@ from pathlib import Path
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 load_dotenv()
 
@@ -42,6 +44,16 @@ VK_REDIRECT_URI = "https://oauth.vk.com/blank.html"
 
 BACKEND_URL = "http://localhost"
 LOGIN_REDIRECT_URL = "/"
+
+# Sentry settings
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=[DjangoIntegration()],
+    send_default_pii=True,
+)
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

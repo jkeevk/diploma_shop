@@ -764,6 +764,46 @@ SWAGGER_CONFIGS = {
             ),
         ],
     ),
+    "test_force_sentry_error_schema": extend_schema(
+        summary="Запуск принудительной ошибки для Sentry",
+        description="Эндпоинт для принудительного запуска ошибки для отправки в Sentry. Доступен только для администраторов.",
+        responses={
+            500: {
+                "description": "Тестовая ошибка успешно сгенерирована и отправлена в Sentry",
+                "content": {"application/json": {}},
+            },
+            401: {
+                "description": "Пользователь не авторизован",
+                "content": {"application/json": {}},
+            },
+            403: {
+                "description": "Доступ запрещен. Требуются права администратора.",
+                "content": {"application/json": {}},
+            },
+        },
+        examples=[
+            OpenApiExample(
+                name="Тестовая ошибка Sentry",
+                value={"error": "Internal server error"},
+                status_codes=["500"],
+                description="Пример ответа при успешной генерации тестовой ошибки",
+            ),
+            OpenApiExample(
+                name="Пользователь не авторизован",
+                value={"detail": "Пожалуйста, войдите в систему."},
+                status_codes=["401"],
+                description="Пример ответа для неавторизованного пользователя",
+            ),
+            OpenApiExample(
+                name="Доступ запрещен",
+                value={
+                    "detail": "У вас недостаточно прав для выполнения этого действия."
+                },
+                status_codes=["403"],
+                description="Пример ответа при отсутствии прав администратора",
+            ),
+        ],
+    ),
     "check_pytest_task_schema": extend_schema(
         summary="Проверка статуса задачи pytest",
         description="Эндпоинт для проверки статуса задачи pytest. Возвращает результат выполнения тестов.",

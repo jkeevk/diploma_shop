@@ -40,7 +40,11 @@ from backend.views import (
     UserOrdersView,
     VKAuthView,
 )
-from backend.tests.views_tests import RunPytestView, CheckPytestTaskView
+from backend.tests.views_tests import (
+    RunPytestView,
+    CheckPytestTaskView,
+    ForceSentryErrorAPIView,
+)
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -68,6 +72,11 @@ urlpatterns = (
         path(r"jet/dashboard/", include("jet.dashboard.urls", "jet-dashboard")),
         path("admin/", admin.site.urls, name="admin"),
         path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
+        path(
+            "tests/trigger-error/",
+            ForceSentryErrorAPIView.as_view(),
+            name="trigger-error",
+        ),
         path(
             "tests/check-pytest-task/<str:task_id>/",
             CheckPytestTaskView.as_view(),

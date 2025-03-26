@@ -64,3 +64,18 @@ class CheckPytestTaskView(BaseTaskView):
 
     def get(self, request, task_id):
         return self.get_task_response(task_id)
+
+
+@SWAGGER_CONFIGS["test_force_sentry_error_schema"]
+class ForceSentryErrorAPIView(APIView):
+    """
+    API View для тестирования интеграции с Sentry.
+    """
+
+    permission_classes = [check_role_permission("admin")]
+
+    def get(self, request):
+        """
+        Вызывает исключение для проверки работы Sentry.
+        """
+        raise ValueError("Это тестовая ошибка для Sentry!")
