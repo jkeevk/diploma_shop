@@ -527,12 +527,13 @@ class TestBasketAPI_PATCH:
 
         update_url = reverse("basket-detail", args=[order_id])
         update_data = {
-            "order_items": [{"product": product.id, "shop": None, "quantity": 5}]
+            "order_items": [{"product": product.id, "shop": "", "quantity": 5}]
         }
 
         response = api_client.patch(update_url, update_data, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Не указан магазин" in response.content.decode("utf-8")
+        print(response.data)
+        assert "Не указан магазин" in str(response.data["order_items"][0]["shop"])
 
     def test_patch_update_basket_item_no_changes(
         self, api_client, customer, product, shop
@@ -580,6 +581,17 @@ class TestBasketAPI_DELETE:
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_delete_someone_elses_basket(self, api_client, customer_login, order):
+        """
+        Попытка удалить чужую корзину
+        """
+        api_client.force_authenticate(user=customer_login)
+        url = reverse("basket-detail", args=[order.id])
+        response = api_client.delete(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["detail"] == "Корзина не найдена."
 
 
 @pytest.mark.django_db
@@ -638,3 +650,200 @@ class TestCustomCheck:
             order.status = "confirmed"
             order.save()
             mock_send_email.assert_not_called()
+
+    def test_customer_update_allowed_status(self, api_client, product_info, customer):
+        """Покупатель может менять статусы new и canceled"""
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+            "status": "new",
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 7,
+                }
+            ],
+            "status": "canceled",
+        }
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == "canceled"
+        assert response.data["order_items"][0]["quantity"] == 7
+
+    def test_user_update_forbidden_status(
+        self, api_client, product_info, customer, admin, supplier
+    ):
+        """Пользователь не может ставить статусы кроме валидных"""
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+        api_client.force_authenticate(user=admin)
+
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 5,
+                }
+            ],
+            "status": "delayed",
+        }
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Некорректный статус" in response.data[0]
+
+    def test_admin_update_any_status(self, api_client, product_info, admin, customer):
+        """Админ может менять любой статус"""
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        api_client.force_authenticate(user=admin)
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 5,
+                }
+            ],
+            "status": "assembled",
+        }
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == "assembled"
+        assert response.data["order_items"][0]["quantity"] == 5
+
+    def test_supplier_update_any_status(
+        self, api_client, product_info, supplier, customer
+    ):
+        """Продавец может менять любой статус"""
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        api_client.force_authenticate(user=supplier)
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+            "status": "sent",
+        }
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == "sent"
+        assert response.data["order_items"][0]["quantity"] == 2
+
+    def test_update_invalid_status(self, api_client, product_info, admin, customer):
+        """Проверка невалидного статуса"""
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        api_client.force_authenticate(user=admin)
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {
+            "user": customer.id,
+            "order_items": [
+                {
+                    "product": product_info.product.id,
+                    "shop": product_info.shop.id,
+                    "quantity": 5,
+                }
+            ],
+            "status": "invalid",
+        }
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Некорректный статус" in response.data[0]
+
+    def test_unauthorized_update(self, api_client, order):
+        """Неавторизованный пользователь не может менять статус"""
+        url = reverse("basket-detail", args=[order.id])
+        data = {"status": "canceled"}
+        response = api_client.patch(url, data)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
