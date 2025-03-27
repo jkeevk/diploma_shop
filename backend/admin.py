@@ -257,7 +257,17 @@ class ContactAdmin(admin.ModelAdmin):
     номеров телефонов непосредственно в админке.
     """
 
-    list_display = ("user", "city", "street", "house")
+    list_display = (
+        "id",
+        "user",
+        "city",
+        "street",
+        "house",
+        "structure",
+        "building",
+        "apartment",
+        "phone",
+    )
     search_fields = ("user__email", "city", "street")
     list_filter = ("city",)
     list_editable = ("city", "street", "house")
