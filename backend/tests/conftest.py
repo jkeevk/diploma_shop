@@ -136,6 +136,21 @@ def contact(customer):
 
 
 @pytest.fixture
+def another_user_contact(customer_login):
+    """Фикстура для создания контакта другого пользователя."""
+    return Contact.objects.create(
+        user=customer_login,
+        city="SPb",
+        street="Nevsky",
+        house="120",
+        structure="1",
+        building="B",
+        apartment="12",
+        phone="+79991234567",
+    )
+
+
+@pytest.fixture
 def order_item(customer, product, shop):
     """Фикстура для создания элемента заказа."""
     product_info = ProductInfo.objects.create(

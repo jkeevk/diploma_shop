@@ -3,7 +3,7 @@ from celery.result import AsyncResult
 
 # Local imports
 from backend.permissions import check_role_permission
-from backend.swagger_configs import SWAGGER_CONFIGS
+from backend.swagger.config import SWAGGER_CONFIGS
 from backend.tasks import run_pytest
 
 # Rest Framework
