@@ -9,6 +9,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
 from django.views.generic import TemplateView
 from django.conf import settings
+from django.http import Http404
 
 # Rest Framework
 from rest_framework import status
@@ -21,9 +22,10 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
 
 # Local imports
-from .filters import ProductFilter
+from .filters import ProductFilter, BasketFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
 from .permissions import check_role_permission
 from .serializers import (
@@ -39,8 +41,9 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    OrderWithContactSerializer,
 )
-from .swagger_configs import SWAGGER_CONFIGS
+from backend.swagger.config import SWAGGER_CONFIGS
 from .tasks import export_products_task, import_products_task
 from celery.result import AsyncResult
 
@@ -54,7 +57,10 @@ class BasketViewSet(ModelViewSet):
 
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [check_role_permission("customer", "admin")]
+    permission_classes = [check_role_permission("customer", "admin", "supplier")]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = BasketFilter
+    search_fields = ["status"]
 
     def retrieve(self, request, *args, **kwargs):
         order = self.get_object()
@@ -69,20 +75,37 @@ class BasketViewSet(ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         order = self.get_object()
+        new_status = request.data.get("status")
+        if new_status:
+            if request.user.role == "customer" and new_status not in [
+                "new",
+                "canceled",
+            ]:
+                raise ValidationError(
+                    "Недостаточно прав. Вы можете устанавливать только: new, canceled"
+                )
+            if new_status not in dict(Order.STATUS_CHOICES):
+                raise ValidationError(
+                    f"Некорректный статус: {new_status}. "
+                    f"Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}"
+                )
 
-        serializer = self.get_serializer(
-            order, data=request.data, partial=True
-        )  # partial=True для частичного обновления
+        serializer = self.get_serializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
         return Response(serializer.data)
 
     def get_queryset(self) -> List[Order]:
-        """
-        Возвращает только заказы текущего пользователя.
-        """
+        if self.request.user.role in ["admin", "supplier"]:
+            return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Корзина не найдена.", code="not_found")
 
 
 @SWAGGER_CONFIGS["category_viewset_schema"]
@@ -120,31 +143,11 @@ class ConfirmBasketView(APIView):
         """
         Подтверждает корзину, создает заказ и связывает его с контактом пользователя.
         """
-        order = Order.objects.filter(user=request.user, status="new").first()
-
-        if not order:
-            return Response(
-                {"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        contact_id = request.data.get("contact_id")
-        if not contact_id:
-            return Response(
-                {"detail": "ID контакта обязателен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            contact = Contact.objects.get(id=contact_id, user=request.user)
-        except Contact.DoesNotExist:
-            return Response(
-                {"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        order.status = "confirmed"
-        order.contact = contact
-        order.save()
-
+        serializer = OrderWithContactSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(
             {"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK
         )
