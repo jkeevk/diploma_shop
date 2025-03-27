@@ -3,11 +3,19 @@ from django_filters import rest_framework as filters
 from django.db.models import QuerySet
 
 # Local imports
-from .models import Product, Shop, Category
+from .models import Product, Shop, Category, Order
 
 # Standard library imports
 from django.db.models import QuerySet
 from typing import Optional
+
+
+class BasketFilter(filters.FilterSet):
+    status = filters.ChoiceFilter(choices=Order.STATUS_CHOICES)
+
+    class Meta:
+        model = Order
+        fields = ["status"]
 
 
 class ProductFilter(filters.FilterSet):
