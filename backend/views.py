@@ -267,18 +267,6 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@SWAGGER_CONFIGS["order_viewset_schema"]
-class OrderViewSet(ModelViewSet):
-    """
-    Сет представлений для управления заказами.
-    Доступен только для администраторов и поставщиков.
-    """
-
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [check_role_permission("admin", "supplier")]
-
-
 @SWAGGER_CONFIGS["parameter_viewset_schema"]
 class ParameterViewSet(ModelViewSet):
     """

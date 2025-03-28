@@ -1,14 +1,11 @@
-# DRF Spectacular
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
     OpenApiResponse,
     extend_schema,
-    extend_schema_view,
 )
 
-# Local imports
 from backend.serializers import (
     UserRegistrationSerializer,
     LoginSerializer,
