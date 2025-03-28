@@ -63,8 +63,8 @@ class UserAdmin(admin.ModelAdmin):
 
     form = CustomUserChangeForm
 
-    list_display = ("email", "first_name", "last_name", "role", "is_active")
-    search_fields = ("email", "first_name", "last_name")
+    list_display = ("id", "email", "first_name", "last_name", "role", "is_active")
+    search_fields = ("id", "email", "first_name", "last_name")
     list_filter = ("role", "is_active")
     ordering = ("-email",)
 
