@@ -15,7 +15,7 @@ class TestThrottle:
         """Сбрасывает кэш перед каждым тестом."""
         from django_redis import get_redis_connection
 
-        conn = get_redis_connection("default").flushall()
+        conn = get_redis_connection("default")
         conn.flushdb()
 
     def test_anon_user_throttle(self, api_client):
