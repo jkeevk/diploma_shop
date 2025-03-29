@@ -82,7 +82,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "drf_spectacular",
     "social_django",
-    "cacheops",
+    "cachalot",
     # Local
     "backend",
 ]
@@ -251,7 +251,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "filename": "orders.log",
+            "filename": "debug.log",
         },
     },
     "loggers": {
@@ -300,21 +300,11 @@ VK_APP_ID = os.getenv("VK_APP_ID")
 VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")
 VK_REDIRECT_URI = "https://oauth.vk.com/blank.html"
 
-# CACHEOPS (кэширование запросов к БД)
-CACHEOPS = {
-    "backend.*": {"ops": "all", "timeout": 60 * 60},
-    "*.*": {"timeout": 60 * 60},
-}
-CACHEOPS_REDIS = {
-    "host": "redis",
-    "port": 6379,
-    "db": 1,
-    "socket_timeout": 3,
-}
+# Cachalot (кэширования запросов к БД)
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": "redis://redis:6379/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

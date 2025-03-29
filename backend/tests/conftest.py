@@ -1,4 +1,5 @@
 import pytest
+import redis
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from backend.models import (
@@ -24,6 +25,19 @@ User = get_user_model()
 def api_client():
     """Фикстура для создания тестового клиента API."""
     return APIClient()
+
+
+@pytest.fixture
+def redis_client():
+    """
+    Фикстура для создания клиента Redis.
+    """
+    return redis.Redis(
+        host="redis",
+        port=6379,
+        db=2,
+        socket_timeout=3,
+    )
 
 
 @pytest.fixture
