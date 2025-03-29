@@ -18,6 +18,16 @@ class BasketFilter(filters.FilterSet):
         fields = ["status"]
 
 
+class CategoryFilter(filters.FilterSet):
+    name = filters.CharFilter(
+        field_name="name",
+    )
+
+    class Meta:
+        model = Category
+        fields = ["name"]
+
+
 class ProductFilter(filters.FilterSet):
     """
     Фильтр для модели Product, позволяющий фильтровать продукты по магазину и категории.

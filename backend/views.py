@@ -25,7 +25,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.exceptions import NotFound
 
 # Local imports
-from .filters import ProductFilter, BasketFilter
+from .filters import BasketFilter, CategoryFilter, ProductFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
 from .permissions import check_role_permission
 from .serializers import (
@@ -118,6 +118,9 @@ class CategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = CategoryFilter
+    search_fields = ["name"]
 
     def get_permissions(self) -> List[Any]:
         """
