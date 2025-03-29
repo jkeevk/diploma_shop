@@ -40,7 +40,7 @@ class TestThrottle:
         for _ in range(500):
             response = api_client.get(url)
             assert response.status_code == status.HTTP_200_OK
-            time.sleep(0.01)
+            time.sleep(0.05)
 
         response = api_client.get(url)
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
