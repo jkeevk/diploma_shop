@@ -13,10 +13,10 @@ class TestThrottle:
     @pytest.fixture(autouse=True)
     def clear_cache(self):
         """Сбрасывает кэш перед каждым тестом."""
-        cache.clear()
         from django_redis import get_redis_connection
 
-        get_redis_connection("default").flushall()
+        conn = get_redis_connection("default").flushall()
+        conn.flushdb()
 
     def test_anon_user_throttle(self, api_client):
         """Проверяет, что анонимный пользователь может сделать до 300 запросов,
