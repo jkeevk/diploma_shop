@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.core.cache import cache
 
 
+@pytest.mark.throttling
 @pytest.mark.django_db
 class TestThrottle:
     """Тесты для проверки механизма троттлинга в API."""
@@ -12,6 +13,9 @@ class TestThrottle:
     def clear_cache(self):
         """Сбрасывает кэш перед каждым тестом."""
         cache.clear()
+        from django_redis import get_redis_connection
+
+        get_redis_connection("default").flushall()
 
     def test_anon_user_throttle(self, api_client):
         """Проверяет, что анонимный пользователь может сделать до 300 запросов,

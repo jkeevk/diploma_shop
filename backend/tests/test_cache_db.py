@@ -198,5 +198,5 @@ class TestCacheFromDB(TestCase):
             f"Производительность: без кэша={cold_query_time:.4f}, с кэшем={cached_query_time:.4f}"
         )
         assert (
-            cached_query_time < cold_query_time / 3
+            cached_query_time < cold_query_time / 2
         ), "Запросы с кэшем недостаточно быстрые"

@@ -1,6 +1,7 @@
 import pytest
 import redis
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from rest_framework.test import APIClient
 from backend.models import (
     Category,
@@ -175,12 +176,13 @@ def order_item(customer, product, shop):
 
 
 @pytest.fixture
-def shops(supplier, user_factory):
+def shops(user_factory):
     """Фикстура для создания нескольких магазинов с разными поставщиками."""
-    supplier2 = user_factory(role="supplier", email="supplier2@example.com")
+    supplier1 = user_factory(role="supplier", email="supplier_1@example.com")
+    supplier2 = user_factory(role="supplier", email="supplier_2@example.com")
     return [
-        Shop.objects.create(name="Shop 1", user=supplier),
-        Shop.objects.create(name="Shop 2", user=supplier2),
+        Shop.objects.create(name="Shop #1", user=supplier1),
+        Shop.objects.create(name="Shop #2", user=supplier2),
     ]
 
 
@@ -262,3 +264,17 @@ def order_with_multiple_shops(db, customer, shops, product, another_product):
     )
 
     return order
+
+
+@pytest.fixture(autouse=True)
+def disable_throttling(request):
+    marker = request.node.get_closest_marker("throttling")
+    if not marker:
+        original_throttle_classes = settings.REST_FRAMEWORK.get(
+            "DEFAULT_THROTTLE_CLASSES", []
+        )
+        settings.REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = []
+        yield
+        settings.REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = original_throttle_classes
+    else:
+        yield
