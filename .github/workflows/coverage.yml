@@ -15,6 +15,10 @@ jobs:
       pull-requests: write
       contents: write
     services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
       docker:
         image: docker:19.03.12
         options: --privileged
@@ -43,6 +47,11 @@ jobs:
             sleep 2
           done
 
+      - name: Clear Redis cache
+        run: |
+          echo '=== CLEARING REDIS CACHE ==='
+          docker-compose exec -T redis redis-cli FLUSHALL
+
       - name: Flush database
         run: |
           echo '=== FLUSHING DATABASE ==='
@@ -60,27 +69,16 @@ jobs:
           echo '=== RUNNING TESTS INSIDE CONTAINER ==='
           docker-compose exec -T app pytest --cov=backend --cov-report=xml:/app/coverage/coverage.xml
 
-      - name: List running containers
-        run: |
-          echo '=== LISTING RUNNING CONTAINERS ==='
-          docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
-
       - name: Copy coverage report from container to host
         run: |
           echo '=== COPYING COVERAGE REPORT ==='
           docker cp diploma_shop_app_1:/app/coverage/coverage.xml ./coverage.xml
-
-      - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: ./coverage.xml
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./coverage.xml
-          
+
       - name: Shutdown Docker Compose
         run: docker-compose down

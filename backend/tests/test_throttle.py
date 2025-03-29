@@ -2,6 +2,7 @@ import pytest
 from rest_framework import status
 from django.urls import reverse
 from django.core.cache import cache
+import time
 
 
 @pytest.mark.throttling
@@ -25,6 +26,7 @@ class TestThrottle:
         for _ in range(300):
             response = api_client.get(url)
             assert response.status_code == status.HTTP_200_OK
+            time.sleep(0.01)
 
         response = api_client.get(url)
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
@@ -38,6 +40,7 @@ class TestThrottle:
         for _ in range(500):
             response = api_client.get(url)
             assert response.status_code == status.HTTP_200_OK
+            time.sleep(0.01)
 
         response = api_client.get(url)
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
