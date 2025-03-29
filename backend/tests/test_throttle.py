@@ -16,7 +16,7 @@ class TestThrottle:
         from django_redis import get_redis_connection
 
         conn = get_redis_connection("default")
-        conn.flushdb()
+        conn.flushall()
 
     def test_anon_user_throttle(self, api_client):
         """Проверяет, что анонимный пользователь может сделать до 300 запросов,
@@ -40,7 +40,7 @@ class TestThrottle:
         for _ in range(500):
             response = api_client.get(url)
             assert response.status_code == status.HTTP_200_OK
-            time.sleep(0.05)
+            time.sleep(0.01)
 
         response = api_client.get(url)
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
