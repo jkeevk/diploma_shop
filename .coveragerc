@@ -10,4 +10,5 @@ omit =
     */backend/dashboard.py
     */backend/migrations/*
     */backend/__init__.py
-    */backend/swagger/* 
+    */backend/swagger/*
+    */backend/management/*

@@ -136,8 +136,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "user": "200/minute",
-        "anon": "100/minute",
+        "user": "500/minute",
+        "anon": "300/minute",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -308,13 +308,13 @@ CACHEOPS = {
 CACHEOPS_REDIS = {
     "host": "redis",
     "port": 6379,
-    "db": 0,
+    "db": 1,
     "socket_timeout": 3,
 }
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://redis:6379/0",
+        "LOCATION": "redis://redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

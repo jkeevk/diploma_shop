@@ -1,10 +1,10 @@
-import re
 import pytest
 from django.core import mail
 from django.urls import reverse
 from rest_framework import status
 from celery import current_app
 from backend.models import User
+from unittest.mock import patch
 
 
 @pytest.mark.django_db
@@ -76,6 +76,7 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "too short" in str(response.data["errors"]["password"][0]).lower()
 
+    @patch("backend.signals.TESTING", False)
     def test_email_sending_after_registration(self):
         """Проверка отправки письма с подтверждением."""
         url = reverse("user-register")
@@ -88,6 +89,7 @@ class TestUserRegistration:
         assert self.base_data["email"] in email.to
         assert "confirm" in email.body.lower()
 
+    @patch("backend.signals.TESTING", False)
     def test_successful_email_confirmation(self):
         """Проверка успешного подтверждения email."""
         self.client.post(reverse("user-register"), self.base_data)

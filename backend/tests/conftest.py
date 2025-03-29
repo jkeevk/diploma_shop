@@ -236,3 +236,15 @@ def order_admin(user_admin):
 def order_item_admin(user_admin):
     """Фикстура для создания экземпляра OrderItemAdmin."""
     return OrderItemAdmin(OrderItem, user_admin)
+
+
+@pytest.fixture
+def order_with_multiple_shops(db, customer, shops, product, another_product):
+    """Фикстура для создания заказа с товарами из разных магазинов"""
+    order = Order.objects.create(user=customer)
+    OrderItem.objects.create(order=order, product=product, shop=shops[0], quantity=2)
+    OrderItem.objects.create(
+        order=order, product=another_product, shop=shops[1], quantity=3
+    )
+
+    return order

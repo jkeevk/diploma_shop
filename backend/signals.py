@@ -16,7 +16,7 @@ from .tasks import (
 )
 from .models import User, Order
 
-TESTING = os.getenv("DJANGO_TESTING", False) == False
+TESTING = os.getenv("DJANGO_TESTING", "False") == "True"
 
 
 @receiver(post_save, sender=User)
@@ -55,8 +55,7 @@ def send_email_to_host(sender: Any, instance: Order, **kwargs: Any) -> None:
         order_items = instance.order_items.all()
         shops = {item.shop for item in order_items}
         for shop in shops:
-            if shop and shop.user.email:
-                send_email_to_host_async.delay(shop.user.email, instance.id, shop.id)
+            send_email_to_host_async.delay(shop.user.email, instance.id, shop.id)
 
 
 @receiver(post_save, sender=Order)
@@ -66,7 +65,4 @@ def send_email_to_customer(sender: Any, instance: Order, **kwargs: Any) -> None:
     """
     if instance.status == "confirmed" and not kwargs.get("created") and not TESTING:
         contact = instance.user.contacts.first()
-        if contact and instance.user.email:
-            send_email_to_customer_async.delay(
-                instance.user.email, instance.id, contact.id
-            )
+        send_email_to_customer_async.delay(instance.user.email, instance.id, contact.id)

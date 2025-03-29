@@ -1,24 +1,87 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
+from django.core import mail
+from unittest.mock import patch
+from celery import current_app
 
 
 @pytest.mark.django_db
-class TestConfirmBasket:
-    def test_confirm_basket_success(self, api_client, customer, order, contact):
-        """
-        Проверяем успешное подтверждение корзины с валидным contact_id.
-        """
-        api_client.force_authenticate(user=customer)
-        url = reverse("confirm-basket")
-        data = {"contact_id": contact.id}
-        response = api_client.post(url, data, format="json")
+class TestOrderConfirmation:
+    """
+    Тестирование подтверждения заказа.
+    """
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {"detail": "Заказ успешно подтвержден."}
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client):
+        current_app.conf.task_always_eager = True
+        self.client = api_client
 
-        order.refresh_from_db()
-        assert order.status == "confirmed"
+    def test_confirm_basket_success(
+        self, customer, order_with_multiple_shops, contact, shops
+    ):
+        """
+        Проверяем успешное подтверждение заказа.
+        Подтверждаем заказ с несколькими магазинами.
+        Покупателю и поставщикам отправляется письмо.
+        """
+        # Отключаем TESTING режим для этого теста
+        with patch("backend.signals.TESTING", False):
+            self.client.force_authenticate(user=customer)
+            url = reverse("confirm-basket")
+            data = {"contact_id": contact.id}
+
+            # Отправляем запрос на подтверждение заказа
+            response = self.client.post(url, data, format="json")
+
+            # Проверка базового сценария
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data == {"detail": "Заказ успешно подтвержден."}
+
+            # Обновляем данные заказа
+            order_with_multiple_shops.refresh_from_db()
+            assert order_with_multiple_shops.status == "confirmed"
+
+            # Проверка отправленных писем
+            assert len(mail.outbox) == 1 + len(
+                shops
+            ), f"Ожидалось {1 + len(shops)} писем, получено {len(mail.outbox)}"
+
+            # Разделяем письма по типам
+            customer_emails = [e for e in mail.outbox if "подтвержден" in e.subject]
+            host_emails = [e for e in mail.outbox if "новый заказ" in e.subject]
+
+            # Проверка письма покупателю
+            assert len(customer_emails) == 1
+            customer_email = customer_emails[0]
+            assert customer_email.to == [customer.email]
+            assert "Ваш заказ подтвержден" in customer_email.subject
+            assert str(order_with_multiple_shops.id) in customer_email.body
+
+            # Проверка содержимого письма покупателю
+            for item in order_with_multiple_shops.order_items.all():
+                assert item.product.name in customer_email.body
+                assert str(item.quantity) in customer_email.body
+                assert item.shop.name in customer_email.body
+
+            # Проверка писем поставщикам
+            assert len(host_emails) == len(shops)
+            for shop, email in zip(shops, host_emails):
+                assert email.to == [shop.user.email]
+                assert "Поступил новый заказ" in email.subject
+                assert str(order_with_multiple_shops.id) in email.body
+
+                # Проверка фильтрации товаров по магазину
+                shop_items = order_with_multiple_shops.order_items.filter(shop=shop)
+                for item in shop_items:
+                    assert item.product.name in email.body
+                    assert str(item.quantity) in email.body
+
+            # Проверка контактных данных во всех письмах
+            for email in mail.outbox:
+                assert contact.phone in email.body
+                assert contact.city in email.body
+                assert contact.street in email.body
 
     def test_confirm_basket_empty(self, api_client, customer, contact):
         """
