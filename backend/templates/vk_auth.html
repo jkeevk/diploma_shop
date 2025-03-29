@@ -1,0 +1,48 @@
+<div>
+    <script src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
+    <script type="text/javascript">
+      if ('VKIDSDK' in window) {
+        const VKID = window.VKIDSDK;
+  
+        VKID.Config.init({
+          app: 53307480,
+          redirectUrl: 'https://localhost/swagger',
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
+          scope: '', // Complete the necessary accesses as needed
+        });
+  
+        const oneTap = new VKID.OneTap();
+  
+        oneTap.render({
+          container: document.currentScript.parentElement,
+          showAlternativeLogin: true,
+          styles: {
+            borderRadius: 14,
+            height: 48
+          },
+          oauthList: [
+            'ok_ru',
+            'mail_ru'
+          ]
+        })
+        .on(VKID.WidgetEvents.ERROR, vkidOnError)
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+          const code = payload.code;
+          const deviceId = payload.device_id;
+  
+          VKID.Auth.exchangeCode(code, deviceId)
+            .then(vkidOnSuccess)
+            .catch(vkidOnError);
+        });
+      
+        function vkidOnSuccess(data) {
+          // Processing result
+        }
+      
+        function vkidOnError(error) {
+          // Processing error
+        }
+      }
+    </script>
+  </div>

@@ -56,10 +56,8 @@ class TestRunPytestView:
         к представлению проверки задачи.
         """
         response = api_client.get("/tests/check-pytest-task/some-task-id/")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data == {
-            "detail": "Вы не авторизованы. Пожалуйста, войдите в систему."
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.data["detail"] == "Пожалуйста, войдите в систему."
 
     def test_check_pytest_task_view_pending(
         self, api_client: APIClient, admin: User

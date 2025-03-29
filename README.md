@@ -1,3 +1,12 @@
+[![Python](https://img.shields.io/badge/python-3.12.8-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/django-5.1.7-green?logo=django)](https://www.djangoproject.com/)
+[![PyPI Version](https://img.shields.io/pypi/v/djangorestframework.svg)](https://pypi.org/project/djangorestframework/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/jkeevk/diploma_shop/coverage.yml?branch=main&label=tests&logo=github)](https://github.com/jkeevk/diploma_shop/actions/workflows/coverage.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jkeevk/diploma_shop/badge.svg)](https://coveralls.io/github/jkeevk/diploma_shop)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Last Commit](https://img.shields.io/github/last-commit/jkeevk/diploma_shop.svg)](https://github.com/your-username/your-repo/commits)
+[![Open Issues](https://img.shields.io/github/issues-raw/jkeevk/diploma_shop.svg)](https://github.com/your-username/your-repo/issues)
+[![License](https://img.shields.io/github/license/jkeevk/diploma_shop)](https://github.com/jkeevk/diploma_shop/blob/main/LICENSE)
 # Дипломный проект: Backend-приложение для автоматизации закупок
 
 ## Описание проекта
@@ -39,17 +48,18 @@
 ## Технологии
 
 - **Python 3.10+**  
-- **Django** (веб-фреймворк для создания приложения)  
-- **Django Rest Framework (DRF)** (для создания RESTful API)  
-- **PostgreSQL** (в качестве основной базы данных)  
-- **Redis** (для кеширования и работы с Celery)  
-- **Celery** (для выполнения асинхронных задач, таких как отправка email-уведомлений, запуска тестов, импорт/экспорт товаров)  
-- **Docker** (для контейнеризации приложения и зависимостей)  
-- **Nginx** (как reverse proxy для обработки HTTP-запросов)  
-- **Swagger/Redoc** (для автоматической документации API)  
-- **pytest** (для написания и запуска unit- и integration-тестов)  
-- **pytest-django** (плагин для интеграции pytest с Django)  
-- **pytest-cov** (для проверки покрытия кода тестами)  
+- **Django** — веб-фреймворк для создания приложения  
+- **Django Rest Framework (DRF)** — создание RESTful API  
+- **PostgreSQL** — основная база данных  
+- **Redis** — кеширование и работа с Celery  
+- **Celery** — выполнение асинхронных задач, таких как отправка email-уведомлений, запуск тестов, импорт/экспорт товаров  
+- **Docker** — контейнеризация приложения и зависимостей  
+- **Nginx** — reverse proxy для обработки HTTP-запросов  
+- **Swagger/Redoc** — автоматическая документация API  
+- **pytest** — написание и запуск unit- и integration-тестов  
+- **pytest-django** — плагин для интеграции pytest с Django  
+- **pytest-cov** — проверка покрытия кода тестами  
+- **GitHub Actions** (для автоматизации CI/CD процессов, включая запуск тестов и выгрузку результатов в Coveralls)
 
 ## Установка и запуск
 
@@ -64,49 +74,52 @@
 
 1. Клонировать репозиторий:
    
-   ```git clone https://github.com/jkeevk/diploma_shop.git```
+   ```bash
+   git clone https://github.com/jkeevk/diploma_shop.git
+   cd diploma_shop
+   ```
 
-   ```cd diploma_shop```
-2. Файл .env.example переименовать в .env и заполнить значения переменных окружения для отправки почты.
-   
+2. Заполнить файл `.env` необходимыми значениями переменных окружения.
+
 3. Запустить контейнеры с помощью Docker Compose:
 
-    ```docker-compose up -d --build```
+    ```bash
+    docker-compose up -d --build
+    ```
 
-Во время запуска будет:
+Во время запуска будут выполнены миграции базы данных, создан суперпользователь с почтой `admin@admin.com` и паролем `admin`, собраны статические файлы, и будут развернуты контейнеры Django, PostgreSQL, Celery, Redis, Nginx и Tests.
 
-- выполнены миграции базы данных;
-
-- создан суперпользователь с почтой admin@admin.com и паролем admin;
-
-- собраны статические файлы;
-
-- запущены серверы Django, Celery, Redis и Nginx;
-
-После успешного запуска сервер будет доступен по адресу: http://127.0.0.1/.
+После успешного запуска сервер будет доступен по адресу: [http://127.0.0.1/](http://127.0.0.1/)
 
 Запуск тестов командой:
 
-```docker-compose exec app pytest```
+```bash
+docker-compose exec app pytest
+```
 
-![Coverage](https://raw.githubusercontent.com/jkeevk/diploma_shop/main/badges/coverage.svg)
+Покрытие кода тестами:
 
+[![Coverage Status](https://coveralls.io/repos/github/jkeevk/diploma_shop/badge.svg?branch=main)](https://coveralls.io/github/jkeevk/diploma_shop?branch=main)
+
+### CI/CD с GitHub Actions
+
+Для автоматизации процессов CI/CD в проекте настроены GitHub Actions. При каждом пуше изменений в репозиторий автоматически запускаются тесты, а результаты покрытия кода выгружаются в Coveralls. Это позволяет поддерживать высокое качество кода и быстро выявлять возможные проблемы.
 
 ### Документация API
 
 Документация API доступна в следующих форматах:
 
-Swagger: http://127.0.0.1/swagger
-Redoc: http://127.0.0.1/redoc
+- Swagger: [http://127.0.0.1/swagger](http://127.0.0.1/swagger)
+- Redoc: [http://127.0.0.1/redoc](http://127.0.0.1/redoc)
 
-Примеры и формат данных для обновления прайса поставщиков в data/
+Примеры и формат данных для обновления прайса поставщиков находятся в папке `data/`.
 
-### Контакты:
+### Контакты
 
 Если у вас есть вопросы или предложения, свяжитесь со мной:
 
-Email: jkeevk@yandex.ru
-TG: [jkeeincredible](https://t.me/jkeeincredible)
-GitHub: [jkeevk](https://github.com/jkeevk/)
+- Email: jkeevk@yandex.ru
+- TG: [jkeeincredible](https://t.me/jkeeincredible)
+- GitHub: [jkeevk](https://github.com/jkeevk/)
 
 Ссылка на задание дипломного проекта: [Диплом](https://github.com/netology-code/python-final-diplom)

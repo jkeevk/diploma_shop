@@ -1,113 +1,139 @@
 services:
   app:
-    env_file:
-      - .env
-    build: .
+    env_file: .env
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: 3.12
     depends_on:
-      - db
-      - redis
-    expose:
-      - "8000"
-    links:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_HOST: db
-      POSTGRES_PORT: 5432
-      CELERY_BROKER_URL: ${REDIS_URL}
-      CELERY_RESULT_BACKEND: ${REDIS_URL}
-      REDIS_URL: ${REDIS_URL}
+      DJANGO_SETTINGS_MODULE: orders.settings
+      PYTHONPATH: /app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]
-      interval: 30s
+      interval: 20s
+      timeout: 10s
       retries: 5
-    restart: on-failure
+      start_period: 30s
+    restart: unless-stopped
     ports:
       - "8000:8000"
     networks:
       - net
     volumes:
       - ./data/:/app/data/
+      - ./coverage:/app/coverage
     command: >
       bash -c "
-        python manage.py makemigrations backend &&
-        python manage.py migrate &&
-        python manage.py collectstatic --noinput &&
-        uvicorn orders.asgi:application --host 0.0.0.0 --port 8000 --reload
-        "
-  
+        echo 'Waiting for PostgreSQL...'
+        while ! nc -z db 5432; do sleep 2; done
+
+        echo 'Running migrations...'
+        python manage.py makemigrations --no-input backend &&
+        python manage.py migrate --no-input &&
+
+        echo 'Collecting static files...'
+        python manage.py collectstatic --no-input --clear &&
+
+        echo 'Creating superuser...'
+        python scripts/create_superuser.py &&
+
+        echo 'Starting Gunicorn...'
+        gunicorn orders.wsgi:application --bind 0.0.0.0:8000 --workers 4
+      "
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   db:
-    env_file:
-      - .env
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    image: postgres:17-alpine
+    env_file: .env
     networks:
       - net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
     ports:
       - "5431:5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 10s
 
   redis:
-    image: redis:latest
-    container_name: redis
+    image: redis:7-alpine
     networks:
       - net
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
     ports:
       - "6379:6379"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 10s
 
   celery:
     build: .
     command: celery -A backend.celery_app worker --loglevel=info
-    env_file:
-      - .env
+    env_file: .env
     environment:
-      - DJANGO_SETTINGS_MODULE=orders.settings
-      - PYTHONPATH=/diploma_shop/
+      DJANGO_SETTINGS_MODULE: orders.settings
+      PYTHONPATH: /app
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./data/:/app/data/
-    restart: on-failure
-    networks:
-      - net
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./staticfiles:/staticfiles
-    ports:
-      - "80:80"
     networks:
       - net
     restart: unless-stopped
-    command: ["/bin/bash", "-c", "nginx -g 'daemon off;'"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A backend.celery_app status | grep -q '1 node online'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - app
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./staticfiles:/staticfiles
+      - ./media:/media
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - net
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
   tests:
     build: .
-    env_file:
-      - .env
+    env_file: .env
     command: >
       bash -c "
         echo '=== WAITING FOR DATABASE ==='
@@ -117,18 +143,26 @@ services:
         python manage.py makemigrations backend &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput
-        
+
         echo '=== RUNNING TESTS ==='
         pytest --cov=backend --cov-report=xml:/app/coverage/coverage.xml
-        "
+      "
     depends_on:
-      - app
-      - db
+      app:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./coverage:/app/coverage
     networks:
       - net
-  
+
 networks:
   net:
     driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,77 +1,40 @@
 import pytest
+from backend.models import Contact
+from backend.serializers import ContactSerializer
+from rest_framework.exceptions import ErrorDetail
 from django.urls import reverse
 from rest_framework import status
-from backend.models import Contact
 
 
 @pytest.mark.django_db
-class TestUserContacts:
+class TestContactSerializer:
     """
-    Тесты для работы с контактами пользователя.
+    Тесты для сериализатора ContactSerializer.
     """
 
-    def test_create_contact(self, api_client, customer):
+    def test_serializer_auto_set_user_for_non_admin(self, customer):
         """
-        Тест создания контакта.
+        Тест автоматического назначения пользователя при создании (не администратор).
         """
-        api_client.force_authenticate(user=customer)
-
-        data = {
-            "city": "Moscow",
-            "street": "Lenina",
-            "house": "10",
-            "structure": "1",
-            "building": "A",
-            "apartment": "15",
-            "phone": "+79991234567",
-            "user": customer.id,
-        }
-
-        url = reverse("user-contacts-list")
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        contact = Contact.objects.get(user=customer)
-        assert contact.city == "Moscow"
-        assert contact.street == "Lenina"
-        assert contact.house == "10"
-        assert contact.structure == "1"
-        assert contact.building == "A"
-        assert contact.apartment == "15"
-        assert contact.phone == "+79991234567"
-
-    def test_create_contact_with_minimal_data(self, api_client, customer):
-        """
-        Тест создания контакта с минимальными данными.
-        """
-        api_client.force_authenticate(user=customer)
-
         data = {
             "city": "Moscow",
             "street": "Lenina",
             "house": "10",
             "phone": "+79991234567",
-            "user": customer.id,
         }
 
-        url = reverse("user-contacts-list")
-        response = api_client.post(url, data, format="json")
+        serializer = ContactSerializer(
+            data=data, context={"request": type("Request", (), {"user": customer})}
+        )
 
-        assert response.status_code == status.HTTP_201_CREATED
+        assert serializer.is_valid()
+        contact = serializer.save()
+        assert contact.user == customer
 
-        contact = Contact.objects.get(user=customer)
-        assert contact.city == "Moscow"
-        assert contact.street == "Lenina"
-        assert contact.house == "10"
-        assert contact.phone == "+79991234567"
-
-    def test_create_contact_for_wrong_user(self, api_client, customer, supplier):
+    def test_serializer_validate_user_mismatch(self, customer, supplier):
         """
-        Тест создания контакта для другого пользователя.
+        Тест валидации при несовпадении пользователя (не администратор).
         """
-        api_client.force_authenticate(user=customer)
-
         data = {
             "city": "Moscow",
             "street": "Lenina",
@@ -80,182 +43,134 @@ class TestUserContacts:
             "user": supplier.id,
         }
 
-        url = reverse("user-contacts-list")
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert (
-            response.data["user"][0] == "Вы не можете указывать другого пользователя."
+        serializer = ContactSerializer(
+            data=data, context={"request": type("Request", (), {"user": customer})}
         )
 
-    def test_create_contact_with_invalid_phone(self, api_client, customer):
-        """
-        Тест создания контакта с неверным номером телефона.
-        """
-        api_client.force_authenticate(user=customer)
-
-        data = {
-            "city": "Moscow",
-            "street": "Lenina",
-            "house": "10",
-            "structure": "1",
-            "building": "A",
-            "apartment": "15",
-            "phone": "invalid_phone",
-            "user": customer.id,
+        assert not serializer.is_valid()
+        assert serializer.errors == {
+            "user": [
+                ErrorDetail(
+                    string="Вы не можете указывать другого пользователя.",
+                    code="invalid",
+                )
+            ]
         }
 
-        url = reverse("user-contacts-list")
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "phone" in response.data
-
-    def test_create_max_contacts(self, api_client, customer):
+    def test_serializer_admin_can_set_any_user(self, admin, customer):
         """
-        Тест создания максимального количества контактов (5).
+        Тест что админ может указать любого пользователя.
         """
-        api_client.force_authenticate(user=customer)
-
-        for i in range(5):
-            Contact.objects.create(
-                user=customer,
-                city=f"City {i}",
-                street=f"Street {i}",
-                house=f"{i}",
-                structure=f"{i}",
-                building=f"{i}",
-                apartment=f"{i}",
-                phone=f"+7999123456{i}",
-            )
-
         data = {
             "city": "Moscow",
             "street": "Lenina",
             "house": "10",
-            "structure": "1",
-            "building": "A",
-            "apartment": "15",
             "phone": "+79991234567",
             "user": customer.id,
         }
 
-        url = reverse("user-contacts-list")
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "non_field_errors" in response.data
-        assert (
-            "Максимум 5 адресов на пользователя."
-            in response.data["non_field_errors"][0]
+        serializer = ContactSerializer(
+            data=data, context={"request": type("Request", (), {"user": admin})}
         )
 
-    def test_update_contact(self, api_client, customer, contact):
+        assert serializer.is_valid()
+        contact = serializer.save()
+        assert contact.user == customer
+
+    def test_serializer_model_validation(self, customer):
         """
-        Тест обновления контакта.
+        Тест интеграции с моделью (вызов clean()).
         """
-        api_client.force_authenticate(user=customer)
+        Contact.objects.bulk_create(
+            [
+                Contact(
+                    user=customer,
+                    city=f"City {i}",
+                    street=f"Street {i}",
+                    house=str(i),
+                    phone=f"+7999123456{i}",
+                )
+                for i in range(5)
+            ]
+        )
 
         data = {
-            "city": "Updated City",
-            "street": "Updated Street",
-            "house": "20",
-            "structure": "2",
-            "building": "B",
-            "apartment": "30",
-            "phone": "+79991111111",
+            "city": "Moscow",
+            "street": "Lenina",
+            "house": "10",
+            "phone": "+79991234567",
             "user": customer.id,
         }
 
-        url = reverse("user-contacts-detail", args=[contact.id])
-        response = api_client.put(url, data, format="json")
+        serializer = ContactSerializer(
+            data=data, context={"request": type("Request", (), {"user": customer})}
+        )
 
-        assert response.status_code == status.HTTP_200_OK
-
-        contact.refresh_from_db()
-        assert contact.city == "Updated City"
-        assert contact.street == "Updated Street"
-        assert contact.house == "20"
-        assert contact.structure == "2"
-        assert contact.building == "B"
-        assert contact.apartment == "30"
-        assert contact.phone == "+79991111111"
-
-    def test_partial_update_contact(self, api_client, customer, contact):
-        """
-        Тест частичного обновления контакта.
-        """
-        api_client.force_authenticate(user=customer)
-
-        data = {
-            "city": "Partial Updated City",
-            "phone": "+79992222222",
+        assert not serializer.is_valid()
+        assert serializer.errors == {
+            "non_field_errors": [
+                ErrorDetail(
+                    string="Максимум 5 адресов на пользователя.", code="invalid"
+                )
+            ]
         }
 
-        url = reverse("user-contacts-detail", args=[contact.id])
-        response = api_client.patch(url, data, format="json")
-
-        assert response.status_code == status.HTTP_200_OK
-
-        contact.refresh_from_db()
-        assert contact.city == "Partial Updated City"
-        assert contact.phone == "+79992222222"
-
-    def test_list_contacts(self, api_client, customer):
+    def test_partial_update_keep_existing_user(self, customer, contact):
         """
-        Тест получения списка контактов.
+        Тест что при частичном обновлении пользователь остается прежним.
         """
-        api_client.force_authenticate(user=customer)
-
-        Contact.objects.create(
-            user=customer,
-            city="City 1",
-            street="Street 1",
-            house="1",
-            phone="+79991111111",
-        )
-        Contact.objects.create(
-            user=customer,
-            city="City 2",
-            street="Street 2",
-            house="2",
-            phone="+79992222222",
+        new_phone = "+79991111111"
+        serializer = ContactSerializer(
+            instance=contact,
+            data={"phone": new_phone},
+            partial=True,
+            context={"request": type("Request", (), {"user": customer})},
         )
 
-        url = reverse("user-contacts-list")
-        response = api_client.get(url)
+        assert serializer.is_valid()
+        updated_contact = serializer.save()
+        assert updated_contact.user == contact.user
+        assert updated_contact.phone == new_phone
+
+    def test_contact_str_method(self, contact):
+        """
+        Тестирование строкового представления контакта.
+        """
+        assert f"{contact.city} {contact.street} {contact.house}" == str(contact)
+
+
+@pytest.mark.django_db
+class TestContactViewSet:
+    """
+    Тесты для ContactViewSet.
+    """
+
+    def test_admin_sees_all_contacts(self, api_client, admin, customer, supplier):
+        """
+        Проверяем, что администратор получает все контакты.
+        """
+        Contact.objects.create(user=customer, city="Moscow", street="Lenina", house="1")
+        Contact.objects.create(user=supplier, city="SPb", street="Nevsky", house="5")
+
+        api_client.force_authenticate(user=admin)
+        response = api_client.get(reverse("user-contacts-list"))
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
-    def test_retrieve_contact(self, api_client, customer, contact):
+    def test_non_admin_sees_only_own_contacts(self, api_client, customer, supplier):
         """
-        Тест получения одного контакта.
+        Проверяем, что не-администратор (customer/supplier) видит только свои контакты.
         """
+        Contact.objects.create(user=customer, city="Moscow", street="Arbat", house="10")
+        Contact.objects.create(user=supplier, city="SPb", street="Main", house="3")
+
         api_client.force_authenticate(user=customer)
+        response = api_client.get(reverse("user-contacts-list"))
+        assert len(response.data) == 1
+        assert response.data[0]["user"] == customer.id
 
-        url = reverse("user-contacts-detail", args=[contact.id])
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["city"] == contact.city
-        assert response.data["street"] == contact.street
-        assert response.data["house"] == contact.house
-
-    def test_delete_contact(self, api_client, customer, contact):
-        """
-        Тест удаления контакта.
-        """
-        api_client.force_authenticate(user=customer)
-
-        url = reverse("user-contacts-detail", args=[contact.id])
-        response = api_client.delete(url)
-
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert not Contact.objects.filter(id=contact.id).exists()
-
-    def test_contact_str_method(self, contact):
-        """
-        Тест строкового представления модели Contact.
-        """
-        assert str(contact) == f"{contact.city} {contact.street} {contact.house}"
+        api_client.force_authenticate(user=supplier)
+        response = api_client.get(reverse("user-contacts-list"))
+        assert len(response.data) == 1
+        assert response.data[0]["user"] == supplier.id

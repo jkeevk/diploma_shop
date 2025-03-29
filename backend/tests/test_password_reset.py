@@ -4,26 +4,42 @@ from rest_framework import status
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from unittest.mock import patch
 from backend.models import User
 from backend.serializers import PasswordResetConfirmSerializer
+from unittest.mock import patch
+from django.core import mail
+from celery import current_app
 
 
 @pytest.mark.django_db
 class TestPasswordResetView:
-    def test_password_reset_success(self, api_client, customer):
-        """Тест успешного запроса на сброс пароля."""
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client):
+        self.client = api_client
+        current_app.conf.task_always_eager = True
 
+    @patch("backend.signals.TESTING", False)
+    def test_password_reset_success(self, api_client, customer):
         url = reverse("password-reset")
         response = api_client.post(url, {"email": customer.email})
 
+        # Проверка ответа API
         assert response.status_code == status.HTTP_200_OK
         assert (
             response.data["detail"] == "Ссылка для сброса пароля отправлена на email."
         )
 
+        # Проверка отправки письма
+        assert len(mail.outbox) == 1, "Письмо не было отправлено!"
+        email = mail.outbox[0]
+
+        # Проверка содержимого письма
+        assert email.subject == "Password Reset"
+        assert customer.email in email.to
+        assert "reset" in email.body.lower()
+
     def test_password_reset_user_not_found(self, api_client):
-        """Тест запроса на сброс пароля для несуществующего пользователя."""
+        """Проверка обработки несуществующего пользователя."""
         url = reverse("password-reset")
         response = api_client.post(url, {"email": "nonexistent@example.com"})
 
@@ -35,7 +51,7 @@ class TestPasswordResetView:
         )
 
     def test_password_reset_invalid_email(self, api_client):
-        """Тест запроса на сброс пароля с недействительным email."""
+        """Проверка валидации неверного формата email."""
         url = reverse("password-reset")
         response = api_client.post(url, {"email": "invalid_email"})
 
@@ -46,108 +62,90 @@ class TestPasswordResetView:
 
 @pytest.mark.django_db
 class TestPasswordResetConfirmView:
-    def test_password_reset_confirm_success(self, api_client):
-        """
-        Тест успешного подтверждения сброса пароля.
-        """
-        user = User.objects.create_user(
+    """Тесты для эндпоинта подтверждения сброса пароля."""
+
+    def create_test_user(self):
+        """Создание тестового пользователя."""
+        return User.objects.create_user(
             email="testuser@example.com", password="oldpassword123"
         )
 
+    def test_success(self, api_client):
+        """Проверка успешной смены пароля."""
+        user = self.create_test_user()
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-
-        with patch(
-            "django.contrib.auth.tokens.default_token_generator.check_token",
-            return_value=True,
-        ):
-            url = reverse(
-                "password_reset_confirm", kwargs={"uidb64": uid, "token": token}
-            )
-            response = api_client.post(url, {"new_password": "newpassword123"})
-
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data == {"detail": "Пароль успешно изменён."}
-
-        user.refresh_from_db()
-        assert user.check_password("newpassword123")
-
-    def test_password_reset_confirm_invalid_token(self, api_client):
-        """
-        Тест подтверждения сброса пароля с недействительным токеном.
-        """
-        user = User.objects.create_user(
-            email="testuser@example.com", password="oldpassword123"
-        )
-
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        invalid_token = "invalid-token"
-
-        with patch(
-            "django.contrib.auth.tokens.default_token_generator.check_token",
-            return_value=False,
-        ):
-            url = reverse(
-                "password_reset_confirm", kwargs={"uidb64": uid, "token": invalid_token}
-            )
-            response = api_client.post(url, {"new_password": "newpassword123"})
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {"detail": "Недействительный токен."}
-
-    def test_password_reset_confirm_user_not_found(self, api_client):
-        """
-        Тест подтверждения сброса пароля для несуществующего пользователя.
-        """
-        uid = urlsafe_base64_encode(force_bytes(999))
-        token = "valid-token"
 
         url = reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token})
-        response = api_client.post(url, {"new_password": "newpassword123"})
+        response = api_client.post(url, {"new_password": "NewSecurePassword123!"})
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert response.data == {"detail": "Пользователь не найден."}
+        assert response.status_code == status.HTTP_200_OK
+        user.refresh_from_db()
+        assert user.check_password("NewSecurePassword123!")
 
-    def test_password_reset_confirm_invalid_password(self, api_client):
-        """
-        Тест подтверждения сброса пароля с некорректным новым паролем.
-        """
-        user = User.objects.create_user(
-            email="testuser@example.com", password="oldpassword123"
+    def test_invalid_token(self, api_client):
+        """Проверка обработки недействительного токена."""
+        user = self.create_test_user()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        url = reverse(
+            "password_reset_confirm", kwargs={"uidb64": uid, "token": "invalid_token"}
         )
+        response = api_client.post(url, {"new_password": "NewPassword123"})
 
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "token" in response.data
+        assert response.data["token"][0] == "Недействительный токен сброса пароля"
+
+    def test_invalid_uid(self, api_client):
+        """Проверка обработки неверного идентификатора пользователя."""
+        url = reverse(
+            "password_reset_confirm",
+            kwargs={"uidb64": "invalid_uid", "token": "any_token"},
+        )
+        response = api_client.post(url, {"new_password": "NewPassword123"})
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "uid" in response.data
+
+    def test_weak_password(self, api_client):
+        """Проверка валидации слабого пароля."""
+        user = self.create_test_user()
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
-        with patch(
-            "django.contrib.auth.tokens.default_token_generator.check_token",
-            return_value=True,
-        ):
-            url = reverse(
-                "password_reset_confirm", kwargs={"uidb64": uid, "token": token}
-            )
-            response = api_client.post(url, {"new_password": "short"})
+        url = reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token})
+        response = api_client.post(url, {"new_password": "123"})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "new_password" in response.data
-        assert "This password is too short." in response.data["new_password"][0]
+        assert "non_field_errors" in response.data
+        assert "too short" in response.data["non_field_errors"][0].lower()
 
 
+@pytest.mark.django_db
 class TestPasswordResetConfirmSerializer:
-    def test_password_reset_confirm_serializer_valid(self):
-        """
-        Тест валидации корректного нового пароля.
-        """
+    """Тесты для сериализатора подтверждения сброса пароля."""
+
+    @pytest.fixture
+    def valid_context(self):
+        """Фикстура с валидным контекстом для сериализатора."""
+        user = User.objects.create_user(email="test@example.com", password="oldpass")
+        return {
+            "uidb64": urlsafe_base64_encode(force_bytes(user.pk)),
+            "token": default_token_generator.make_token(user),
+        }
+
+    def test_valid_data(self, valid_context):
+        """Проверка валидации корректных данных."""
         serializer = PasswordResetConfirmSerializer(
-            data={"new_password": "validpassword123"}
+            data={"new_password": "ValidPassword123!"}, context=valid_context
         )
         assert serializer.is_valid()
 
-    def test_password_reset_confirm_serializer_invalid(self):
-        """
-        Тест валидации некорректного нового пароля.
-        """
-        serializer = PasswordResetConfirmSerializer(data={"new_password": "short"})
+    def test_invalid_password(self, valid_context):
+        """Проверка обработки некорректного пароля."""
+        serializer = PasswordResetConfirmSerializer(
+            data={"new_password": "short"}, context=valid_context
+        )
         assert not serializer.is_valid()
-        assert "new_password" in serializer.errors
-        assert "This password is too short." in serializer.errors["new_password"][0]
+        assert "non_field_errors" in serializer.errors

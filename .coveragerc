@@ -2,12 +2,13 @@
 branch = True
 source = backend
 omit =
-    */backend/migrations/*
+    */backend/migrations/__init__.py
     */backend/tests/*
-    */backend/celery_app.py
-    */backend/signals.py
     */backend/tasks.py
-    */backend/apps.py
+    */backend/celery_app.py
     */backend/utils/*
-    */backend/admin.py
-    manage.py
+    */backend/dashboard.py
+    */backend/migrations/*
+    */backend/__init__.py
+    */backend/swagger/*
+    */backend/management/*

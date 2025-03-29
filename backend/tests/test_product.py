@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from backend.models import Product, Category, Shop, ProductInfo
+from backend.serializers import ProductSerializer
 
 
 @pytest.mark.django_db
@@ -74,7 +75,7 @@ class TestProductAPI:
         """
         api_client.force_authenticate(user=supplier)
         category = Category.objects.create(name="Test Category")
-        new_shop = Shop.objects.create(id=100, name="New Shop")
+        new_shop = Shop.objects.create(name="New Shop")
 
         product = Product.objects.create(
             name="Test Product",
@@ -327,19 +328,70 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
 
-    def test_filter_without_shop_param(self, api_client, supplier):
+    def test_filter_shop_empty_value(self, api_client, supplier, shop):
         """
-        Тест запроса без параметра shop.
-        Проверяет ветку кода с return queryset
+        Тест фильтрации с пустым значением shop, должен вернуть все продукты.
         """
-        category = Category.objects.create(name="Test Category")
         api_client.force_authenticate(user=supplier)
+        category = Category.objects.create(name="Test Category")
+        product1 = Product.objects.create(name="Product 1", category=category)
+        product2 = Product.objects.create(name="Product 2", category=category)
 
-        Product.objects.create(name="Product 1", category=category)
-        Product.objects.create(name="Product 2", category=category)
+        ProductInfo.objects.create(
+            product=product1, shop=shop, quantity=10, price=100, price_rrc=110
+        )
+        ProductInfo.objects.create(
+            product=product2, shop=shop, quantity=12, price=110, price_rrc=120
+        )
 
         url = reverse("product-list")
-        response = api_client.get(url)
+        response = api_client.get(url, {"shop": ""})
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
+
+    def test_filter_shop_invalid_value(self, api_client, supplier, shop):
+        """
+        Тест фильтрации с невалидным shop (не число).
+        Проверяет, что возвращается исходный queryset.
+        """
+        api_client.force_authenticate(user=supplier)
+
+        category = Category.objects.create(name="Test Category")
+        product = Product.objects.create(name="Test Product", category=category)
+        ProductInfo.objects.create(
+            product=product,
+            shop=shop,
+            quantity=10,
+            price=100.00,
+            price_rrc=120.00,
+        )
+
+        url = reverse("product-list")
+        response = api_client.get(url, {"shop": "invalid_shop"})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+
+    def test_product_str_method(self, product):
+        """
+        Тестирование строкового представления объекта Product
+        """
+        assert str(product) == "Test Product"
+
+    def test_update_skips_product_infos_block(self, supplier):
+        """Тест: Обновление продукта без передачи product_infos -> пропуск блока."""
+        category = Category.objects.create(name="Test Category")
+        product = Product.objects.create(
+            name="Original Name", model="Original Model", category=category
+        )
+
+        update_data = {"name": "Updated Name", "model": "Updated Model"}
+
+        serializer = ProductSerializer()
+        updated_instance = serializer.update(product, update_data)
+
+        assert updated_instance.name == "Updated Name"
+        assert updated_instance.model == "Updated Model"
+
+        assert updated_instance.product_infos.count() == 0

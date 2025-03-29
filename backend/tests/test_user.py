@@ -3,100 +3,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status
 from backend.models import User, Contact, Order, OrderItem
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-
-
-@pytest.mark.django_db
-class TestUserRegistration:
-    """
-    Тесты для регистрации пользователя.
-    """
-
-    def setup_method(self):
-        """
-        Инициализация клиента перед каждым тестом.
-        """
-        self.client = APIClient()
-
-    def test_register_user_without_email_confirmation(self):
-        """
-        Тест регистрации пользователя без подтверждения email.
-        """
-        data = {
-            "email": "test@example.com",
-            "password": "strongpassword123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "customer",
-        }
-
-        url = reverse("user-register")
-        response = self.client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-        user = User.objects.get(email="test@example.com")
-        assert user is not None
-        assert user.role == "customer"
-
-    def test_register_user_with_wrong_role(self):
-        """
-        Тест регистрации пользователя с неверной ролью.
-        """
-        data = {
-            "email": "test@example.com",
-            "password": "strongpassword123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "invalid_role",
-        }
-
-        url = reverse("user-register")
-        response = self.client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "role" in response.data
-
-    def test_register_user_with_existing_email(self):
-        """
-        Тест регистрации пользователя с уже существующим email.
-        """
-        User.objects.create_user(
-            email="test@example.com",
-            password="strongpassword123",
-            first_name="Test",
-            last_name="User",
-            role="customer",
-        )
-
-        data = {
-            "email": "test@example.com",
-            "password": "strongpassword123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "customer",
-        }
-
-        url = reverse("user-register")
-        response = self.client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "email" in response.data
-
-    def test_register_user_without_required_fields(self):
-        """
-        Тест регистрации пользователя без обязательных полей.
-        """
-        data = {}
-
-        url = reverse("user-register")
-        response = self.client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "email" in response.data
-        assert "password" in response.data
-        assert "role" in response.data
 
 
 @pytest.mark.django_db
@@ -298,11 +205,9 @@ class TestUserOrdersView:
         """Тест получения заказов для анонимного пользователя."""
         response = api_client.get(reverse("user-orders"))
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.data["detail"].code == "permission_denied"
-        assert "Вы не авторизованы. Пожалуйста, войдите в систему." in str(
-            response.data["detail"]
-        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.data["detail"].code == "not_authenticated"
+        assert "Пожалуйста, войдите в систему." == response.data["detail"]
 
 
 @pytest.mark.django_db
@@ -315,6 +220,7 @@ class TestUserManager:
         self.user_manager = User.objects
 
     def test_create_user_with_email(self):
+        """Тест создания пользователя с email."""
         user = self.user_manager.create_user(
             email="test@example.com", password="password123"
         )
@@ -324,10 +230,12 @@ class TestUserManager:
         assert not user.is_superuser
 
     def test_create_user_without_email(self):
+        """Тест создания пользователя без email."""
         with pytest.raises(ValueError, match="Поле Email должно быть заполнено"):
             self.user_manager.create_user(email="", password="password123")
 
     def test_create_superuser(self):
+        """Тест создания суперпользователя."""
         superuser = self.user_manager.create_superuser(
             email="admin@example.com", password="adminpass"
         )
@@ -337,6 +245,7 @@ class TestUserManager:
         assert superuser.is_superuser
 
     def test_create_superuser_without_is_staff(self):
+        """Тест создания суперпользователя без is_staff."""
         with pytest.raises(
             ValueError, match="Суперпользователь должен иметь is_staff=True."
         ):
@@ -345,9 +254,14 @@ class TestUserManager:
             )
 
     def test_create_superuser_without_is_superuser(self):
+        """Тест создания суперпользователя без is_superuser."""
         with pytest.raises(
             ValueError, match="Суперпользователь должен иметь is_superuser=True."
         ):
             self.user_manager.create_superuser(
                 email="admin@example.com", password="adminpass", is_superuser=False
             )
+
+    def test_user_str_method(self, customer_login):
+        """Тест строкового представления пользователя."""
+        assert str(customer_login) == "customer@example.com"

@@ -1,6 +1,7 @@
 import pytest
 from backend.models import ProductInfo
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 
 @pytest.mark.django_db
@@ -96,3 +97,20 @@ class TestProductInfo:
         )
 
         assert str(product_info) == "Test Description (Supplier Shop)"
+
+    @pytest.mark.django_db
+    def test_product_info_super_clean_called(self, shop, product):
+        """
+        Проверяет, что вызов super().clean() выполняется корректно
+        и не вызывает ошибок при валидных данных.
+        """
+        product_info = ProductInfo(
+            product=product,
+            shop=shop,
+            quantity=10,
+            price=Decimal("100.50"),
+            price_rrc=Decimal("120.00"),
+        )
+
+        product_info.full_clean()
+        assert True

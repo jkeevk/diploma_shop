@@ -18,6 +18,7 @@ from backend.utils.exporters import generate_import_data
 
 logger = logging.getLogger(__name__)
 
+
 @shared_task
 def export_products_task(file_path: str) -> dict:
     """Асинхронно экспортирует данные о продуктах."""
@@ -26,6 +27,7 @@ def export_products_task(file_path: str) -> dict:
         return {"message": "Данные успешно загружены"}
     except Exception as e:
         return {"error": str(e)}
+
 
 @shared_task
 def import_products_task() -> dict:
@@ -36,8 +38,11 @@ def import_products_task() -> dict:
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
 @shared_task
-def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False) -> dict:
+def run_pytest(
+    test_path: str = "backend/tests/", enable_coverage: bool = False
+) -> dict:
     """
     Универсальная задача для запуска pytest с разными параметрами
     """
@@ -47,10 +52,10 @@ def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False)
         "--no-migrations",
         "--disable-warnings",
         "--tb=short",
-        "-v", 
-        test_path
+        "-v",
+        test_path,
     ]
-    
+
     if enable_coverage:
         command += ["--cov=backend", "--cov-report=term", "--cov-report=html"]
 
@@ -62,14 +67,14 @@ def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False)
         )
 
         output = result.stdout + "\n" + result.stderr
-        
-        passed = len(re.findall(r'PASSED', output))
-        failed = len(re.findall(r'FAILED', output))
-        errors = len(re.findall(r'ERROR', output))
-        
+
+        passed = len(re.findall(r"PASSED", output))
+        failed = len(re.findall(r"FAILED", output))
+        errors = len(re.findall(r"ERROR", output))
+
         coverage_data = {}
         if enable_coverage:
-            total_coverage = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+%)', output)
+            total_coverage = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+%)", output)
             coverage_data["total"] = total_coverage.group(1) if total_coverage else "0%"
 
         return {
@@ -77,12 +82,12 @@ def run_pytest(test_path: str = "backend/tests/", enable_coverage: bool = False)
             "failed": failed,
             "errors": errors,
             "output": output,
-            "coverage": coverage_data if enable_coverage else None
+            "coverage": coverage_data if enable_coverage else None,
         }
     except Exception as e:
         logger.error(f"Ошибка при запуске pytest: {e}", exc_info=True)
         return {"error": str(e)}
-    
+
 
 @shared_task
 def send_confirmation_email_async(user_id: int, token: str) -> None:
@@ -100,8 +105,11 @@ def send_confirmation_email_async(user_id: int, token: str) -> None:
     except Exception as e:
         logger.error(f"Failed to send confirmation email to user ID {user_id}: {e}")
 
+
 @shared_task
-def send_email_to_customer_async(recipient_email: str, order_id: int, contact_id: int) -> None:
+def send_email_to_customer_async(
+    recipient_email: str, order_id: int, contact_id: int
+) -> None:
     """Асинхронно отправляет письмо покупателю о подтверждении заказа."""
     try:
         order = Order.objects.get(id=order_id)
@@ -129,6 +137,7 @@ def send_email_to_customer_async(recipient_email: str, order_id: int, contact_id
         logger.error(
             f"Failed to send confirmation email to {recipient_email} for order {order_id}: {e}"
         )
+
 
 @shared_task
 def send_email_to_host_async(recipient_email: str, order_id: int, shop_id: int) -> None:
@@ -168,6 +177,7 @@ def send_email_to_host_async(recipient_email: str, order_id: int, shop_id: int) 
         logger.error(
             f"Failed to send email to {recipient_email} for order {order_id} and shop {shop_id}: {e}"
         )
+
 
 @shared_task
 def send_password_reset_email_async(user_id: int, token: str, uid: str) -> None:

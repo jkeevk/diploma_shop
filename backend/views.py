@@ -3,13 +3,13 @@ import os
 from typing import Any, List
 
 # Django
-from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
+from django.views.generic import TemplateView
+from django.conf import settings
+from django.http import Http404
 
 # Rest Framework
 from rest_framework import status
@@ -17,12 +17,15 @@ from rest_framework.filters import SearchFilter
 from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
 
 # Local imports
-from .filters import ProductFilter
+from .filters import BasketFilter, CategoryFilter, ProductFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
 from .permissions import check_role_permission
 from .serializers import (
@@ -38,10 +41,12 @@ from .serializers import (
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
+    OrderWithContactSerializer,
 )
-from .swagger_configs import SWAGGER_CONFIGS
+from backend.swagger.config import SWAGGER_CONFIGS
 from .tasks import export_products_task, import_products_task
 from celery.result import AsyncResult
+
 
 @SWAGGER_CONFIGS["basket_viewset_schema"]
 class BasketViewSet(ModelViewSet):
@@ -52,13 +57,55 @@ class BasketViewSet(ModelViewSet):
 
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [check_role_permission("customer", "admin")]
+    permission_classes = [check_role_permission("customer", "admin", "supplier")]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = BasketFilter
+    search_fields = ["status"]
+
+    def retrieve(self, request, *args, **kwargs):
+        order = self.get_object()
+
+        if order.status not in dict(Order.STATUS_CHOICES):
+            raise ValidationError(
+                f"Некорректный статус: {order.status}. Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}"
+            )
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+        new_status = request.data.get("status")
+        if new_status:
+            if request.user.role == "customer" and new_status not in [
+                "new",
+                "canceled",
+            ]:
+                raise ValidationError(
+                    "Недостаточно прав. Вы можете устанавливать только: new, canceled"
+                )
+            if new_status not in dict(Order.STATUS_CHOICES):
+                raise ValidationError(
+                    f"Некорректный статус: {new_status}. "
+                    f"Доступные статусы: {', '.join(dict(Order.STATUS_CHOICES).keys())}"
+                )
+
+        serializer = self.get_serializer(order, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
 
     def get_queryset(self) -> List[Order]:
-        """
-        Возвращает только заказы текущего пользователя.
-        """
+        if self.request.user.role in ["admin", "supplier"]:
+            return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Корзина не найдена.", code="not_found")
 
 
 @SWAGGER_CONFIGS["category_viewset_schema"]
@@ -71,11 +118,15 @@ class CategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = CategoryFilter
+    search_fields = ["name"]
 
     def get_permissions(self) -> List[Any]:
         """
         Настраивает права доступа в зависимости от действия.
         """
+        permission_classes = []
         if self.action in ["list", "retrieve"]:
             permission_classes = []
         elif self.action in ["create", "update", "partial_update", "destroy"]:
@@ -95,25 +146,14 @@ class ConfirmBasketView(APIView):
         """
         Подтверждает корзину, создает заказ и связывает его с контактом пользователя.
         """
-        order = Order.objects.filter(user=request.user, status="new").first()
-
-        if not order:
-            return Response({"detail": "Корзина пуста."}, status=status.HTTP_400_BAD_REQUEST)
-
-        contact_id = request.data.get("contact_id")
-        if not contact_id:
-            return Response({"detail": "ID контакта обязателен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            contact = Contact.objects.get(id=contact_id, user=request.user)
-        except Contact.DoesNotExist:
-            return Response({"detail": "Контакт не найден."}, status=status.HTTP_400_BAD_REQUEST)
-
-        order.status = "confirmed"
-        order.contact = contact
-        order.save()
-
-        return Response({"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK)
+        serializer = OrderWithContactSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "Заказ успешно подтвержден."}, status=status.HTTP_200_OK
+        )
 
 
 @SWAGGER_CONFIGS["confirm_registration_schema"]
@@ -151,13 +191,14 @@ class ContactViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
     permission_classes = [check_role_permission("customer", "admin", "supplier")]
-    
+
     def get_queryset(self) -> QuerySet[Contact]:
         """Возвращает только контакты текущего пользователя."""
         user = self.request.user
         if user.role == "admin":
             return Contact.objects.all()
         return Contact.objects.filter(user=user)
+
 
 @SWAGGER_CONFIGS["disable_toggle_user_activity_schema"]
 class ToggleUserActivityView(APIView):
@@ -187,7 +228,7 @@ class ToggleUserActivityView(APIView):
             {
                 "message": f"Активность пользователя {user.email} (ID={user.id}) изменена на {user.is_active}",
                 "user_id": user.id,
-                "new_status": user.is_active
+                "new_status": user.is_active,
             },
             status=status.HTTP_200_OK,
         )
@@ -229,18 +270,6 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@SWAGGER_CONFIGS["order_viewset_schema"]
-class OrderViewSet(ModelViewSet):
-    """
-    Сет представлений для управления заказами.
-    Доступен только для администраторов и поставщиков.
-    """
-
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [check_role_permission("admin", "supplier")]
-
-
 @SWAGGER_CONFIGS["parameter_viewset_schema"]
 class ParameterViewSet(ModelViewSet):
     """
@@ -265,51 +294,52 @@ class PartnerOrders(APIView):
         """
         Возвращает список заказов, связанных с магазином поставщика.
         """
-        if request.user.is_anonymous:
-            return Response(
-                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
-            )
 
         shop = Shop.objects.filter(user=request.user).first()
 
         if not shop:
-            return Response({"detail": "Вы не связаны с магазином."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Вы не связаны с магазином."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        orders = Order.objects.filter(order_items__shop=shop, status="confirmed").distinct()
+        orders = Order.objects.filter(
+            order_items__shop=shop, status="confirmed"
+        ).distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
+
 
 @SWAGGER_CONFIGS["partner_import_schema"]
 class PartnerImportView(APIView):
     """
     Представление для создания задачи на импорт данных поставщика.
     """
+
     permission_classes = [check_role_permission("admin", "supplier")]
 
     def get(self, request) -> Response:
         try:
             task = import_products_task.delay()
-            return Response(
-                {"task_id": task.id}, 
-                status=status.HTTP_202_ACCEPTED
-            )
+            return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-@SWAGGER_CONFIGS["check_partner_import_schema"] 
+
+@SWAGGER_CONFIGS["check_partner_import_schema"]
 class PartnerImportStatusView(APIView):
     """
     Представление для получения результата выполнения задачи на импорт данных поставщика.
     """
+
     permission_classes = [check_role_permission("admin", "supplier")]
 
     def get(self, request, task_id) -> Response:
         task_result = AsyncResult(task_id)
         response_data = {"status": task_result.status}
-        
+
         if task_result.ready():
             if task_result.successful():
                 result = task_result.result
@@ -319,9 +349,9 @@ class PartnerImportStatusView(APIView):
                     response_data["error"] = result.get("message", "Unknown error")
             else:
                 response_data["error"] = "Task failed"
-        
+
         return Response(response_data, status=status.HTTP_200_OK)
-    
+
 
 @SWAGGER_CONFIGS["partner_update_schema"]
 class PartnerUpdateView(APIView):
@@ -341,7 +371,9 @@ class PartnerUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         if "file" not in request.FILES or not request.FILES["file"]:
-            return Response({"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Файл не загружен"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         uploaded_file = request.FILES.get("file")
         file_path = os.path.join("data", uploaded_file.name)
@@ -373,39 +405,29 @@ class PartnerUpdateView(APIView):
 @SWAGGER_CONFIGS["password_reset_confirm_schema"]
 class PasswordResetConfirmView(GenericAPIView):
     """
-    Представление для подтверждения сброса пароля. Позволяет установить новый пароль.
+    Представление для изменения пароля после сброса.
+    Сохраняет новый пароль при валидном токене.
     """
 
     serializer_class = PasswordResetConfirmSerializer
 
-    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
-        """
-        Подтверждает сброс пароля и устанавливает новый пароль.
-        """
-        uid = force_str(urlsafe_base64_decode(kwargs["uidb64"]))
-        token = kwargs["token"]
-
-        try:
-            user = User.objects.get(pk=uid)
-        except User.DoesNotExist:
-            return Response({"detail": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
-
-        if not default_token_generator.check_token(user, token):
-            return Response({"detail": "Недействительный токен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request: Request, uidb64: str, token: str) -> Response:
+        serializer = self.get_serializer(
+            data=request.data, context={"uidb64": uidb64, "token": token}
+        )
         serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        user.set_password(serializer.validated_data["new_password"])
-        user.save()
-
-        return Response({"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Пароль успешно изменён."}, status=status.HTTP_200_OK
+        )
 
 
 @SWAGGER_CONFIGS["password_reset_schema"]
 class PasswordResetView(GenericAPIView):
     """
-    Представление для сброса пароля. Отправляет ссылку для сброса на email пользователя.
+    Представление для сброса пароля.
+    Отправляет ссылку для сброса на email пользователя.
     """
 
     serializer_class = PasswordResetSerializer
@@ -440,37 +462,38 @@ class ProductViewSet(ModelViewSet):
 
 @SWAGGER_CONFIGS["register_schema"]
 class RegisterView(APIView):
-    """
-    Представление для регистрации нового пользователя.
-    """
+    """Представление для регистрации нового пользователя."""
 
     serializer_class = UserRegistrationSerializer
 
-    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
-        """
-        Регистрирует нового пользователя и отправляет подтверждение на email.
-        """
+    def post(self, request):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data.get("email")
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {
-                        "Status": "error",
-                        "Message": "Пользователь с таким email уже существует.",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
 
-            user = serializer.save()
+        if not serializer.is_valid():
             return Response(
-                {
-                    "Status": "success",
-                    "Message": "Пользователь успешно создан. Пожалуйста, проверьте вашу почту для подтверждения регистрации.",
-                },
-                status=status.HTTP_201_CREATED,
+                {"status": "error", "errors": self._clean_errors(serializer.errors)},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(
+            {
+                "status": "success",
+                "message": "Регистрация успешна. Проверьте email для активации",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _clean_errors(self, errors):
+        """Очистка и форматирование ошибок"""
+        clean_errors = {}
+        for field, messages in errors.items():
+            unique_messages = list(
+                dict.fromkeys([msg for msg in messages if not isinstance(msg, dict)])
+            )
+            if unique_messages:
+                clean_errors[field] = unique_messages
+        return clean_errors
 
 
 @SWAGGER_CONFIGS["shop_schema"]
@@ -518,10 +541,25 @@ class UserOrdersView(APIView):
         """
         if request.user.is_anonymous:
             return Response(
-                {"detail": "Пожалуйста, войдите в систему."}, status=status.HTTP_401_UNAUTHORIZED
+                {"detail": "Пожалуйста, войдите в систему."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
-
 
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
+
+
+class VKAuthView(TemplateView):
+    template_name = "vk_auth.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context.update(
+            {
+                "VK_APP_ID": settings.VK_APP_ID,
+                "VK_REDIRECT_URI": settings.VK_REDIRECT_URI,
+            }
+        )
+        return context

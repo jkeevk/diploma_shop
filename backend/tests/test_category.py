@@ -2,6 +2,9 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from backend.models import Category
+from backend.views import CategoryViewSet
+from rest_framework.request import Request
+from unittest.mock import Mock
 
 
 @pytest.mark.django_db
@@ -46,18 +49,20 @@ class TestCategoryViewSet:
         response = api_client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_create_category_unauthenticated(self, api_client):
         """
         Тест создания категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         data = {"name": "New Category"}
         url = reverse("category-list")
         response = api_client.post(url, data, format="json")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_create_category_invalid_data(self, api_client, admin):
         """
@@ -99,18 +104,20 @@ class TestCategoryViewSet:
         response = api_client.put(url, data, format="json")
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_update_category_unauthenticated(self, api_client, category):
         """
         Тест обновления категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         data = {"name": "Updated Category"}
         url = reverse("category-detail", args=[category.id])
         response = api_client.put(url, data, format="json")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_delete_category_as_admin(self, api_client, admin, category):
         """
@@ -135,17 +142,19 @@ class TestCategoryViewSet:
         response = api_client.delete(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "У вас недостаточно прав для выполнения этого действия." in str(response.data["detail"])
+        assert "У вас недостаточно прав для выполнения этого действия." in str(
+            response.data["detail"]
+        )
 
     def test_delete_category_unauthenticated(self, api_client, category):
         """
         Тест удаления категории неавторизованным пользователем.
-        Должен вернуть ошибку 403.
+        Должен вернуть ошибку 401.
         """
         url = reverse("category-detail", args=[category.id])
         response = api_client.delete(url)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_category_str_method(self, category):
         """
@@ -203,3 +212,13 @@ class TestCategoryViewSet:
         assert len(response.data["results"]) == 5
 
         assert response.data["next"] is None
+
+    def test_categoty_permission_for_non_action(self):
+        """
+        Тест проверки прав доступа для действия с категориями.
+        """
+        view = CategoryViewSet()
+        view.action = "non_action"
+        view.request = Mock(spec=Request)
+        permissions = view.get_permissions()
+        assert permissions == []

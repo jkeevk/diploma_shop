@@ -69,3 +69,22 @@ class TestPartnerUpdateView:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "No file was submitted." in response.data["file"]
+
+    def test_upload_file_processing_error(self, api_client, url, supplier, mocker):
+        """
+        Проверяем обработку внутренней ошибки сервера при загрузке файла.
+        """
+        api_client.force_authenticate(user=supplier)
+
+        json_file = SimpleUploadedFile(
+            "test.json",
+            b'{"key": "value"}',
+            content_type="application/json",
+        )
+
+        mocker.patch("builtins.open", side_effect=Exception("Test error"))
+
+        response = api_client.post(url, {"file": json_file}, format="multipart")
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert "Ошибка при загрузке файла: Test error" in response.data["error"]

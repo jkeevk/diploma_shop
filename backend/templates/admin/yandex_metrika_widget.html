@@ -1,0 +1,55 @@
+<div class="yandex-metrika">
+    <h3><i class="fa fa-bar-chart"></i> {{ title }}</h3>
+    <div class="metrics">
+        <div class="metric">
+            <span class="value">{{ data.visitors|default:"22" }}</span>
+            <span class="label">Посетители</span>
+        </div>
+        <div class="metric">
+            <span class="value">{{ data.views|default:"2837" }}</span>
+            <span class="label">Просмотры</span>
+        </div>
+    </div>
+    <a href="https://metrika.yandex.ru" target="_blank" class="btn">Подробнее</a>
+</div>
+
+<style>
+.yandex-metrika {
+    background: #fff;
+    padding: 15px;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.1);
+}
+.yandex-metrika h3 {
+    margin-top: 0;
+    color: #222;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.metrics {
+    display: flex;
+    margin: 15px 0;
+}
+.metric {
+    flex: 1;
+    text-align: center;
+}
+.metric .value {
+    font-size: 24px;
+    font-weight: bold;
+    display: block;
+}
+.metric .label {
+    color: #999;
+    font-size: 12px;
+}
+.btn {
+    display: block;
+    text-align: center;
+    background: #47bac1;
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    text-decoration: none;
+}
+</style>

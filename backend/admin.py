@@ -23,6 +23,7 @@ class ProductParameterInline(admin.TabularInline):
     Инлайн интерфейс админки для параметров продукта, связанных с ProductInfo.
     Позволяет добавлять несколько параметров продукта прямо на странице администрирования ProductInfo.
     """
+
     model = ProductParameter
     extra = 1
 
@@ -32,6 +33,7 @@ class CustomUserChangeForm(UserChangeForm):
     Кастомная форма для редактирования пользователя в админке.
     Добавляет поле для ввода нового пароля с подсказкой и хэширует пароль при его изменении.
     """
+
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={"placeholder": "Введите новый пароль"}),
         required=False,
@@ -42,24 +44,13 @@ class CustomUserChangeForm(UserChangeForm):
         model = User
         fields = "__all__"
 
-    def save(self, commit=True):
-        """
-        Сохраняет пользователя, хэшируя пароль только если он был изменен.
-        Если пароль не был изменен, оставляем его без изменений.
-        """
-        user = super().save(commit=False)
-        if self.cleaned_data["password"]:
-            user.set_password(self.cleaned_data["password"])
-        if commit:
-            user.save()
-        return user
-
 
 class OrderItemInline(admin.TabularInline):
     """
     Инлайн интерфейс админки для элементов заказов, связанных с заказами.
     Облегчает управление товарами в заказе непосредственно из страницы администрирования заказа.
     """
+
     model = OrderItem
     extra = 1
 
@@ -69,10 +60,11 @@ class UserAdmin(admin.ModelAdmin):
     Интерфейс админки для управления пользователями.
     Этот интерфейс предоставляет список пользователей с возможностью поиска и фильтрации по email и роли.
     """
+
     form = CustomUserChangeForm
 
-    list_display = ("email", "first_name", "last_name", "role", "is_active")
-    search_fields = ("email", "first_name", "last_name")
+    list_display = ("id", "email", "first_name", "last_name", "role", "is_active")
+    search_fields = ("id", "email", "first_name", "last_name")
     list_filter = ("role", "is_active")
     ordering = ("-email",)
 
@@ -123,8 +115,13 @@ class UserAdmin(admin.ModelAdmin):
             else:
                 obj.password = User.objects.get(pk=obj.pk).password
         else:
-            if obj.password:
-                obj.set_password(obj.password)
+            password = form.cleaned_data.get("password1")
+            if password:
+                obj.set_password(password)
+        obj.first_name = form.cleaned_data.get("first_name", obj.first_name)
+        obj.last_name = form.cleaned_data.get("last_name", obj.last_name)
+        obj.email = form.cleaned_data.get("email", obj.email)
+        obj.role = form.cleaned_data.get("role", obj.role)
 
         super().save_model(request, obj, form, change)
 
@@ -134,8 +131,9 @@ class ShopAdmin(admin.ModelAdmin):
     Интерфейс админки для управления магазинами.
     Отображает название магазина и URL с возможностью поиска по имени.
     """
-    list_display = ("name", "url")
-    search_fields = ("name",)
+
+    list_display = ("name", "url", "user")
+    search_fields = ("name", "user")
     list_filter = ("name",)
 
 
@@ -144,6 +142,7 @@ class CategoryAdmin(admin.ModelAdmin):
     Интерфейс админки для управления категориями продуктов.
     Предоставляет возможность поиска по названию категории и управления связанными магазинами.
     """
+
     list_display = ("name",)
     search_fields = ("name",)
     filter_horizontal = ("shops",)
@@ -155,6 +154,7 @@ class ProductAdmin(admin.ModelAdmin):
     Отображает название продукта, категорию и модель с возможностью поиска,
     фильтрации и прямого редактирования в списковом представлении.
     """
+
     list_display = ("name", "category", "model")
     search_fields = ("name", "model", "category__name")
     list_filter = ("category",)
@@ -167,6 +167,7 @@ class ProductInfoAdmin(admin.ModelAdmin):
     Отображает данные о продукте, такие как описание, цена и количество,
     с возможностью инлайнового редактирования параметров продукта.
     """
+
     list_display = ("product", "shop", "description", "price", "quantity", "price_rrc")
     search_fields = ("product__name", "shop__name", "description")
     list_filter = ("product", "shop")
@@ -180,6 +181,7 @@ class ParameterAdmin(admin.ModelAdmin):
     Интерфейс админки для управления параметрами продуктов.
     Отображает названия параметров с возможностью поиска.
     """
+
     list_display = ("name",)
     search_fields = ("name",)
 
@@ -189,6 +191,7 @@ class ProductParameterAdmin(admin.ModelAdmin):
     Интерфейс админки для управления параметрами продуктов, связанными с ProductInfo.
     Отображает информацию о продукте, параметре и значении с возможностями поиска и фильтрации.
     """
+
     list_display = ("product_info", "parameter", "value")
     search_fields = ("value", "parameter__name")
     list_filter = ("parameter",)
@@ -209,6 +212,7 @@ class OrderAdmin(admin.ModelAdmin):
     Отображает детали заказа, такие как ID, пользователь, статус и общая стоимость с
     возможностями поиска и фильтрации.
     """
+
     list_display = ("id", "user", "status", "dt", "total_cost")
     search_fields = ("user__email", "status")
     list_filter = ("status",)
@@ -231,6 +235,7 @@ class OrderItemAdmin(admin.ModelAdmin):
     Отображает детали товаров в заказе, позволяя осуществлять поиск,
     фильтрацию и инлайновое редактирование.
     """
+
     list_display = ("order", "product", "shop", "quantity", "cost")
     search_fields = ("order__id", "product__name", "shop__name")
     list_filter = ("order",)
@@ -251,7 +256,18 @@ class ContactAdmin(admin.ModelAdmin):
     Отображает контактные данные с возможностью редактирования адресов и
     номеров телефонов непосредственно в админке.
     """
-    list_display = ("user", "city", "street", "house")
+
+    list_display = (
+        "id",
+        "user",
+        "city",
+        "street",
+        "house",
+        "structure",
+        "building",
+        "apartment",
+        "phone",
+    )
     search_fields = ("user__email", "city", "street")
     list_filter = ("city",)
     list_editable = ("city", "street", "house")
@@ -267,6 +283,7 @@ class ContactAdmin(admin.ModelAdmin):
                     "structure",
                     "building",
                     "apartment",
+                    "user",
                 )
             },
         ),
