@@ -310,3 +310,20 @@ CACHES = {
         },
     }
 }
+
+# Silk (профилирование)
+if DEBUG:
+    INSTALLED_APPS += ["silk"]
+    MIDDLEWARE += ["silk.middleware.SilkyMiddleware"]
+else:
+    SILKY_ENABLE = False
+
+SILKY_AUTHENTICATION = False
+SILKY_AUTHORISATION = False
+SILKY_IGNORE_PATHS = [
+    r"/admin/",
+    r"/silk/",
+    r"/staticfiles/",
+    r"/media/",
+    r"/favicon.ico",
+]
