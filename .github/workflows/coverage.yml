@@ -42,6 +42,11 @@ jobs:
             echo 'Waiting for app container to be ready...'
             sleep 2
           done
+          
+      - name: Clear Redis cache
+        run: |
+          echo '=== CLEARING REDIS CACHE ==='
+          docker-compose exec -T redis redis-cli FLUSHALL
 
       - name: Flush database
         run: |
