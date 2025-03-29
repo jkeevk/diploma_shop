@@ -264,17 +264,3 @@ def order_with_multiple_shops(db, customer, shops, product, another_product):
     )
 
     return order
-
-
-@pytest.fixture(autouse=True)
-def disable_throttling(request):
-    marker = request.node.get_closest_marker("throttling")
-    if not marker:
-        original_throttle_classes = settings.REST_FRAMEWORK.get(
-            "DEFAULT_THROTTLE_CLASSES", []
-        )
-        settings.REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = []
-        yield
-        settings.REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = original_throttle_classes
-    else:
-        yield

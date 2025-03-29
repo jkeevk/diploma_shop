@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/test_cov
   pull_request:
     branches:
       - main
@@ -42,12 +43,22 @@ jobs:
             echo 'Waiting for app container to be ready...'
             sleep 2
           done
+          
+      - name: Clear Redis cache
+        run: |
+          echo '=== CLEARING REDIS CACHE ==='
+          docker-compose exec -T redis redis-cli -n 0 FLUSHDB
 
       - name: Flush database
         run: |
           echo '=== FLUSHING DATABASE ==='
           docker-compose exec -T app python manage.py flush --noinput
 
+      - name: Check Redis throttle keys
+        run: |
+          echo '=== REDIS THROTTLE KEYS ==='
+          docker-compose exec -T redis redis-cli -n 2 KEYS "*throttle*"
+          
       - name: Apply migrations
         run: |
           echo '=== APPLYING MIGRATIONS ==='
