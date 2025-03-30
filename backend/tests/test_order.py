@@ -89,6 +89,26 @@ class TestBasketAPI_POST:
         assert OrderItem.objects.count() == 1
         assert OrderItem.objects.first().quantity == 2
 
+    def test_create_basket_with_no_items(self, api_client, customer, product, shop):
+        """
+        Создание пустой корзины без товаров
+        """
+        ProductInfo.objects.create(
+            product=product, shop=shop, quantity=10, price=100, price_rrc=120
+        )
+
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+
+        data = {
+            "user": customer.id,
+            "order_items": [],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert [] == response.data["order_items"]
+
     def test_create_basket_item_as_customer_empty_fields(
         self, api_client, customer, product, shop
     ):
@@ -157,7 +177,7 @@ class TestBasketAPI_POST:
 
         response = api_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Невозможно создать заказ." in response.data[0]
+        assert "неактивен" in response.data[0]
 
     def test_create_basket_item_shop_without_owner(
         self, api_client, customer, product, shop
@@ -260,7 +280,7 @@ class TestBasketAPI_POST:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Добавление товара" in str(response.data[0])
+        assert "Превышение доступного количества" in str(response.data[0])
 
     def test_post_update_basket_item_as_customer(
         self, api_client, customer, product, shop
@@ -405,7 +425,7 @@ class TestBasketAPI_PATCH:
     Тесты для PATCH запросов API корзины.
     """
 
-    def test_patch_update_basket_item_quantity(
+    def test_patch_update_basket_item_quantity_all_fields(
         self, api_client, customer, product, shop
     ):
         """
@@ -526,14 +546,107 @@ class TestBasketAPI_PATCH:
         order_id = response.data["id"]
 
         update_url = reverse("basket-detail", args=[order_id])
-        update_data = {
-            "order_items": [{"product": product.id, "shop": "", "quantity": 5}]
-        }
+        update_data = {"order_items": [{"product": product.id, "quantity": 5}]}
 
         response = api_client.patch(update_url, update_data, format="json")
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_200_OK
         print(response.data)
-        assert "Не указан магазин" in str(response.data["order_items"][0]["shop"])
+        assert response.data["order_items"][0]["quantity"] == 5
+        assert response.data["order_items"][0]["shop"] == shop.id
+        assert response.data["order_items"][0]["product"] == product.id
+
+    def test_patch_update_basket_item_missing_product(
+        self, api_client, customer, product, shop
+    ):
+        """
+        Частичное обновление элемента корзины без указания товара
+        """
+        ProductInfo.objects.create(
+            product=product, shop=shop, quantity=10, price=100, price_rrc=120
+        )
+
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [{"product": product.id, "shop": shop.id, "quantity": 2}],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {"order_items": [{"shop": shop.id, "quantity": 3}]}
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        print(response.data)
+        assert response.data["order_items"][0]["quantity"] == 3
+        assert response.data["order_items"][0]["product"] == product.id
+        assert response.data["order_items"][0]["shop"] == shop.id
+
+    def test_patch_update_basket_item_missing_shop_and_product(
+        self, api_client, customer, product, shop
+    ):
+        """
+        Частичное обновление элемента корзины без указания магазина и товара
+        """
+        ProductInfo.objects.create(
+            product=product, shop=shop, quantity=10, price=100, price_rrc=120
+        )
+
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [{"product": product.id, "shop": shop.id, "quantity": 2}],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {"order_items": [{"quantity": 1}]}
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        print(response.data)
+        assert response.data["order_items"][0]["quantity"] == 1
+        assert response.data["order_items"][0]["product"] == product.id
+        assert response.data["order_items"][0]["shop"] == shop.id
+
+    def test_patch_update_basket_item_missing_order_items(
+        self, api_client, customer, product, shop
+    ):
+        """
+        Частичное обновление элемента корзины без указания всех данных
+        """
+        ProductInfo.objects.create(
+            product=product, shop=shop, quantity=10, price=100, price_rrc=120
+        )
+
+        api_client.force_authenticate(user=customer)
+        url = reverse("basket-list")
+        data = {
+            "user": customer.id,
+            "order_items": [{"product": product.id, "shop": shop.id, "quantity": 2}],
+        }
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED
+        order_id = response.data["id"]
+
+        update_url = reverse("basket-detail", args=[order_id])
+        update_data = {"order_items": [{}]}
+
+        response = api_client.patch(update_url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        print(response.data)
+        assert response.data["order_items"][0]["quantity"] == 2
+        assert response.data["order_items"][0]["product"] == product.id
+        assert response.data["order_items"][0]["shop"] == shop.id
 
     def test_patch_update_basket_item_no_changes(
         self, api_client, customer, product, shop

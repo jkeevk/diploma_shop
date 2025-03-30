@@ -62,9 +62,9 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         errors = response.data["errors"]
         assert all(field in errors for field in ["email", "password", "role"])
-        assert "required" in str(errors["email"][0]).lower()
-        assert "required" in str(errors["password"][0]).lower()
-        assert "required" in str(errors["role"][0]).lower()
+        assert "обязателен для заполнения" in str(errors["email"][0])
+        assert "обязателен для заполнения" in str(errors["password"][0])
+        assert "Роль обязательна для заполнения" in str(errors["role"][0])
 
     def test_password_validation(self):
         """Проверка валидации слабого пароля."""

@@ -109,6 +109,30 @@ class TestPartnerImportView:
         assert response.data["error"] == "Task failed"
 
     @patch("backend.views.AsyncResult")
+    def test_partner_import_status_some_error(
+        self, mock_async_result, api_client, admin
+    ):
+        """
+        Тест получения статуса задачи импорта с ошибкой.
+        """
+        api_client.force_authenticate(user=admin)
+
+        mock_task_id = str(uuid.uuid4())
+        mock_result = {"status": "error", "message": "Unknown error"}
+        mock_async_result.return_value = MagicMock(
+            status="Some status",
+            ready=lambda: True,
+            successful=lambda: True,
+            result=mock_result,
+        )
+
+        url = reverse("import-status", args=[mock_task_id])
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["error"] == "Unknown error"
+
+    @patch("backend.views.AsyncResult")
     def test_task_not_ready(self, mock_async_result, api_client, admin):
         """
         Тест, который проверяет выполнение блока кода, когда задача не готова.
