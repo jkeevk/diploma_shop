@@ -474,7 +474,14 @@ BASKET_SCHEMAS = {
     "confirm_basket_schema": extend_schema(
         summary="Подтвердить корзину",
         description="Подтвердить заказ. Изменяет статус корзины на 'подтвержден' и использует ID контакта (адрес доставки) для подтверждения.",
-        request=OrderWithContactSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="contact_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description="ID контакта пользователя в системе.",
+            ),
+        ],
         responses={
             200: {
                 "description": "Корзина успешно подтверждена.",

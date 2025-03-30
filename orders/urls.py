@@ -45,6 +45,7 @@ from backend.tests.views_tests import (
     CheckPytestTaskView,
     ForceSentryErrorAPIView,
 )
+from backend.admin import admin_site
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -70,7 +71,7 @@ urlpatterns = (
         path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
         path(r"jet/", include("jet.urls", "jet")),
         path(r"jet/dashboard/", include("jet.dashboard.urls", "jet-dashboard")),
-        path("admin/", admin.site.urls, name="admin"),
+        path("admin/", admin_site.urls, name="admin"),
         path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
         path(
             "tests/trigger-error/",
@@ -107,7 +108,11 @@ urlpatterns = (
             PartnerImportStatusView.as_view(),
             name="import-status",
         ),
-        path("basket/confirm", ConfirmBasketView.as_view(), name="confirm-basket"),
+        path(
+            "basket/confirm/<int:contact_id>/",
+            ConfirmBasketView.as_view(),
+            name="confirm-basket",
+        ),
         path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
         path("shops", ShopView.as_view(), name="shops"),
         path(

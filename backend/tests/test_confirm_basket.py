@@ -29,11 +29,10 @@ class TestOrderConfirmation:
         # Отключаем TESTING режим для этого теста
         with patch("backend.signals.TESTING", False):
             self.client.force_authenticate(user=customer)
-            url = reverse("confirm-basket")
-            data = {"contact_id": contact.id}
+            url = reverse("confirm-basket", args=[contact.id])
 
             # Отправляем запрос на подтверждение заказа
-            response = self.client.post(url, data, format="json")
+            response = self.client.post(url, format="json")
 
             # Проверка базового сценария
             assert response.status_code == status.HTTP_200_OK
@@ -91,33 +90,19 @@ class TestOrderConfirmation:
         Проверяем ошибку при попытке подтвердить пустую корзину.
         """
         api_client.force_authenticate(user=customer)
-        url = reverse("confirm-basket")
-        data = {"contact_id": contact.id}
-        response = api_client.post(url, data, format="json")
+        url = reverse("confirm-basket", args=[contact.id])
+        response = api_client.post(url, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"non_field_errors": ["Корзина пуста."]}
-
-    def test_confirm_basket_missing_contact_id(self, api_client, customer, order):
-        """
-        Проверяем ошибку при отсутствии contact_id.
-        """
-        api_client.force_authenticate(user=customer)
-        url = reverse("confirm-basket")
-        data = {}
-        response = api_client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.data == {"contact_id": ["ID контакта обязателен."]}
 
     def test_confirm_basket_invalid_contact_id(self, api_client, customer, order):
         """
         Проверяем ошибку при передаче несуществующего contact_id.
         """
         api_client.force_authenticate(user=customer)
-        url = reverse("confirm-basket")
-        data = {"contact_id": 999}
-        response = api_client.post(url, data, format="json")
+        url = reverse("confirm-basket", args=[999])
+        response = api_client.post(url, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"contact_id": ["Неверный ID контакта."]}
@@ -129,9 +114,8 @@ class TestOrderConfirmation:
         Проверяем ошибку при передаче несуществующего contact_id.
         """
         api_client.force_authenticate(user=customer)
-        url = reverse("confirm-basket")
-        data = {"contact_id": another_user_contact.id}
-        response = api_client.post(url, data, format="json")
+        url = reverse("confirm-basket", args=[another_user_contact.id])
+        response = api_client.post(url, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"contact_id": ["Контакт не найден."]}

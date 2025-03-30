@@ -142,12 +142,12 @@ class ConfirmBasketView(APIView):
 
     permission_classes = [check_role_permission("customer", "admin")]
 
-    def post(self, request: Any) -> Response:
+    def post(self, request: Any, contact_id: int) -> Response:
         """
         Подтверждает корзину, создает заказ и связывает его с контактом пользователя.
         """
         serializer = OrderWithContactSerializer(
-            data=request.data, context={"request": request}
+            data={"contact_id": contact_id}, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()

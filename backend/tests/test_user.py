@@ -181,9 +181,9 @@ class TestUserOrdersView:
         order_item = OrderItem.objects.create(
             order=order, product=product, shop=shop, quantity=2
         )
-        url = reverse("confirm-basket")
-        data = {"contact_id": contact.id}
-        response = api_client.post(url, data, format="json")
+        url = reverse("confirm-basket", args=[contact.id])
+
+        response = api_client.post(url, format="json")
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data == {"detail": "Заказ успешно подтвержден."}
