@@ -11,6 +11,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
+from django.db import transaction
 
 # DRF Spectacular
 from drf_spectacular.utils import extend_schema_field
@@ -145,14 +146,19 @@ class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True, required=True)
     user = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        error_messages={"required": "Пользователь не указан"},
+        error_messages={
+            "required": "Пользователь не указан",
+            "does_not_exist": "Указанный пользователь не существует",
+        },
     )
     status = serializers.ChoiceField(
         choices=Order.STATUS_CHOICES,
         required=False,
         default="new",
         error_messages={
-            "invalid_choice": "Недопустимый статус заказа. Доступные варианты: {choices}"
+            "invalid_choice": "Недопустимый статус заказа. Доступные варианты: {choices}".format(
+                choices=", ".join([choice[0] for choice in Order.STATUS_CHOICES])
+            )
         },
     )
 
@@ -161,74 +167,81 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "order_items", "dt", "status"]
         extra_kwargs = {
             "dt": {"read_only": True},
+            "order_items": {
+                "error_messages": {"required": "Список товаров обязателен"}
+            },
         }
 
-    def validate(self, attrs):
-        """Валидация полей."""
-        if "order_items" not in attrs or not attrs["order_items"]:
-            raise serializers.ValidationError({"order_items": "Обязательное поле"})
-        return attrs
+    def _validate_shop(self, shop: Shop) -> None:
+        """Валидация данных магазина."""
+        if not shop.user:
+            raise serializers.ValidationError(
+                f"Магазин {shop.name} (ID={shop.id}) не привязан к пользователю"
+            )
 
-    def create(self, validated_data: Dict[str, Any]) -> Order:
-        """Создание нового заказа с элементами заказа."""
+        if not shop.user.is_active:
+            raise serializers.ValidationError(
+                f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен"
+            )
+
+    def _validate_product_availability(
+        self, product: Product, shop: Shop, quantity: int
+    ) -> ProductInfo:
+        """Проверка доступности товара."""
+        product_info = ProductInfo.objects.filter(product=product, shop=shop).first()
+
+        if not product_info:
+            raise serializers.ValidationError(
+                f"Товар {product.name} (ID={product.id}) отсутствует в магазине {shop.name}"
+            )
+
+        if product_info.quantity < quantity:
+            raise serializers.ValidationError(
+                f"Недостаточно товара {product.name}. Доступно: {product_info.quantity}"
+            )
+
+        return product_info
+
+    def _process_order_item(self, order: Order, item_data: dict) -> None:
+        """Обработка одного элемента заказа."""
+        product = item_data["product"]
+        shop = item_data["shop"]
+        quantity = item_data["quantity"]
+
+        self._validate_shop(shop)
+        product_info = self._validate_product_availability(product, shop, quantity)
+
+        existing_item = OrderItem.objects.filter(
+            order=order, product=product, shop=shop
+        ).first()
+
+        if existing_item:
+            new_quantity = existing_item.quantity + quantity
+            if product_info.quantity < new_quantity:
+                raise serializers.ValidationError(
+                    f"Превышение доступного количества товара {product.name}. Максимум: {product_info.quantity}"
+                )
+            existing_item.quantity = new_quantity
+            existing_item.save()
+        else:
+            OrderItem.objects.create(
+                order=order, product=product, shop=shop, quantity=quantity
+            )
+
+    @transaction.atomic
+    def create(self, validated_data: dict) -> Order:
+        """Создание заказа с обработкой элементов."""
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
 
+        # Получаем или создаем новый заказ
+        order, created = Order.objects.get_or_create(
+            user=user, status="new", defaults=validated_data
+        )
+
+        # Обрабатываем все элементы заказа
         for item_data in order_items_data:
-            product = item_data.get("product")
-            shop = item_data.get("shop")
-            quantity = item_data.get("quantity")
-
-            if not shop.user:
-                raise serializers.ValidationError(
-                    f"Магазин {shop.name} (ID={shop.id}) не привязан к пользователю"
-                )
-
-            if not shop.user.is_active:
-                raise serializers.ValidationError(
-                    f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
-                )
-            product_info = ProductInfo.objects.filter(
-                product=product, shop=shop
-            ).first()
-            if not product_info:
-                raise serializers.ValidationError(
-                    f"Товар {product.name} (ID={product.id}) отсутствует в магазине {shop.name} (ID={shop.id})."
-                )
-            if not shop:
-                raise serializers.ValidationError(
-                    f"Магазин {shop.name} (ID={shop.id}) не найден."
-                )
-            if product_info.quantity < quantity:
-                raise serializers.ValidationError(
-                    f"Недостаточно товара {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрошено: {quantity}."
-                )
-
-        order = Order.objects.filter(user=user, status="new").first()
-        if not order:
-            order = Order.objects.create(user=user, status="new")
-
-        for item_data in order_items_data:
-            product = item_data.get("product")
-            shop = item_data.get("shop")
-            quantity = item_data.get("quantity")
-
-            existing_item = OrderItem.objects.filter(
-                order=order, product=product, shop=shop
-            ).first()
-
-            if existing_item:
-                new_quantity = existing_item.quantity + quantity
-                if product_info.quantity < new_quantity:
-                    raise serializers.ValidationError(
-                        f"Добавление товара {product.name} (ID={product.id}) приведет к превышению доступного количества в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрашивается: {new_quantity}."
-                    )
-                existing_item.quantity = new_quantity
-                existing_item.save()
-            else:
-                OrderItem.objects.create(
-                    order=order, product=product, shop=shop, quantity=quantity
-                )
+            self._process_order_item(order, item_data)
 
         return order
 
@@ -244,16 +257,11 @@ class OrderSerializer(serializers.ModelSerializer):
         order_items_data = validated_data.get("order_items")
 
         if method == "PUT":
-            if order_items_data is None:
-                raise serializers.ValidationError(
-                    {"order_items": "Это поле обязательно для метода PUT"}
-                )
-
             instance.order_items.all().delete()
             for item_data in order_items_data:
                 self._validate_and_create_item(instance, item_data)
 
-        elif method == "PATCH" and order_items_data is not None:
+        elif method == "PATCH":
             for item_data in order_items_data:
                 self._update_item_partially(instance, item_data)
 
@@ -286,11 +294,6 @@ class OrderSerializer(serializers.ModelSerializer):
                 product=new_product, shop=new_shop
             ).first()
 
-            if not product_info:
-                raise serializers.ValidationError(
-                    f"Товар {new_product.name} отсутствует в магазине {new_shop.name}"
-                )
-
         product_info = ProductInfo.objects.filter(
             product=new_product, shop=new_shop
         ).first()
@@ -317,32 +320,6 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {str(e): "Обязательное поле не указано"}
             ) from e
-
-        if not shop.user:
-            raise serializers.ValidationError(
-                {"shop": f"Магазин {shop.name} не привязан к пользователю"}
-            )
-
-        if not shop.user.is_active:
-            raise serializers.ValidationError(
-                f"Продавец {shop.user.email} (магазин ID={shop.id}) неактивен. Невозможно создать заказ."
-            )
-        product_info = ProductInfo.objects.filter(product=product, shop=shop).first()
-        if not product_info:
-            raise serializers.ValidationError(
-                f"Товар {product.name} (ID={product.id}) отсутствует в магазине {shop.name} (ID={shop.id})."
-            )
-
-        if product_info.quantity < quantity:
-            raise serializers.ValidationError(
-                f"Недостаточно товара {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрошено: {quantity}."
-            )
-        product_info = ProductInfo.objects.filter(product=product, shop=shop).first()
-
-        if not product_info or product_info.quantity < quantity:
-            raise serializers.ValidationError(
-                f"Недостаточно товара {product.name} (ID={product.id}) в магазине {shop.name} (ID={shop.id}). Доступно: {product_info.quantity}, запрошено: {quantity}."
-            )
 
         OrderItem.objects.create(
             order=order, product=product, shop=shop, quantity=quantity
@@ -562,6 +539,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "invalid_choice": "Неверная роль. Допустимые значения: {allowed_roles}".format(
                 allowed_roles=", ".join([role.value for role in UserRole])
             ),
+            "required": "Роль обязательна для заполнения",
             "blank": "Роль обязательна для заполнения",
         },
     )
@@ -570,21 +548,25 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ["email", "password", "first_name", "last_name", "role"]
         extra_kwargs = {
-            "password": {
-                "write_only": True,
-                "error_messages": {"blank": "Пароль не может быть пустым"},
-            },
             "email": {
                 "validators": [],
                 "error_messages": {
-                    "invalid": "Введите корректный email адрес",
+                    "required": "Email обязателен для заполнения",
                     "blank": "Email обязателен для заполнения",
+                    "invalid": "Введите корректный email адрес",
+                },
+            },
+            "password": {
+                "write_only": True,
+                "error_messages": {
+                    "required": "Пароль обязателен для заполнения",
+                    "blank": "Пароль не может быть пустым",
                 },
             },
         }
 
     def validate_email(self, value):
-        """Проверка существования пользователя с указанным email."""
+        """Проверка уникальности email."""
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
@@ -592,28 +574,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def validate_password(self, value):
-        """Проверка валидности пароля."""
-        if not value:
-            raise serializers.ValidationError("Пароль не может быть пустым")
-
+        """Валидация сложности пароля."""
         try:
             validate_password(value)
         except ValidationError as e:
             raise serializers.ValidationError(e.messages)
         return value
-
-    def validate(self, data):
-        """Валидация данных."""
-        errors = {}
-
-        for field in ["email", "password", "role"]:
-            if field not in data:
-                errors[field] = [self.fields[field].error_messages["blank"]]
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        return data
 
     def create(self, validated_data):
         """Создание пользователя с неактивным аккаунтом."""
@@ -670,9 +636,6 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         """Проверка валидности данных."""
         uidb64 = self.context.get("uidb64")
         token = self.context.get("token")
-
-        if not uidb64 or not token:
-            raise serializers.ValidationError("Необходимые параметры отсутствуют")
 
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
