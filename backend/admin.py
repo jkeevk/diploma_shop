@@ -1,7 +1,16 @@
+import os
+
 # Django
 from django.contrib import admin
 from django.contrib.auth.forms import UserChangeForm
 from django import forms
+from django.urls import path
+from django.shortcuts import render
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.core.files.storage import default_storage
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group
 
 # Local imports
 from .models import (
@@ -16,6 +25,71 @@ from .models import (
     Shop,
     User,
 )
+from .tasks import export_products_task
+
+
+class PriceUpdateAdmin(admin.AdminSite):
+    """
+    Кастомная админка для обновления товаров от поставщиков.
+    """
+
+    index_template = "admin/index.html"
+    site_header = "Администрирование"
+
+    def has_permission(self, request):
+        """
+        Проверка доступа к админке.
+        """
+        return (
+            request.user.is_active
+            and request.user.is_staff
+            and request.user.role in ["admin"]
+            and request.user.has_perm("partner.change_price")
+        )
+
+    def get_urls(self):
+        """
+        Добавление дополнительных URL-адресов.
+        """
+        urls = super().get_urls()
+        custom_urls = [
+            path("price_update/", self.price_update_view, name="price_update"),
+        ]
+        return custom_urls + urls
+
+    def price_update_view(self, request):
+        """
+        Обработка запроса на обновление цен продуктов.
+        """
+        if request.method == "POST":
+            file = request.FILES.get("file")
+
+            if not file:
+                messages.error(request, "Файл не выбран!")
+                return HttpResponseRedirect(request.path_info)
+
+            if not file.name.endswith(".json"):
+                messages.error(request, "Требуется JSON-файл!")
+                return HttpResponseRedirect(request.path_info)
+
+            try:
+                file_path = os.path.join("data", file.name)
+                default_storage.save(file_path, file)
+                export_products_task.delay(file_path)
+                messages.success(
+                    request,
+                    "Файл принят в обработку. Обновление может занять несколько минут.",
+                )
+            except Exception as e:
+                messages.error(request, f"Ошибка: {str(e)}")
+
+            return HttpResponseRedirect(request.path_info)
+
+        context = self.each_context(request)
+        context.update(
+            {"opts": self._registry.keys(), "title": "Обновление прайс-листа"}
+        )
+        return render(request, "admin/price_update.html", context)
 
 
 class ProductParameterInline(admin.TabularInline):
@@ -292,13 +366,15 @@ class ContactAdmin(admin.ModelAdmin):
 
 
 # Регистрация моделей в админке
-admin.site.register(User, UserAdmin)
-admin.site.register(Shop, ShopAdmin)
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Product, ProductAdmin)
-admin.site.register(ProductInfo, ProductInfoAdmin)
-admin.site.register(Parameter, ParameterAdmin)
-admin.site.register(ProductParameter, ProductParameterAdmin)
-admin.site.register(Order, OrderAdmin)
-admin.site.register(OrderItem, OrderItemAdmin)
-admin.site.register(Contact, ContactAdmin)
+admin_site = PriceUpdateAdmin(name="myadmin")
+admin_site.register(User, UserAdmin)
+admin_site.register(Shop, ShopAdmin)
+admin_site.register(Category, CategoryAdmin)
+admin_site.register(Product, ProductAdmin)
+admin_site.register(ProductInfo, ProductInfoAdmin)
+admin_site.register(Parameter, ParameterAdmin)
+admin_site.register(ProductParameter, ProductParameterAdmin)
+admin_site.register(Order, OrderAdmin)
+admin_site.register(OrderItem, OrderItemAdmin)
+admin_site.register(Contact, ContactAdmin)
+admin_site.register(Group, GroupAdmin)

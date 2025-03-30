@@ -1,0 +1,26 @@
+<!-- backend/templates/admin/price_update.html -->
+{% extends "admin/base_site.html" %}  <!-- Должен быть ПЕРВЫМ тегом -->
+{% load static %}  <!-- Затем подключаем теги -->
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'jet/css/components.min.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Обновление прайс-листа поставщика</h1>
+    <div class="module">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-row">
+                <label for="file">Выберите JSON-файл:</label>
+                <input type="file" name="file" required accept=".json">
+            </div>
+            <div class="submit-row">
+                <input type="submit" value="Загрузить" class="default">
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

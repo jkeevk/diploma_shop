@@ -14,6 +14,7 @@ import os
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from django.urls import reverse
 
 load_dotenv()
 
@@ -281,7 +282,53 @@ JET_CHANGE_FORM_SIBLING_LINKS = True
 JET_APP_INDEX_DASHBOARD = "jet.dashboard.dashboard.DefaultAppIndexDashboard"
 JET_DASHBOARD_LAYOUT = "layout.VerticalLayout"
 JET_INDEX_DASHBOARD = "backend.dashboard.CustomIndexDashboard"
-
+JET_SIDE_MENU_ITEMS = [
+    {
+        "label": "Пользователи и группы",
+        "items": [
+            {"name": "backend.user", "label": "Пользователи"},
+            {"name": "auth.group", "label": "Группы"},
+        ],
+    },
+    {
+        "label": "Контакты",
+        "app_label": "backend",
+        "items": [
+            {"name": "contact", "label": "Контактные данные"},
+        ],
+    },
+    {
+        "label": "Товары и категории",
+        "app_label": "backend",
+        "items": [
+            {"name": "shop", "label": "Магазины"},
+            {"name": "category", "label": "Категории"},
+            {"name": "product", "label": "Товары"},
+            {"name": "productinfo", "label": "Информация о товарах"},
+            {"name": "parameter", "label": "Параметры"},
+            {"name": "productparameter", "label": "Параметры товаров"},
+        ],
+    },
+    {
+        "label": "Заказы",
+        "app_label": "backend",
+        "items": [
+            {"name": "order", "label": "Заказы"},
+            {"name": "orderitem", "label": "Элементы заказов"},
+        ],
+    },
+    {
+        "label": "Операции поставщика",
+        "items": [
+            {
+                "url": "/admin/price_update/",
+                "label": "Обновить прайс",
+                "permissions": ["partner.change_price"],
+                "url_blank": False,
+            }
+        ],
+    },
+]
 # ==============================================================================
 # Интеграции
 # ==============================================================================
