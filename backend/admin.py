@@ -26,6 +26,33 @@ from .models import (
     User,
 )
 from .tasks import export_products_task
+from social_django.models import UserSocialAuth, Nonce, Association, Code, Partial
+
+
+class UserSocialAuthAdmin(admin.ModelAdmin):
+    list_display = ("user", "provider", "uid", "created", "modified")
+    search_fields = ("user__email", "provider", "uid")
+    raw_id_fields = ("user",)
+
+
+class NonceAdmin(admin.ModelAdmin):
+    list_display = ("server_url", "timestamp", "salt")
+    search_fields = ("server_url", "salt")
+
+
+class AssociationAdmin(admin.ModelAdmin):
+    list_display = ("server_url", "handle", "issued", "lifetime")
+    search_fields = ("server_url", "handle")
+
+
+class CodeAdmin(admin.ModelAdmin):
+    list_display = ("email", "code", "verified", "timestamp")
+    search_fields = ("email", "code")
+
+
+class PartialAdmin(admin.ModelAdmin):
+    list_display = ("token", "next_step", "backend", "timestamp")
+    search_fields = ("token", "backend")
 
 
 class PriceUpdateAdmin(admin.AdminSite):
@@ -378,3 +405,8 @@ admin_site.register(Order, OrderAdmin)
 admin_site.register(OrderItem, OrderItemAdmin)
 admin_site.register(Contact, ContactAdmin)
 admin_site.register(Group, GroupAdmin)
+admin_site.register(UserSocialAuth, UserSocialAuthAdmin)
+admin_site.register(Nonce, NonceAdmin)
+admin_site.register(Association, AssociationAdmin)
+admin_site.register(Code, CodeAdmin)
+admin_site.register(Partial, PartialAdmin)

@@ -14,7 +14,6 @@ import os
 from dotenv import load_dotenv
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
-from django.urls import reverse
 
 load_dotenv()
 
@@ -29,6 +28,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 AUTH_USER_MODEL = "backend.User"
 BACKEND_URL = "http://localhost"
 LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 # ==============================================================================
 # Безопасность
@@ -40,8 +40,10 @@ ALLOWED_HOSTS = ["*"]
 
 # HTTPS settings (активировать для production)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = False
 CSRF_TRUSTED_ORIGINS = ["https://localhost"]
 CORS_ALLOW_ALL_ORIGINS = True
 X_FRAME_OPTIONS = "SAMEORIGIN"
@@ -87,7 +89,7 @@ INSTALLED_APPS = [
     # Local
     "backend",
 ]
-
+SITE_ID = 1
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -171,11 +173,6 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_SETTINGS": {
         "filter": True,
     },
-    "TAGS": [
-        {
-            "name": "user",
-        },
-    ],
 }
 
 # ==============================================================================
@@ -183,9 +180,10 @@ SPECTACULAR_SETTINGS = {
 # ==============================================================================
 
 AUTHENTICATION_BACKENDS = (
-    "social_core.backends.vk.VKOAuth2",
+    "social_core.backends.google.GoogleOAuth2",
     "django.contrib.auth.backends.ModelBackend",
 )
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -195,6 +193,28 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.social_auth.associate_by_email",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+)
+
+SOCIAL_AUTH_USERNAME_IS_FULL_EMAIL = True
+
+VK_APP_ID = os.getenv("VK_APP_ID")
+VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")
+VK_REDIRECT_URI = "https://oauth.vk.com/blank.html"
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ["email", "profile"]
 
 # ==============================================================================
 # Локализация и время
@@ -265,7 +285,7 @@ LOGGING = {
 }
 
 # ==============================================================================
-# JET Admin
+# Django JET Admin dashboard
 # ==============================================================================
 
 JET_THEMES = [
@@ -282,41 +302,40 @@ JET_CHANGE_FORM_SIBLING_LINKS = True
 JET_APP_INDEX_DASHBOARD = "jet.dashboard.dashboard.DefaultAppIndexDashboard"
 JET_DASHBOARD_LAYOUT = "layout.VerticalLayout"
 JET_INDEX_DASHBOARD = "backend.dashboard.CustomIndexDashboard"
+
 JET_SIDE_MENU_ITEMS = [
+    # Раздел управления пользователями
     {
-        "label": "Пользователи и группы",
+        "label": "Управление доступом",
         "items": [
-            {"name": "backend.user", "label": "Пользователи"},
-            {"name": "auth.group", "label": "Группы"},
+            {"name": "backend.user", "label": "Пользователи системы"},
+            {"name": "auth.group", "label": "Группы доступа"},
         ],
     },
+    # Раздел клиентских данных
     {
-        "label": "Контакты",
+        "label": "Клиентские данные",
         "app_label": "backend",
         "items": [
             {"name": "contact", "label": "Контактные данные"},
+            {"name": "order", "label": "История заказов"},
+            {"name": "orderitem", "label": "Позиции заказов"},
         ],
     },
+    # Раздел управления товарами
     {
-        "label": "Товары и категории",
+        "label": "Товарный каталог",
         "app_label": "backend",
         "items": [
             {"name": "shop", "label": "Магазины"},
-            {"name": "category", "label": "Категории"},
-            {"name": "product", "label": "Товары"},
-            {"name": "productinfo", "label": "Информация о товарах"},
-            {"name": "parameter", "label": "Параметры"},
-            {"name": "productparameter", "label": "Параметры товаров"},
+            {"name": "category", "label": "Категории товаров"},
+            {"name": "product", "label": "Товарные карточки"},
+            {"name": "productinfo", "label": "Детализация товаров"},
+            {"name": "parameter", "label": "Характеристики"},
+            {"name": "productparameter", "label": "Характеристики товаров"},
         ],
     },
-    {
-        "label": "Заказы",
-        "app_label": "backend",
-        "items": [
-            {"name": "order", "label": "Заказы"},
-            {"name": "orderitem", "label": "Элементы заказов"},
-        ],
-    },
+    # Раздел управления магазинами
     {
         "label": "Операции поставщика",
         "items": [
@@ -328,7 +347,19 @@ JET_SIDE_MENU_ITEMS = [
             }
         ],
     },
+    # Раздел социальных сетей
+    {
+        "label": "Социальная авторизация",
+        "items": [
+            {"name": "social_django.usersocialauth", "label": "Привязанные аккаунты"},
+            {"name": "social_django.nonce", "label": "Одноразовые коды"},
+            {"name": "social_django.association", "label": "Ассоциации сессий"},
+            {"name": "social_django.code", "label": "Коды авторизации"},
+            {"name": "social_django.partial", "label": "Частичные данные"},
+        ],
+    },
 ]
+
 # ==============================================================================
 # Интеграции
 # ==============================================================================
@@ -341,11 +372,6 @@ sentry_sdk.init(
     integrations=[DjangoIntegration()],
     send_default_pii=True,
 )
-
-# VK Auth (аутентификация ВК)
-VK_APP_ID = os.getenv("VK_APP_ID")
-VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")
-VK_REDIRECT_URI = "https://oauth.vk.com/blank.html"
 
 # Cachalot (кэширования запросов к БД)
 CACHES = {
