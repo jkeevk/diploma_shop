@@ -5,21 +5,29 @@
         const VKID = window.VKIDSDK;
   
         VKID.Config.init({
-          app: "{{ VK_APP_ID }}",
-          redirectUrl: "{{ VK_REDIRECT_URI }}",
+          app: 53307480,
+          redirectUrl: 'https://localhost/api/docs/swagger',
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          scope: 'email',
+          scope: '', // Complete the necessary accesses as needed
         });
   
-        const floatingOneTap = new VKID.FloatingOneTap();
+        const oneTap = new VKID.OneTap();
   
-        floatingOneTap.render({
-          appName: 'ShopVKAuth',
-          showAlternativeLogin: true
+        oneTap.render({
+          container: document.currentScript.parentElement,
+          showAlternativeLogin: true,
+          styles: {
+            borderRadius: 14,
+            height: 48
+          },
+          oauthList: [
+            'ok_ru',
+            'mail_ru'
+          ]
         })
         .on(VKID.WidgetEvents.ERROR, vkidOnError)
-        .on(VKID.FloatingOneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
           const code = payload.code;
           const deviceId = payload.device_id;
   
@@ -29,8 +37,6 @@
         });
       
         function vkidOnSuccess(data) {
-          floatingOneTap.close();
-          
           // Processing result
         }
       
