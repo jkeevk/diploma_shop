@@ -546,7 +546,7 @@ class UserOrdersView(APIView):
 
 
 class VKAuthView(TemplateView):
-    template_name = "vk_auth.html"
+    template_name = "vk/vk_auth.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

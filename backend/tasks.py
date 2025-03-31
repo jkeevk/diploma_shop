@@ -94,7 +94,7 @@ def send_confirmation_email_async(user_id: int, token: str) -> None:
     """Асинхронно отправляет письмо для подтверждения регистрации."""
     try:
         user = User.objects.get(id=user_id)
-        confirmation_url = reverse("user-register-confirm", kwargs={"token": token})
+        confirmation_url = reverse("register-confirm", kwargs={"token": token})
         full_url = f"{settings.BACKEND_URL}{confirmation_url}"
         subject = "Confirm Your Registration"
         message = (
@@ -185,7 +185,7 @@ def send_password_reset_email_async(user_id: int, token: str, uid: str) -> None:
     try:
         user = User.objects.get(id=user_id)
         reset_link = settings.BACKEND_URL + reverse(
-            "password_reset_confirm", kwargs={"uidb64": uid, "token": token}
+            "password-reset-confirm", kwargs={"uidb64": uid, "token": token}
         )
         send_mail(
             subject="Password Reset",

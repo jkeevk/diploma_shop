@@ -76,7 +76,7 @@ class TestPasswordResetConfirmView:
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
-        url = reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token})
+        url = reverse("password-reset-confirm", kwargs={"uidb64": uid, "token": token})
         response = api_client.post(url, {"new_password": "NewSecurePassword123!"})
 
         assert response.status_code == status.HTTP_200_OK
@@ -89,7 +89,7 @@ class TestPasswordResetConfirmView:
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
         url = reverse(
-            "password_reset_confirm", kwargs={"uidb64": uid, "token": "invalid_token"}
+            "password-reset-confirm", kwargs={"uidb64": uid, "token": "invalid_token"}
         )
         response = api_client.post(url, {"new_password": "NewPassword123"})
 
@@ -100,7 +100,7 @@ class TestPasswordResetConfirmView:
     def test_invalid_uid(self, api_client):
         """Проверка обработки неверного идентификатора пользователя."""
         url = reverse(
-            "password_reset_confirm",
+            "password-reset-confirm",
             kwargs={"uidb64": "invalid_uid", "token": "any_token"},
         )
         response = api_client.post(url, {"new_password": "NewPassword123"})
@@ -114,7 +114,7 @@ class TestPasswordResetConfirmView:
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
 
-        url = reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token})
+        url = reverse("password-reset-confirm", kwargs={"uidb64": uid, "token": token})
         response = api_client.post(url, {"new_password": "123"})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST

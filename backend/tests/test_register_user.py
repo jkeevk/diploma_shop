@@ -25,7 +25,7 @@ class TestUserRegistration:
 
     def test_successful_registration(self):
         """Проверка успешной регистрации с корректными данными."""
-        url = reverse("user-register")
+        url = reverse("register")
         response = self.client.post(url, self.base_data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -37,7 +37,7 @@ class TestUserRegistration:
     def test_registration_with_invalid_role(self):
         """Проверка обработки невалидной роли."""
         data = {**self.base_data, "role": "invalid_role"}
-        url = reverse("user-register")
+        url = reverse("register")
 
         response = self.client.post(url, data)
 
@@ -47,7 +47,7 @@ class TestUserRegistration:
     def test_registration_with_existing_email(self):
         """Проверка регистрации с уже существующим email."""
         User.objects.create_user(**self.base_data)
-        url = reverse("user-register")
+        url = reverse("register")
 
         response = self.client.post(url, self.base_data)
 
@@ -56,7 +56,7 @@ class TestUserRegistration:
 
     def test_registration_with_missing_fields(self):
         """Проверка валидации отсутствия обязательных полей."""
-        url = reverse("user-register")
+        url = reverse("register")
         response = self.client.post(url, {})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -69,7 +69,7 @@ class TestUserRegistration:
     def test_password_validation(self):
         """Проверка валидации слабого пароля."""
         data = {**self.base_data, "password": "123"}
-        url = reverse("user-register")
+        url = reverse("register")
 
         response = self.client.post(url, data)
 
@@ -79,7 +79,7 @@ class TestUserRegistration:
     @patch("backend.signals.TESTING", False)
     def test_email_sending_after_registration(self):
         """Проверка отправки письма с подтверждением."""
-        url = reverse("user-register")
+        url = reverse("register")
         self.client.post(url, self.base_data)
 
         assert len(mail.outbox) == 1
@@ -92,12 +92,10 @@ class TestUserRegistration:
     @patch("backend.signals.TESTING", False)
     def test_successful_email_confirmation(self):
         """Проверка успешного подтверждения email."""
-        self.client.post(reverse("user-register"), self.base_data)
+        self.client.post(reverse("register"), self.base_data)
         user = User.objects.get(email=self.base_data["email"])
 
-        url = reverse(
-            "user-register-confirm", kwargs={"token": user.confirmation_token}
-        )
+        url = reverse("register-confirm", kwargs={"token": user.confirmation_token})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
@@ -106,7 +104,7 @@ class TestUserRegistration:
 
     def test_invalid_confirmation_token(self):
         """Проверка обработки невалидного токена подтверждения."""
-        url = reverse("user-register-confirm", kwargs={"token": "invalid_token"})
+        url = reverse("register-confirm", kwargs={"token": "invalid_token"})
         response = self.client.get(url)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

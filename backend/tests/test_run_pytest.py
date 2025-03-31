@@ -55,7 +55,9 @@ class TestRunPytestView:
         Проверяем, что неавторизованный пользователь не может получить доступ
         к представлению проверки задачи.
         """
-        response = api_client.get("/tests/check-pytest-task/some-task-id/")
+        url = reverse("check-pytest", kwargs={"task_id": "some-task-id"})
+        response = api_client.get(url)
+
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data["detail"] == "Пожалуйста, войдите в систему."
 
@@ -73,8 +75,8 @@ class TestRunPytestView:
             mock_task = mock_async_result.return_value
             mock_task.ready.return_value = False
             mock_task.failed.return_value = False
-
-            response = api_client.get(f"/tests/check-pytest-task/{task_id}/")
+            url = reverse("check-pytest", kwargs={"task_id": task_id})
+            response = api_client.get(url)
 
         assert response.status_code == status.HTTP_202_ACCEPTED
         assert response.data == {

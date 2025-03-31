@@ -11,6 +11,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
+from django.views.generic.base import RedirectView
 from rest_framework_nested.routers import NestedDefaultRouter
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import (
@@ -18,111 +19,166 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
-from backend.views import (
-    UserViewSet,
-    ProductViewSet,
-    RegisterView,
-    ConfirmRegistrationView,
-    CategoryViewSet,
-    ShopView,
-    ContactViewSet,
-    PartnerUpdateView,
-    LoginView,
-    PasswordResetView,
-    PasswordResetConfirmView,
-    BasketViewSet,
-    PartnerOrders,
-    PartnerImportView,
-    PartnerImportStatusView,
-    ConfirmBasketView,
-    ToggleUserActivityView,
-    ParameterViewSet,
-    UserOrdersView,
-    VKAuthView,
-)
-from backend.tests.views_tests import (
-    RunPytestView,
-    CheckPytestTaskView,
-    ForceSentryErrorAPIView,
-)
+
+import backend.views as views
+import backend.OAuth.social_views as social_views
+import backend.tests.views_tests as tests_views
+
 from backend.admin import admin_site
 
-router = DefaultRouter()
-router.register(r"products", ProductViewSet, basename="product")
-router.register(r"users", UserViewSet, basename="user")
-router.register(r"contacts", ContactViewSet, basename="user-contacts")
-router.register(r"basket", BasketViewSet, basename="basket")
-router.register(r"categories", CategoryViewSet, basename="category")
-router.register(r"parameters", ParameterViewSet, basename="parameter")
+# API Router Configuration
+api_router = DefaultRouter()
+api_router.register(r"products", views.ProductViewSet, basename="product")
+api_router.register(r"users", views.UserViewSet, basename="user")
+api_router.register(r"contacts", views.ContactViewSet, basename="user-contacts")
+api_router.register(r"basket", views.BasketViewSet, basename="basket")
+api_router.register(r"categories", views.CategoryViewSet, basename="category")
+api_router.register(r"parameters", views.ParameterViewSet, basename="parameter")
 
-user_router = NestedDefaultRouter(router, r"users", lookup="user")
-user_router.register(r"contacts", ContactViewSet, basename="user-contacts")
+# Nested Routes
+user_router = NestedDefaultRouter(api_router, r"users", lookup="user")
+user_router.register(r"contacts", views.ContactViewSet, basename="user-contacts")
 
-urlpatterns = (
-    [
-        path("schema", SpectacularAPIView.as_view(), name="schema"),
-        path(
-            "swagger",
-            SpectacularSwaggerView.as_view(url_name="schema"),
-            name="swagger-ui",
+urlpatterns = [
+    path(
+        "",
+        RedirectView.as_view(url="/api/docs/swagger", permanent=False),
+        name="root-redirect",
+    ),
+    path("admin/", admin_site.urls),
+    # API Documentation
+    path("api/schema", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/swagger",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/docs/redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"
+    ),
+    # Authentication Endpoints
+    path(
+        "api/auth/",
+        include(
+            [
+                path("login", views.LoginView.as_view(), name="login"),
+                path("register", views.RegisterView.as_view(), name="register"),
+                path(
+                    "register/confirm/<str:token>",
+                    views.ConfirmRegistrationView.as_view(),
+                    name="register-confirm",
+                ),
+                path(
+                    "password/reset",
+                    views.PasswordResetView.as_view(),
+                    name="password-reset",
+                ),
+                path(
+                    "password/reset/confirm/<str:uidb64>/<str:token>",
+                    views.PasswordResetConfirmView.as_view(),
+                    name="password-reset-confirm",
+                ),
+                path("social/vk", views.VKAuthView.as_view(), name="vk-auth"),
+            ]
         ),
-        path("user/login", LoginView.as_view(), name="login"),
-        path("vk-auth/", VKAuthView.as_view(), name="vk_auth"),
-        path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-        path(r"jet/", include("jet.urls", "jet")),
-        path(r"jet/dashboard/", include("jet.dashboard.urls", "jet-dashboard")),
-        path("admin/", admin_site.urls, name="admin"),
-        path("tests/run-pytest/", RunPytestView.as_view(), name="run-pytest"),
-        path(
-            "tests/trigger-error/",
-            ForceSentryErrorAPIView.as_view(),
-            name="trigger-error",
+    ),
+    # Social Auth Endpoints
+    path(
+        "social/",
+        include(
+            [
+                path(
+                    "google/login", social_views.google_login_page, name="google-login"
+                ),
+                path("google/auth", social_views.google_auth, name="google-auth"),
+                path(
+                    "google/callback",
+                    social_views.google_callback,
+                    name="google-callback",
+                ),
+                path("", include("social_django.urls", namespace="social")),
+            ]
         ),
-        path(
-            "tests/check-pytest-task/<str:task_id>/",
-            CheckPytestTaskView.as_view(),
-            name="check_pytest_task",
+    ),
+    # Partner API Endpoints
+    path(
+        "api/partner/",
+        include(
+            [
+                path(
+                    "update", views.PartnerUpdateView.as_view(), name="partner-update"
+                ),
+                path(
+                    "import", views.PartnerImportView.as_view(), name="partner-import"
+                ),
+                path(
+                    "import/status/<str:task_id>",
+                    views.PartnerImportStatusView.as_view(),
+                    name="import-status",
+                ),
+                path("orders", views.PartnerOrders.as_view(), name="partner-orders"),
+            ]
         ),
-        path("", include(router.urls)),
-        path("", include(user_router.urls)),
-        path("user/register", RegisterView.as_view(), name="user-register"),
-        path(
-            "user/register/confirm/<str:token>",
-            ConfirmRegistrationView.as_view(),
-            name="user-register-confirm",
+    ),
+    # User Management Endpoints
+    path(
+        "api/user/",
+        include(
+            [
+                path(
+                    "<int:user_id>/toggle-activity",
+                    views.ToggleUserActivityView.as_view(),
+                    name="toggle-user-activity",
+                ),
+                path("orders", views.UserOrdersView.as_view(), name="user-orders"),
+            ]
         ),
-        path(
-            "user/password_reset",
-            PasswordResetView.as_view(),
-            name="password-reset",
+    ),
+    # Shop & Order Endpoints
+    path("api/shops", views.ShopView.as_view(), name="shops"),
+    path(
+        "api/basket/confirm/<int:contact_id>",
+        views.ConfirmBasketView.as_view(),
+        name="confirm-basket",
+    ),
+    # Testing Endpoints
+    path(
+        "api/tests/",
+        include(
+            [
+                path(
+                    "run-pytest", tests_views.RunPytestView.as_view(), name="run-pytest"
+                ),
+                path(
+                    "check-pytest/<str:task_id>",
+                    tests_views.CheckPytestTaskView.as_view(),
+                    name="check-pytest",
+                ),
+                path(
+                    "trigger-error",
+                    tests_views.ForceSentryErrorAPIView.as_view(),
+                    name="trigger-error",
+                ),
+            ]
         ),
-        path(
-            "user/password_reset/confirm/<str:uidb64>/<str:token>",
-            PasswordResetConfirmView.as_view(),
-            name="password_reset_confirm",
-        ),
-        path("partner/update", PartnerUpdateView.as_view(), name="partner-update"),
-        path("partner/import", PartnerImportView.as_view(), name="partner-import"),
-        path(
-            "partner/import/status/<str:task_id>/",
-            PartnerImportStatusView.as_view(),
-            name="import-status",
-        ),
-        path(
-            "basket/confirm/<int:contact_id>/",
-            ConfirmBasketView.as_view(),
-            name="confirm-basket",
-        ),
-        path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
-        path("shops", ShopView.as_view(), name="shops"),
-        path(
-            "user/<int:user_id>/toggle-activity/",
-            ToggleUserActivityView.as_view(),
-            name="toggle-user-activity",
-        ),
-        path("user/orders", UserOrdersView.as_view(), name="user-orders"),
-        path("silk/", include("silk.urls", namespace="silk")),
-    ]
-    + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-)
+    ),
+    # Third-party Integrations
+    path("jet/", include("jet.urls", "jet")),
+    path("jet/dashboard/", include("jet.dashboard.urls", "jet-dashboard")),
+    path("silk/", include("silk.urls", "silk")),
+    # Main API Routes
+    path("api/", include(api_router.urls)),
+    path("api/", include(user_router.urls)),
+]
+
+# Static and media files (development only)
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+    # Debug Toolbar
+    import debug_toolbar
+
+    urlpatterns = [
+        path("__debug__/", include(debug_toolbar.urls)),
+    ] + urlpatterns

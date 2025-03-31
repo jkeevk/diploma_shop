@@ -14,7 +14,7 @@ services:
       DJANGO_SETTINGS_MODULE: orders.settings
       PYTHONPATH: /app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/"]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -127,7 +127,7 @@ services:
       - "443:443"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/"]
       interval: 20s
       timeout: 5s
       retries: 3
