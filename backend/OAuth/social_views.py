@@ -1,3 +1,4 @@
+import json
 import requests
 
 from django.urls import reverse
@@ -5,10 +6,12 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view
 
 from backend.models import User
-import json
+from backend.swagger.config import SWAGGER_CONFIGS
 
 
 def google_auth(request):
@@ -94,6 +97,22 @@ def google_callback(request):
         )
 
 
+@SWAGGER_CONFIGS["google_auth_schema"]
+@api_view(["GET"])
 def google_login_page(request):
     """Главная страница для входа"""
     return render(request, "google/google_login.html")
+
+
+@SWAGGER_CONFIGS["vk_auth_schema"]
+class VKAuthView(APIView):
+    def get(self, request, *args, **kwargs):
+        """Рендерит HTML-страницу авторизации через VK"""
+        return render(
+            request,
+            "vk/vk_auth.html",
+            {
+                "VK_APP_ID": settings.VK_APP_ID,
+                "VK_REDIRECT_URI": settings.VK_REDIRECT_URI,
+            },
+        )

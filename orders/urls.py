@@ -78,7 +78,6 @@ urlpatterns = [
                     views.PasswordResetConfirmView.as_view(),
                     name="password-reset-confirm",
                 ),
-                path("social/vk", views.VKAuthView.as_view(), name="vk-auth"),
             ]
         ),
     ),
@@ -96,6 +95,7 @@ urlpatterns = [
                     social_views.google_callback,
                     name="google-callback",
                 ),
+                path("vk/login", social_views.VKAuthView.as_view(), name="vk-auth"),
                 path("", include("social_django.urls", namespace="social")),
             ]
         ),

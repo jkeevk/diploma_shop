@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
-from django.views.generic import TemplateView
 from django.conf import settings
 from django.http import Http404
 
@@ -543,18 +542,3 @@ class UserOrdersView(APIView):
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
-
-
-class VKAuthView(TemplateView):
-    template_name = "vk/vk_auth.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        context.update(
-            {
-                "VK_APP_ID": settings.VK_APP_ID,
-                "VK_REDIRECT_URI": settings.VK_REDIRECT_URI,
-            }
-        )
-        return context

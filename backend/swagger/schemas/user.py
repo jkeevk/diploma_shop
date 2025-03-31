@@ -531,4 +531,36 @@ USER_SCHEMAS = {
             ),
         ],
     ),
+    "google_auth_schema": extend_schema(
+        summary="Страница авторизации через Google",
+        description="Этот эндпоинт рендерит HTML-страницу для авторизации через Google. Для начала авторизации перейдите по следующей ссылке: [https://localhost/social/google/login](https://localhost/social/google/login).",
+        responses={
+            200: {
+                "description": "Страница для авторизации через Google",
+                "content": {
+                    "text/html": {
+                        "example": "<html><body>Login page content here</body></html>"
+                    }
+                },
+            }
+        },
+        tags=["auth"],
+        operation_id="render_google_login",
+    ),
+    "vk_auth_schema": extend_schema(
+        summary="Страница авторизации через VK",
+        description="Этот эндпоинт рендерит HTML-страницу для авторизации через VK. Для начала авторизации перейдите по следующей ссылке: [https://localhost/social/vk/login](https://localhost/social/vk/login).",
+        responses={
+            200: {
+                "description": "Страница для авторизации через VK",
+                "content": {
+                    "text/html": {
+                        "example": "<html><body>Login page content here</body></html>"
+                    }
+                },
+            }
+        },
+        tags=["auth"],
+        operation_id="render_vk_login",
+    ),
 }
