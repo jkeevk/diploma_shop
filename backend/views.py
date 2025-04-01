@@ -533,11 +533,6 @@ class UserOrdersView(APIView):
         """
         Возвращает список заказов со статусом "confirmed".
         """
-        if request.user.is_anonymous:
-            return Response(
-                {"detail": "Пожалуйста, войдите в систему."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
 
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)

@@ -21,6 +21,8 @@ class BasketFilter(filters.FilterSet):
 class CategoryFilter(filters.FilterSet):
     name = filters.CharFilter(
         field_name="name",
+        lookup_expr="icontains",
+        help_text="Фильтр по названию категории (частичное совпадение, без учета регистра)",
     )
 
     class Meta:
