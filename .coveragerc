@@ -12,3 +12,4 @@ omit =
     */backend/__init__.py
     */backend/swagger/*
     */backend/management/*
+    */backend/OAuth/social_views.py
