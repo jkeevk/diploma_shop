@@ -308,7 +308,7 @@ JET_SIDE_MENU_ITEMS = [
     {
         "label": "Управление доступом",
         "items": [
-            {"name": "backend.user", "label": "Пользователи системы"},
+            {"name": "backend.user", "label": "Пользователи"},
             {"name": "auth.group", "label": "Группы доступа"},
         ],
     },

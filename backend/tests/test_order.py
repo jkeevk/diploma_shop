@@ -801,9 +801,7 @@ class TestCustomCheck:
         assert response.data["status"] == "canceled"
         assert response.data["order_items"][0]["quantity"] == 7
 
-    def test_user_update_forbidden_status(
-        self, api_client, product_info, customer, admin, supplier
-    ):
+    def test_user_update_forbidden_status(self, api_client, product_info, customer):
         """Пользователь не может ставить статусы кроме валидных"""
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
@@ -821,7 +819,6 @@ class TestCustomCheck:
         response = api_client.post(url, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED
         order_id = response.data["id"]
-        api_client.force_authenticate(user=admin)
 
         update_url = reverse("basket-detail", args=[order_id])
         update_data = {
@@ -837,7 +834,10 @@ class TestCustomCheck:
 
         response = api_client.patch(update_url, update_data, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "Некорректный статус" in response.data[0]
+        assert (
+            "Недостаточно прав. Вы можете устанавливать только: new, canceled"
+            in response.data[0]
+        )
 
     def test_admin_update_any_status(self, api_client, product_info, admin, customer):
         """Админ может менять любой статус"""

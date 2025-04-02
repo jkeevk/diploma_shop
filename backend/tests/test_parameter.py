@@ -3,6 +3,7 @@ from rest_framework import status
 from django.urls import reverse
 from backend.models import Parameter
 from backend.serializers import ProductInfoSerializer
+import json
 
 
 @pytest.mark.django_db
@@ -76,6 +77,62 @@ class TestParameterViewSet:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not Parameter.objects.filter(id=deletable_parameter.id).exists()
+
+    def test_create_parameter_with_existing_name(
+        self, api_client, admin, old_parameter
+    ):
+        """
+        Проверяет, что нельзя создать параметр с уже существующим именем (без учета регистра).
+        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        """
+        url = reverse("parameter-list")
+        data = {"name": old_parameter.name.upper()}
+        api_client.force_authenticate(user=admin)
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Параметр с таким именем уже существует" in response.data["name"]
+
+    def test_create_parameter_with_empty_name(self, api_client, admin):
+        """
+        Проверяет, что нельзя создать параметр с пустым именем.
+        Для дополнительной проверки сериализатора заполним пробелами.
+        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        """
+        url = reverse("parameter-list")
+        data = {"name": "  "}
+        api_client.force_authenticate(user=admin)
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Имя параметра не может быть пустым" in response.data["name"]
+
+    def test_create_parameter_with_non_string_name(self, api_client, admin):
+        """
+        Проверяет, что нельзя создать параметр с именем не строкового типа.
+        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        """
+        url = reverse("parameter-list")
+        data = json.dumps({"name": [1, 5, "Цвет"]})
+
+        api_client.force_authenticate(user=admin)
+        response = api_client.post(url, data=data, content_type="application/json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Имя параметра должно быть строкой" in response.data["name"]
+
+    def test_get_nonexistent_parameter_returns_error(self, api_client, admin):
+        """
+        Проверяет, что при запросе несуществующего параметра
+        возвращается сообщение об ошибке.
+        """
+        url = reverse("parameter-detail", kwargs={"pk": 9999})
+        api_client.force_authenticate(user=admin)
+
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert "Параметр не найден" in response.data["detail"]
 
     def test_delete_parameter_as_customer(
         self, api_client, customer, deletable_parameter

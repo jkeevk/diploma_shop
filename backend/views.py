@@ -280,6 +280,12 @@ class ParameterViewSet(ModelViewSet):
     serializer_class = ParameterSerializer
     permission_classes = [check_role_permission("admin", "supplier")]
 
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Параметр не найден")
+
 
 @SWAGGER_CONFIGS["partner_orders_schema"]
 class PartnerOrders(APIView):
@@ -485,8 +491,8 @@ class RegisterView(APIView):
             unique_messages = list(
                 dict.fromkeys([msg for msg in messages if not isinstance(msg, dict)])
             )
-            if unique_messages:
-                clean_errors[field] = unique_messages
+            clean_errors[field] = unique_messages
+
         return clean_errors
 
 

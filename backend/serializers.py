@@ -33,6 +33,7 @@ from .models import (
 
 # Rest Framework
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -371,11 +372,39 @@ class OrderWithContactSerializer(serializers.ModelSerializer):
 
 
 class ParameterSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Parameter."""
+    """Сериализатор для модели Parameter с проверкой уникальности имени."""
+
+    name = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=Parameter.objects.all(),
+                message="Параметр с таким именем уже существует",
+            )
+        ],
+        error_messages={
+            "blank": "Имя параметра не может быть пустым",
+            "required": "Имя параметра обязательно для заполнения",
+            "invalid": "Имя параметра должно быть строкой",
+            "null": "Параметр не может быть пустым",
+        },
+    )
 
     class Meta:
         model = Parameter
-        fields = ["name"]
+        fields = ["id", "name"]
+
+    def validate_name(self, value):
+        """
+        Дополнительная валидация имени параметра:
+        - проверка уникальности (без учета регистра)
+        - удаление пробелов в начале/конце
+        """
+
+        value = value.strip()
+
+        if Parameter.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("Параметр с таким именем уже существует")
+        return value
 
 
 class ProductInfoSerializer(serializers.ModelSerializer):

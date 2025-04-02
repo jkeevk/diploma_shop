@@ -227,7 +227,7 @@ CONTACT_SCHEMAS = {
         ),
         partial_update=extend_schema(
             summary="Частично обновить",
-            description="Обновление отдельных полей контакта.",
+            description="Обновление отдельных полей контакта. Поля, которые не переданы в запросе, останутся прежними.",
             parameters=[
                 OpenApiParameter(
                     name="id",
