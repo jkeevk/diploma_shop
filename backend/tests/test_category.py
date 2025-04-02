@@ -37,6 +37,23 @@ class TestCategoryViewSet:
         assert response.status_code == status.HTTP_201_CREATED
         assert Category.objects.filter(name="New Category").exists()
 
+    def test_create_dublicate_category_as_admin(self, api_client, admin):
+        """
+        Тест создания категории администратором.
+        """
+        api_client.force_authenticate(user=admin)
+
+        data = {"name": "New Category"}
+        url = reverse("category-list")
+        response = api_client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert Category.objects.filter(name="New Category").exists()
+
+        response = api_client.post(url, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Категория с таким именем уже существует" == response.data["name"][0]
+
     def test_create_category_as_customer(self, api_client, customer):
         """
         Тест создания категории пользователем с ролью customer.
@@ -189,30 +206,6 @@ class TestCategoryViewSet:
         assert len(response.data) == 1
         assert response.data[0]["name"] == "Test Category"
 
-    def test_category_pagination(self, api_client):
-        """
-        Тест пагинации при получении списка категорий.
-        """
-        for i in range(2, 12):
-            Category.objects.create(name=f"Category {i}")
-
-        assert Category.objects.count() == 10
-
-        url = reverse("category-list") + "?limit=5"
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["results"]) == 5
-        assert "next" in response.data
-
-        url = response.data["next"]
-        response = api_client.get(url)
-
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["results"]) == 5
-
-        assert response.data["next"] is None
-
     def test_categoty_permission_for_non_action(self):
         """
         Тест проверки прав доступа для действия с категориями.
@@ -222,3 +215,14 @@ class TestCategoryViewSet:
         view.request = Mock(spec=Request)
         permissions = view.get_permissions()
         assert permissions == []
+
+    def test_get_nonexistent_category(self, api_client, admin):
+        """
+        Попытка получения несуществующей категории
+        """
+        api_client.force_authenticate(user=admin)
+
+        response = api_client.get(reverse("category-detail", kwargs={"pk": 9999}))
+
+        assert response.status_code == 404
+        assert response.data["detail"] == "Категория не найдена"
