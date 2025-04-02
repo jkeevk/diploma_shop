@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import QuerySet
-from django.conf import settings
 from django.http import Http404
 
 # Rest Framework
@@ -24,7 +23,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.exceptions import NotFound
 
 # Local imports
-from .filters import BasketFilter, CategoryFilter, ProductFilter
+from .filters import BasketFilter, CategoryFilter, ContactFilter, ProductFilter
 from .models import Category, Contact, Order, Parameter, Product, Shop, User
 from .permissions import check_role_permission
 from .serializers import (
@@ -116,19 +115,22 @@ class CategoryViewSet(ModelViewSet):
 
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = CategoryFilter
     search_fields = ["name"]
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Категория не найдена")
 
     def get_permissions(self) -> List[Any]:
         """
         Настраивает права доступа в зависимости от действия.
         """
         permission_classes = []
-        if self.action in ["list", "retrieve"]:
-            permission_classes = []
-        elif self.action in ["create", "update", "partial_update", "destroy"]:
+        if self.action in ["create", "update", "partial_update", "destroy"]:
             permission_classes = [check_role_permission("admin")]
         return [permission() for permission in permission_classes]
 
@@ -189,6 +191,8 @@ class ContactViewSet(ModelViewSet):
 
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ContactFilter
     permission_classes = [check_role_permission("customer", "admin", "supplier")]
 
     def get_queryset(self) -> QuerySet[Contact]:
@@ -197,6 +201,12 @@ class ContactViewSet(ModelViewSet):
         if user.role == "admin":
             return Contact.objects.all()
         return Contact.objects.filter(user=user)
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Контакт не найден")
 
 
 @SWAGGER_CONFIGS["disable_toggle_user_activity_schema"]

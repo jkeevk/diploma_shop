@@ -182,7 +182,7 @@ BASKET_SCHEMAS = {
             ],
         ),
         retrieve=extend_schema(
-            summary="Получить корзину по ID",
+            summary="Получить корзину",
             description="Возвращает корзину по указанному ID. Требуется авторизация и права покупателя.",
             parameters=[
                 OpenApiParameter(
@@ -202,7 +202,7 @@ BASKET_SCHEMAS = {
             examples=[*BASKET_SUCCESS_EXAMPLES[:1], *COMMON_ERROR_EXAMPLES],
         ),
         update=extend_schema(
-            summary="Обновить корзину по ID",
+            summary="Обновить корзину",
             description="Обновляет корзину по указанному ID. Требуется авторизация.",
             parameters=[
                 OpenApiParameter(
@@ -264,7 +264,7 @@ BASKET_SCHEMAS = {
             ],
         ),
         destroy=extend_schema(
-            summary="Удалить корзину по ID",
+            summary="Удалить корзину",
             description="Удаляет корзину по указанному ID. Требуется авторизация.",
             parameters=[
                 OpenApiParameter(
