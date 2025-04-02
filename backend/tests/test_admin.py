@@ -1,9 +1,19 @@
+import os
+from unittest.mock import patch, ANY
+
 import pytest
-from django.contrib.auth import get_user_model
 from django import forms
-import pytest
+from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
+from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, Client
+from django.urls import reverse
 from rest_framework.test import APIRequestFactory
+
 from backend.permissions import CheckRole
+from django_redis import get_redis_connection
+
 
 User = get_user_model()
 
@@ -158,3 +168,85 @@ class TestOrderItemAdmin:
         request.user = user
 
         assert permission.has_permission(request, None) is True
+
+
+@pytest.mark.django_db
+class TestPriceUpdateAdmin(TestCase):
+    """
+    Тесты для PriceUpdateAdmin (админка для обновления товаров от поставщиков)
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Инициализация подключения к Redis перед всеми тестами."""
+        super().setUpClass()
+        cls.redis_conn = get_redis_connection("default")
+
+    def setUp(self):
+        """Инициализация тестового окружения перед каждым тестом."""
+
+        self._clear_caches()
+        self.admin_user = User.objects.create_superuser(
+            email="admin_test@example.com", password="password21", is_staff=True
+        )
+        self.client = Client()
+        self.client.force_login(self.admin_user)
+
+    def tearDown(self):
+        """Очистка тестового окружения после каждого теста."""
+
+        self._clear_caches()
+
+    def _clear_caches(self):
+        """Полная очистка всех кэшей и хранилищ"""
+
+        cache.clear()
+        self.redis_conn.flushdb()
+
+    def test_get_request_renders_template(self):
+        """Тестирует, что GET-запрос отображает шаблон."""
+
+        response = self.client.get(reverse("admin:price_update"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin/price_update.html")
+        self.assertContains(response, "Обновление прайс-листа")
+
+    def test_post_without_file_shows_error(self):
+        """Тестирует, что POST-запрос без файла отображает ошибку."""
+
+        response = self.client.post(reverse("admin:price_update"))
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), "Файл не выбран!")
+
+    def test_post_with_non_json_file_shows_error(self):
+        """Тестирует, что POST-запрос с файлом неверного формата отображает ошибку."""
+
+        file = SimpleUploadedFile("test.txt", b"content", content_type="text/plain")
+        response = self.client.post(reverse("admin:price_update"), {"file": file})
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), "Требуется JSON-файл!")
+
+    @patch("backend.admin.default_storage.save")
+    @patch("backend.admin.export_products_task.delay")
+    def test_valid_file_triggers_processing(self, mock_task, mock_save):
+        """Тестирует, что POST-запрос с правильным файлом запускает обработку данных."""
+
+        file = SimpleUploadedFile("test.json", b"{}", content_type="application/json")
+        response = self.client.post(reverse("admin:price_update"), {"file": file})
+
+        expected_path = os.path.join("data", "test.json")
+        mock_save.assert_called_once_with(expected_path, ANY)
+        mock_task.assert_called_once_with(expected_path)
+
+        messages = list(get_messages(response.wsgi_request))
+        self.assertIn("Файл принят в обработку", str(messages[0]))
+
+    @patch("backend.admin.default_storage.save", side_effect=Exception("Test error"))
+    def test_file_save_error_handling(self, mock_save):
+        """Тестирует обработку ошибок при сохранении файла."""
+
+        file = SimpleUploadedFile("test.json", b"{}", content_type="application/json")
+        response = self.client.post(reverse("admin:price_update"), {"file": file})
+
+        messages = list(get_messages(response.wsgi_request))
+        self.assertIn("Ошибка: Test error", str(messages[0]))
