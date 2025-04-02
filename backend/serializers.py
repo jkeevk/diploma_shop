@@ -1,12 +1,11 @@
 # Standard library imports
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 # Django
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.validators import EmailValidator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils.http import urlsafe_base64_decode
@@ -30,6 +29,7 @@ from .models import (
     User,
     UserRole,
 )
+from .validators import PhoneValidator
 
 # Rest Framework
 from rest_framework import serializers
@@ -37,19 +37,127 @@ from rest_framework.validators import UniqueValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Category."""
+    """Сериализатор для модели Category с проверкой уникальности имени."""
+
+    name = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=Category.objects.all(),
+                message="Категория с таким именем уже существует",
+            )
+        ],
+        error_messages={
+            "blank": "Имя категории не может быть пустым",
+            "required": "Имя категории обязательно для заполнения",
+            "invalid": "Имя категории должно быть строкой",
+            "null": "Категория не может быть пустой",
+        },
+    )
 
     class Meta:
         model = Category
         fields = ["id", "name"]
 
+    def validate_name(self, value):
+        """
+        Дополнительная валидация имени категории:
+        - проверка уникальности (без учета регистра)
+        - удаление пробелов в начале/конце
+        """
+        value = value.strip()
+
+        if Category.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("Категория с таким именем уже существует")
+        return value
+
 
 class ContactSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Contact."""
+    """Сериализатор для модели Contact с полной валидацией и русификацией ошибок."""
+
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        error_messages={
+            "required": "Пользователь обязателен для заполнения",
+            "does_not_exist": "Пользователь с таким ID не существует",
+            "incorrect_type": "Некорректный тип данных для пользователя",
+            "null": "Поле пользователя не может быть пустым",
+            "invalid_choice": "Указанный пользователь не существует",
+        },
+    )
+
+    phone = serializers.CharField(
+        validators=[PhoneValidator()],
+        error_messages={
+            "blank": "Телефон не может быть пустым",
+            "required": "Телефон обязателен для заполнения",
+            "null": "Телефон не может быть пустым",
+            "invalid": "Введите корректный номер телефона в формате +79991234567",
+        },
+    )
+
+    city = serializers.CharField(
+        error_messages={
+            "blank": "Город не может быть пустым",
+            "required": "Город обязателен для заполнения",
+            "null": "Город не может быть пустым",
+            "invalid": "Некорректный формат города",
+        }
+    )
+
+    street = serializers.CharField(
+        error_messages={
+            "blank": "Улица не может быть пустой",
+            "required": "Улица обязательна для заполнения",
+            "null": "Улица не может быть пустой",
+            "invalid": "Некорректный формат улицы",
+        }
+    )
+
+    house = serializers.CharField(
+        error_messages={
+            "blank": "Дом не может быть пустым",
+            "required": "Дом обязателен для заполнения",
+            "null": "Дом не может быть пустым",
+            "invalid": "Некорректный номер дома",
+        }
+    )
+
+    structure = serializers.CharField(
+        required=False,
+        allow_null=True,
+        error_messages={
+            "blank": "Корпус не может быть пустым",
+            "invalid": "Некорректный формат корпуса",
+            "null": "Корпус не может быть пустым",
+        },
+    )
+
+    building = serializers.CharField(
+        required=False,
+        allow_null=True,
+        error_messages={
+            "blank": "Строение не может быть пустым",
+            "invalid": "Некорректный формат строения",
+            "null": "Строение не может быть пустым",
+        },
+    )
+
+    apartment = serializers.CharField(
+        required=False,
+        allow_null=True,
+        error_messages={
+            "blank": "Квартира не может быть пустой",
+            "invalid": "Некорректный формат квартиры",
+            "null": "Квартира не может быть пустой",
+        },
+    )
 
     class Meta:
         model = Contact
         fields = "__all__"
+        extra_kwargs = {
+            "user": {"error_messages": {"invalid": "Недопустимый ID пользователя"}}
+        }
 
     def __init__(self, *args, **kwargs):
         """Инициализация сериализатора."""
@@ -235,12 +343,10 @@ class OrderSerializer(serializers.ModelSerializer):
         order_items_data = validated_data.pop("order_items")
         user = validated_data.pop("user", self.context["request"].user)
 
-        # Получаем или создаем новый заказ
         order, created = Order.objects.get_or_create(
             user=user, status="new", defaults=validated_data
         )
 
-        # Обрабатываем все элементы заказа
         for item_data in order_items_data:
             self._process_order_item(order, item_data)
 
