@@ -1,5 +1,6 @@
 # Standard library imports
 from typing import Dict, Any
+from decimal import Decimal
 
 # Django
 from django.contrib.auth import authenticate
@@ -11,9 +12,6 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.db import transaction
-
-# DRF Spectacular
-from drf_spectacular.utils import extend_schema_field
 
 # Local imports
 from .models import (
@@ -37,21 +35,15 @@ from rest_framework.validators import UniqueValidator
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """Сериализатор для модели Category с проверкой уникальности имени."""
+    """Сериализатор для модели Category с проверкой уникальности имени при создании."""
 
     name = serializers.CharField(
-        validators=[
-            UniqueValidator(
-                queryset=Category.objects.all(),
-                message="Категория с таким именем уже существует",
-            )
-        ],
         error_messages={
             "blank": "Имя категории не может быть пустым",
             "required": "Имя категории обязательно для заполнения",
             "invalid": "Имя категории должно быть строкой",
             "null": "Категория не может быть пустой",
-        },
+        }
     )
 
     class Meta:
@@ -60,14 +52,23 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):
         """
-        Дополнительная валидация имени категории:
-        - проверка уникальности (без учета регистра)
-        - удаление пробелов в начале/конце
+        Валидация имени категории:
+        - При создании: проверка уникальности (без учета регистра)
+        - При обновлении: разрешено сохранение текущего имени
         """
         value = value.strip()
+        instance = self.instance
 
-        if Category.objects.filter(name__iexact=value).exists():
+        if instance and instance.name.lower() == value.lower():
+            return value
+
+        if (
+            Category.objects.filter(name__iexact=value)
+            .exclude(pk=instance.pk if instance else None)
+            .exists()
+        ):
             raise serializers.ValidationError("Категория с таким именем уже существует")
+
         return value
 
 
@@ -513,30 +514,30 @@ class ParameterSerializer(serializers.ModelSerializer):
         return value
 
 
-class ProductInfoSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели ProductInfo с дополнительным полем parameters."""
-
-    shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all())
-    parameters = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ProductInfo
-        fields = ["shop", "quantity", "price", "price_rrc", "parameters"]
-
-    @extend_schema_field(serializers.DictField)
-    def get_parameters(self, obj: ProductInfo) -> Dict[str, Any]:
-        """Метод для получения параметров продукта в виде словаря."""
-        parameters = obj.product_parameters.all()
-        return {param.parameter.name: param.value for param in parameters}
-
-
 class ProductParameterSerializer(serializers.ModelSerializer):
     """
     Сериализатор для модели ProductParameter.
     """
 
     parameter = serializers.SlugRelatedField(
-        slug_field="name", queryset=Parameter.objects.all()
+        slug_field="name",
+        queryset=Parameter.objects.all(),
+        error_messages={
+            "required": "ID параметра обязателен.",
+            "does_not_exist": "Неверный ID параметра.",
+            "incorrect_type": "Некорректный тип ID параметра.",
+            "invalid": "Некорректный ID параметра.",
+            "null": "Параметр не может быть пустым",
+        },
+    )
+
+    value = serializers.CharField(
+        error_messages={
+            "blank": "Значение параметра не может быть пустым",
+            "required": "Значение параметра обязательно для заполнения",
+            "null": "Значение параметра не может быть пустым",
+            "invalid": "Некорректное значение параметра",
+        }
     )
 
     class Meta:
@@ -544,13 +545,156 @@ class ProductParameterSerializer(serializers.ModelSerializer):
         fields = ["parameter", "value"]
 
 
+class ProductInfoSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели ProductInfo с полями параметров."""
+
+    shop = serializers.PrimaryKeyRelatedField(
+        queryset=Shop.objects.all(),
+        error_messages={
+            "required": "ID магазина обязателен.",
+            "does_not_exist": "Неверный ID магазина.",
+            "incorrect_type": "Некорректный тип ID магазина.",
+        },
+    )
+
+    parameters = serializers.DictField(
+        child=serializers.CharField(
+            error_messages={
+                "invalid": "Значение параметра должно быть строкой",
+                "blank": "Значение параметра не может быть пустым",
+                "required": "Значение параметра обязательно для заполнения",
+            }
+        ),
+        write_only=True,
+        error_messages={
+            "required": "Параметры обязательны для заполнения.",
+            "null": "Параметры не могут быть пустыми.",
+            "invalid": "Некорректный формат параметров (ожидается словарь)",
+        },
+        required=False,
+    )
+
+    product_parameters = ProductParameterSerializer(
+        many=True,
+        read_only=True,
+        error_messages={
+            "required": "Параметры обязательны для заполнения.",
+            "null": "Параметры не могут быть пустыми.",
+            "invalid": "Некорректные параметры.",
+        },
+    )
+
+    price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        error_messages={
+            "required": "Цена обязательна для заполнения.",
+            "invalid": "Некорректное число.",
+            "min_value": "Цена должна быть больше 0.",
+        },
+    )
+
+    price_rrc = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        error_messages={
+            "invalid": "Некорректное число.",
+            "min_value": "Цена должна быть больше 0.",
+        },
+    )
+
+    external_id = serializers.CharField(
+        error_messages={
+            "blank": "Внешний ID не может быть пустым",
+            "invalid": "Некорректный внешний ID",
+        },
+        required=False,
+    )
+
+    description = serializers.CharField(
+        error_messages={
+            "blank": "Описание не может быть пустым",
+            "invalid": "Некорректное описание",
+        },
+        required=False,
+    )
+
+    def validate_price(self, value):
+        if value < Decimal("0.01"):
+            raise serializers.ValidationError("Цена должна быть больше 0.")
+        return value
+
+    def validate_price_rrc(self, value):
+        if value < Decimal("0.01"):
+            raise serializers.ValidationError("Цена должна быть больше 0.")
+        return value
+
+    def validate_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Количество не может быть отрицательным.")
+        return value
+
+    quantity = serializers.IntegerField(
+        error_messages={
+            "invalid": "Требуется целое число.",
+        },
+        required=False,
+    )
+
+    class Meta:
+        model = ProductInfo
+        fields = [
+            "shop",
+            "external_id",
+            "description",
+            "quantity",
+            "price",
+            "price_rrc",
+            "parameters",
+            "product_parameters",
+        ]
+
+
 class ProductSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для модели Product с вложенными сериализаторами для категории и информации о продукте.
+    Сериализатор для модели Product с вложенным сериализатором для информации о продукте.
+    Категория обрабатывается через имя, а не объект.
     """
 
-    category = CategorySerializer()
-    product_infos = ProductInfoSerializer(many=True)
+    name = serializers.CharField(
+        error_messages={
+            "required": "Название товара обязательно для заполнения.",
+            "blank": "Название товара не может быть пустым.",
+            "invalid": "Некорректное название товара.",
+        }
+    )
+
+    model = serializers.CharField(
+        error_messages={
+            "blank": "Модель товара не может быть пустой.",
+            "invalid": "Некорректная модель товара.",
+        },
+        required=False,
+    )
+
+    category = serializers.CharField(
+        error_messages={
+            "required": "Категория обязательна для заполнения.",
+            "blank": "Категория не может быть пустой.",
+            "invalid": "Некорректное имя категории.",
+        }
+    )
+
+    product_infos = ProductInfoSerializer(
+        many=True,
+        error_messages={
+            "required": "Информация о продукте обязательна для заполнения.",
+            "blank": "Информация о продукте не может быть пустой.",
+            "invalid": "Некорректная информация о продукте.",
+            "null": "Информация о продукте не может быть пустой.",
+        },
+    )
 
     class Meta:
         model = Product
@@ -558,78 +702,78 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: Dict[str, Any]) -> Product:
         """
-        Создание нового продукта с учетом вложенных данных.
+        Создание нового продукта с учётом вложенных данных.
         """
-        category_data = validated_data.pop("category")
         product_infos_data = validated_data.pop("product_infos")
+        category_name = validated_data.pop("category")
+        category, created = Category.objects.get_or_create(name=category_name)
 
-        category, created = Category.objects.get_or_create(**category_data)
         product = Product.objects.create(category=category, **validated_data)
 
         for product_info_data in product_infos_data:
-            parameters_data = product_info_data.pop("parameters", [])
-            shop_data = product_info_data.get("shop")
-
-            product_info, created = ProductInfo.objects.get_or_create(
-                product=product, shop=shop_data, defaults=product_info_data
+            parameters_data = product_info_data.pop("parameters", {})
+            product_info = ProductInfo.objects.create(
+                product=product, shop=product_info_data.pop("shop"), **product_info_data
             )
 
-            for param_data in parameters_data:
-                parameter_name = param_data.get("parameter")
-                value = param_data.get("value")
-                parameter, _ = Parameter.objects.get_or_create(name=parameter_name)
-                ProductParameter.objects.update_or_create(
+            for param_name, param_value in parameters_data.items():
+                parameter, _ = Parameter.objects.get_or_create(name=param_name)
+                ProductParameter.objects.create(
                     product_info=product_info,
                     parameter=parameter,
-                    defaults={"value": value},
+                    value=param_value,
                 )
 
         return product
 
     def update(self, instance: Product, validated_data: Dict[str, Any]) -> Product:
-        """
-        Обновление продукта с учётом вложенных данных.
-        """
+        is_partial = self.context["request"].method == "PATCH"
+
         if "category" in validated_data:
-            category_data = validated_data.pop("category")
-            category, _ = Category.objects.get_or_create(**category_data)
+            category_name = validated_data.pop("category")
+            category, _ = Category.objects.get_or_create(name=category_name)
             instance.category = category
 
         instance.name = validated_data.get("name", instance.name)
         instance.model = validated_data.get("model", instance.model)
         instance.save()
 
-        if "product_infos" in validated_data:
-            product_infos_data = validated_data.pop("product_infos")
+        product_infos_data = validated_data.pop("product_infos", None)
+
+        if product_infos_data is not None:
             for product_info_data in product_infos_data:
-                shop = product_info_data.get("shop")
-                parameters_data = product_info_data.pop("parameters", [])
-                if "id" in product_info_data:
-                    product_info = ProductInfo.objects.get(
-                        id=product_info_data["id"], product=instance
-                    )
-                    if product_info.shop.id != shop.id:
-                        product_info.shop = shop
-                    for key, value in product_info_data.items():
-                        if key not in ["id", "shop"]:
-                            setattr(product_info, key, value)
-                    product_info.save()
+                shop_id = product_info_data.pop("shop", None)
 
+                if not shop_id:
+                    if is_partial and instance.product_infos.exists():
+                        product_info = instance.product_infos.first()
+                    else:
+                        raise serializers.ValidationError({"shop": "Обязательное поле"})
                 else:
-                    product_info = ProductInfo.objects.create(
-                        product=instance,
-                        **{k: v for k, v in product_info_data.items() if k != "id"},
+                    product_info = ProductInfo.objects.filter(
+                        product=instance, shop_id=shop_id
+                    ).first()
+
+                if not product_info:
+                    raise serializers.ValidationError(
+                        {"shop": "Товар не связан с магазином"}
                     )
 
-                for param_data in parameters_data:
-                    parameter_name = param_data["parameter"]
-                    value = param_data["value"]
-                    parameter, _ = Parameter.objects.get_or_create(name=parameter_name)
-                    ProductParameter.objects.update_or_create(
-                        product_info=product_info,
-                        parameter=parameter,
-                        defaults={"value": value},
-                    )
+                for field in ["quantity", "price", "price_rrc"]:
+                    if field in product_info_data:
+                        setattr(product_info, field, product_info_data[field])
+                product_info.save()
+
+                if "parameters" in product_info_data:
+                    parameters_data = product_info_data.pop("parameters")
+                    product_info.product_parameters.all().delete()
+                    for param_name, param_value in parameters_data.items():
+                        parameter, _ = Parameter.objects.get_or_create(name=param_name)
+                        ProductParameter.objects.create(
+                            product_info=product_info,
+                            parameter=parameter,
+                            value=param_value,
+                        )
 
         return instance
 

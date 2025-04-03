@@ -21,6 +21,8 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import ValidationError
 from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import action
 
 # Local imports
 from .filters import BasketFilter, CategoryFilter, ContactFilter, ProductFilter
@@ -459,6 +461,9 @@ class PasswordResetView(GenericAPIView):
 class ProductViewSet(ModelViewSet):
     """
     Сет представлений для управления товарами. Поддерживает фильтрацию и поиск.
+    Доступ:
+    - list/retrieve: все пользователи
+    - create/update/delete: только поставщики и администраторы
     """
 
     queryset = Product.objects.all()
@@ -467,7 +472,24 @@ class ProductViewSet(ModelViewSet):
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = ProductFilter
     search_fields = ["name", "model", "category__name"]
-    permission_classes = [check_role_permission("supplier", "admin")]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_permissions(self) -> list:
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+
+        return [check_role_permission("supplier", "admin")()]
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise NotFound(detail="Товар не найден.", code="not_found")
 
 
 @SWAGGER_CONFIGS["register_schema"]

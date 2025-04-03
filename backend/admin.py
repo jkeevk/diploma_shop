@@ -233,7 +233,7 @@ class ShopAdmin(admin.ModelAdmin):
     Отображает название магазина и URL с возможностью поиска по имени.
     """
 
-    list_display = ("name", "url", "user")
+    list_display = ("id", "name", "url", "user")
     search_fields = ("name", "user")
     list_filter = ("name",)
 
@@ -244,7 +244,10 @@ class CategoryAdmin(admin.ModelAdmin):
     Предоставляет возможность поиска по названию категории и управления связанными магазинами.
     """
 
-    list_display = ("name",)
+    list_display = (
+        "id",
+        "name",
+    )
     search_fields = ("name",)
     filter_horizontal = ("shops",)
 
@@ -256,7 +259,7 @@ class ProductAdmin(admin.ModelAdmin):
     фильтрации и прямого редактирования в списковом представлении.
     """
 
-    list_display = ("name", "category", "model")
+    list_display = ("id", "name", "category", "model")
     search_fields = ("name", "model", "category__name")
     list_filter = ("category",)
     list_editable = ("model",)
@@ -269,7 +272,15 @@ class ProductInfoAdmin(admin.ModelAdmin):
     с возможностью инлайнового редактирования параметров продукта.
     """
 
-    list_display = ("product", "shop", "description", "price", "quantity", "price_rrc")
+    list_display = (
+        "id",
+        "product",
+        "shop",
+        "description",
+        "price",
+        "quantity",
+        "price_rrc",
+    )
     search_fields = ("product__name", "shop__name", "description")
     list_filter = ("product", "shop")
     list_editable = ("description", "price", "quantity", "price_rrc")
@@ -283,7 +294,10 @@ class ParameterAdmin(admin.ModelAdmin):
     Отображает названия параметров с возможностью поиска.
     """
 
-    list_display = ("name",)
+    list_display = (
+        "id",
+        "name",
+    )
     search_fields = ("name",)
 
 
@@ -293,7 +307,7 @@ class ProductParameterAdmin(admin.ModelAdmin):
     Отображает информацию о продукте, параметре и значении с возможностями поиска и фильтрации.
     """
 
-    list_display = ("product_info", "parameter", "value")
+    list_display = ("id", "product_info", "parameter", "value")
     search_fields = ("value", "parameter__name")
     list_filter = ("parameter",)
     raw_id_fields = ("product_info", "parameter")
@@ -337,7 +351,7 @@ class OrderItemAdmin(admin.ModelAdmin):
     фильтрацию и инлайновое редактирование.
     """
 
-    list_display = ("order", "product", "shop", "quantity", "cost")
+    list_display = ("id", "order", "product", "shop", "quantity", "cost")
     search_fields = ("order__id", "product__name", "shop__name")
     list_filter = ("order",)
     raw_id_fields = ("order", "product", "shop")
