@@ -193,7 +193,7 @@ class TestCategoryViewSet:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data
-        assert "unique" in str(response.data["name"])
+        assert "Категория с таким именем уже существует" in str(response.data["name"])
 
     def test_category_search(self, api_client, category):
         """

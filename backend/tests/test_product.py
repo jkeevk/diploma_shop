@@ -1,8 +1,10 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from backend.models import Product, Category, Shop, ProductInfo
+from backend.models import Product, Category, Shop, ProductInfo, Parameter
 from backend.serializers import ProductSerializer
+from django.test import TestCase
+from rest_framework.exceptions import ValidationError
 
 
 @pytest.mark.django_db
@@ -34,7 +36,7 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "Test Product"
         assert response.data["model"] == "Test Model"
-        assert response.data["category"]["name"] == "Test Category"
+        assert response.data["category"] == "Test Category"
         assert len(response.data["product_infos"]) == 1
         assert response.data["product_infos"][0]["shop"] == shop.id
         assert response.data["product_infos"][0]["quantity"] == 10
@@ -47,7 +49,7 @@ class TestProductAPI:
         product_data = {
             "name": "Test Product",
             "model": "Test Model",
-            "category": {"name": "New_Category"},
+            "category": "New_Category",
             "product_infos": [
                 {
                     "shop": shop.id,
@@ -64,14 +66,46 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["name"] == "Test Product"
         assert response.data["model"] == "Test Model"
-        assert response.data["category"]["name"] == "New_Category"
+        assert response.data["category"] == "New_Category"
         assert len(response.data["product_infos"]) == 1
         assert response.data["product_infos"][0]["shop"] == shop.id
         assert response.data["product_infos"][0]["quantity"] == 10
 
-    def test_update_product_with_updated_product_info(self, api_client, supplier, shop):
+    def test_create_product_all_fields(self, api_client, supplier, shop):
         """
-        Тест на обновление продукта с изменением информации о продукте через API.
+        Тест на создание продукта с изменением информации о продукте через API.
+        """
+        api_client.force_authenticate(user=supplier)
+        product_data = {
+            "name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+            "model": "Updated Model",
+            "category": "Телефоны",
+            "product_infos": [
+                {
+                    "shop": shop.id,
+                    "description": "Познакомьтесь с iPhone XS 512 ГБ в золотом цвете в Apple Store — элегантный дизайн, высокая производительность и потрясающий Super Retina дисплей. Премиум-смартфон для тех, кто ценит лучшее!",
+                    "external_id": 142342,
+                    "quantity": 14,
+                    "price": "110000.00",
+                    "price_rrc": "116990.00",
+                    "parameters": {
+                        "Встроенная память (Гб)": "512",
+                        "Диагональ (дюйм)": "6.5",
+                        "Разрешение (пикс)": "2688x1242",
+                        "Цвет": "золотистый",
+                    },
+                }
+            ],
+        }
+
+        url = reverse("product-list")
+        response = api_client.post(url, product_data, format="json")
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_update_product_with_differnt_shop(self, api_client, supplier, shop):
+        """
+        Тест на обновление продукта с разными магазинами через API.
         """
         api_client.force_authenticate(user=supplier)
         category = Category.objects.create(name="Test Category")
@@ -94,22 +128,18 @@ class TestProductAPI:
         update_data = {
             "product_infos": [
                 {
-                    "id": product_info.id,
                     "shop": new_shop.id,
                     "quantity": 20,
                     "price": 200.00,
                     "price_rrc": 220.00,
                 }
-            ],
+            ]
         }
 
         url = reverse("product-detail", kwargs={"pk": product.id})
         response = api_client.patch(url, update_data, format="json")
-        assert response.status_code == status.HTTP_200_OK
-
-        updated_info = ProductInfo.objects.get(product=product, shop=new_shop)
-        assert updated_info.shop.id == new_shop.id
-        assert updated_info.quantity == 20
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data["shop"] == "Товар не связан с магазином"
 
     def test_filter_by_shop(self, api_client, product, supplier, shop, category):
         """
@@ -133,7 +163,7 @@ class TestProductAPI:
         assert len(response.data) == 1
         assert response.data[0]["name"] == "Test Product"
         assert response.data[0]["model"] == "Test Model"
-        assert response.data[0]["category"]["name"] == "Test Category"
+        assert response.data[0]["category"] == "Test Category"
         assert len(response.data[0]["product_infos"]) == 1
         assert response.data[0]["product_infos"][0]["shop"] == shop.id
 
@@ -181,6 +211,84 @@ class TestProductAPI:
         response = api_client.patch(url, update_data, format="json")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_update_patch_all_fields(self, api_client, supplier, shop):
+        """
+        Тест на обновление продукта с изменением информации о продукте через API.
+        """
+        api_client.force_authenticate(user=supplier)
+        category = Category.objects.create(name="Test Category")
+        new_shop = Shop.objects.create(name="New Shop")
+
+        product = Product.objects.create(
+            name="Test Product",
+            model="Test Model",
+            category=category,
+        )
+
+        product_info = ProductInfo.objects.create(
+            product=product,
+            shop=shop,
+            quantity=10,
+            price=100.00,
+            price_rrc=120.00,
+        )
+
+        update_data = {
+            "name": "Смартфон Apple iPhone XS Max 512GB (золотистый)",
+            "model": "Updated Model",
+            "category": "Телефоны",
+            "product_infos": [
+                {
+                    "quantity": 14,
+                    "price": "110000.00",
+                    "price_rrc": "116990.00",
+                    "parameters": {
+                        "Встроенная память (Гб)": "512",
+                        "Диагональ (дюйм)": "6.5",
+                        "Разрешение (пикс)": "2688x1242",
+                        "Цвет": "золотистый",
+                    },
+                }
+            ],
+        }
+
+        url = reverse("product-detail", kwargs={"pk": product.id})
+        response = api_client.patch(url, update_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_update_invalid_price_quantity(self, api_client, supplier, shop):
+        """
+        Тест на обновление продукта с невалидными значениями цены и количества через API.
+        """
+        api_client.force_authenticate(user=supplier)
+        product_data = {
+            "name": "Test Product",
+            "model": "Test Model",
+            "category": "New_Category",
+            "product_infos": [
+                {
+                    "shop": shop.id,
+                    "quantity": -10,
+                    "price": -50.00,
+                    "price_rrc": -120.00,
+                }
+            ],
+        }
+
+        url = reverse("product-list")
+        response = api_client.post(url, product_data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Цена должна быть больше 0." == str(
+            response.data["product_infos"][0]["price"][0]
+        )
+        assert "Цена должна быть больше 0." == str(
+            response.data["product_infos"][0]["price_rrc"][0]
+        )
+        assert "Количество не может быть отрицательным." == str(
+            response.data["product_infos"][0]["quantity"][0]
+        )
 
     def test_delete_product(self, api_client, supplier, shop):
         """
@@ -379,19 +487,88 @@ class TestProductAPI:
         """
         assert str(product) == "Test Product"
 
-    def test_update_skips_product_infos_block(self, supplier):
-        """Тест: Обновление продукта без передачи product_infos -> пропуск блока."""
-        category = Category.objects.create(name="Test Category")
-        product = Product.objects.create(
-            name="Original Name", model="Original Model", category=category
-        )
 
-        update_data = {"name": "Updated Name", "model": "Updated Model"}
+@pytest.mark.django_db
+class TestProductSerializer(TestCase):
+    def setUp(self):
+        self.shop = Shop.objects.create(name="Test Shop")
+        self.category = Category.objects.create(name="Electronics")
+        self.valid_data = {
+            "name": "Test Product",
+            "model": "X100",
+            "category": "Electronics",
+            "product_infos": [
+                {
+                    "shop": self.shop.id,
+                    "quantity": 10,
+                    "price": "999.99",
+                    "parameters": {"Color": "Black", "Weight": "150g"},
+                }
+            ],
+        }
 
-        serializer = ProductSerializer()
-        updated_instance = serializer.update(product, update_data)
+    def test_create_product_with_new_category(self):
+        data = self.valid_data.copy()
+        data["category"] = "New Category"
 
-        assert updated_instance.name == "Updated Name"
-        assert updated_instance.model == "Updated Model"
+        serializer = ProductSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
 
-        assert updated_instance.product_infos.count() == 0
+        assert Product.objects.count() == 1
+        assert Category.objects.get(name="New Category")
+        assert product.product_infos.count() == 1
+
+    def test_create_product_with_existing_category(self):
+        serializer = ProductSerializer(data=self.valid_data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+
+        assert Category.objects.count() == 1
+        assert product.category == self.category
+
+    def test_parameters_creation(self):
+        serializer = ProductSerializer(data=self.valid_data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+
+        product_info = product.product_infos.first()
+        assert product_info.product_parameters.count() == 2
+        assert Parameter.objects.filter(name="Color").exists()
+
+    def test_missing_required_fields(self):
+        invalid_data = self.valid_data.copy()
+        del invalid_data["name"]
+        del invalid_data["category"]
+
+        serializer = ProductSerializer(data=invalid_data)
+        with pytest.raises(ValidationError) as exc:
+            serializer.is_valid(raise_exception=True)
+
+        errors = exc.value.detail
+        assert "name" in errors
+        assert "category" in errors
+        assert "product_infos" not in errors
+
+    def test_product_info_validation(self):
+        invalid_data = self.valid_data.copy()
+        invalid_data["product_infos"][0]["price"] = "-100"
+
+        serializer = ProductSerializer(data=invalid_data)
+        with pytest.raises(ValidationError) as exc:
+            serializer.is_valid(raise_exception=True)
+
+        errors = exc.value.detail["product_infos"][0]
+        assert "price" in errors
+
+    def test_partial_product_info_data(self):
+        data = self.valid_data.copy()
+        data["product_infos"][0] = {"shop": self.shop.id, "price": "499.99"}
+
+        serializer = ProductSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+
+        product_info = product.product_infos.first()
+        assert product_info.quantity == 0
+        assert product_info.product_parameters.count() == 0

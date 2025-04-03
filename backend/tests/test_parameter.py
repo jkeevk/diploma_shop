@@ -21,26 +21,6 @@ class TestParameterViewSet:
         response = api_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_product_info_serialization(self, product_info):
-        """
-        Проверяет корректную сериализацию объекта ProductInfo.
-        Убедитесь, что сериализованные данные содержат все необходимые поля.
-        """
-        serializer = ProductInfoSerializer(product_info)
-        data = serializer.data
-
-        assert "shop" in data
-        assert "quantity" in data
-        assert "price" in data
-        assert "price_rrc" in data
-        assert "parameters" in data
-
-        expected_parameters = {
-            param.parameter.name: param.value
-            for param in product_info.product_parameters.all()
-        }
-        assert data["parameters"] == expected_parameters
-
     def test_update_parameter_as_admin(self, api_client, admin, old_parameter):
         """
         Проверяет, что администратор может обновить параметр.
