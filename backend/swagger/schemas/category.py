@@ -100,6 +100,7 @@ CATEGORY_SCHEMAS = {
         list=extend_schema(
             summary="Список категорий",
             description="Получение списка всех категорий с возможностью фильтрации по названию. Авторизация не требуется.",
+            tags=["Категории"],
             parameters=[
                 OpenApiParameter(
                     name="name",
@@ -126,6 +127,7 @@ CATEGORY_SCHEMAS = {
         create=extend_schema(
             summary="Создать категорию",
             description="Создание новой категории. Требуются права администратора.",
+            tags=["Категории"],
             request=CategorySerializer,
             responses={
                 201: {
@@ -154,6 +156,7 @@ CATEGORY_SCHEMAS = {
         retrieve=extend_schema(
             summary="Получить категорию",
             description="Получение информации о категории по ID. Авторизация не требуется.",
+            tags=["Категории"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -183,6 +186,7 @@ CATEGORY_SCHEMAS = {
         update=extend_schema(
             summary="Обновить категорию",
             description="Полное обновление категории. Требуются права администратора.",
+            tags=["Категории"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -221,6 +225,7 @@ CATEGORY_SCHEMAS = {
         partial_update=extend_schema(
             summary="Частично обновить категорию",
             description="Частичное обновление категории. Поля, которые не переданы в запросе, останутся прежними.",
+            tags=["Категории"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -259,6 +264,7 @@ CATEGORY_SCHEMAS = {
         destroy=extend_schema(
             summary="Удалить категорию",
             description="Удаление категории. Требуются права администратора. Связанные товары будут удалены.",
+            tags=["Категории"],
             parameters=[
                 OpenApiParameter(
                     name="id",

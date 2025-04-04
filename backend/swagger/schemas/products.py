@@ -126,6 +126,7 @@ PRODUCT_SCHEMAS = {
     "product_viewset_schema": extend_schema_view(
         list=extend_schema(
             summary="Список товаров",
+            tags=["Товары"],
             description="Получение списка товаров с фильтрацией по магазину и категории.",
             parameters=[
                 # Фильтрация
@@ -192,6 +193,7 @@ PRODUCT_SCHEMAS = {
             summary="Создать товар",
             description="Создание товара с привязкой к магазинам. Требуются права администратора или поставщика.",
             request=ProductSerializer,
+            tags=["Товары"],
             responses={
                 201: {
                     "description": "Товар создан",
@@ -289,6 +291,7 @@ PRODUCT_SCHEMAS = {
         retrieve=extend_schema(
             summary="Получить товар",
             description="Детальная информация о товаре по ID.",
+            tags=["Товары"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -319,6 +322,7 @@ PRODUCT_SCHEMAS = {
         update=extend_schema(
             summary="Обновить товар",
             description="Полное обновление данных товара (включая product_infos). Требуются права администратора или поставщика.",
+            tags=["Товары"],
             request=ProductSerializer,
             parameters=[
                 OpenApiParameter(
@@ -371,6 +375,7 @@ PRODUCT_SCHEMAS = {
         ),
         partial_update=extend_schema(
             summary="Частичное обновление",
+            tags=["Товары"],
             description="Изменение отдельных полей товара. Требуются права администратора или поставщика.",
             parameters=[
                 OpenApiParameter(
@@ -411,6 +416,7 @@ PRODUCT_SCHEMAS = {
         ),
         destroy=extend_schema(
             summary="Удалить товар",
+            tags=["Товары"],
             description="Удаление товара. Требуются права администратора или поставщика.",
             responses={
                 204: {"description": "Товар удален"},
@@ -436,5 +442,87 @@ PRODUCT_SCHEMAS = {
                 *AUTH_ERROR_EXAMPLES,
             ],
         ),
-    )
+    ),
+    "product_upload_image": extend_schema(
+        summary="Загрузка изображения товара",
+        description="""## Загрузка изображения для товара
+        * Поддерживаемые форматы: JPEG, PNG
+        * Максимальный размер файла: 5MB
+        * При повторной загрузке старое изображение заменяется
+        * Миниатюра генерируется автоматически""",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "image": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Файл изображения товара (обязательное поле)",
+                    }
+                },
+                "required": ["image"],
+            }
+        },
+        responses={
+            200: {"description": "Изображение загружено"},
+            **PRODUCT_ERROR_RESPONSES,
+        },
+        tags=["Администрирование"],
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                location=OpenApiParameter.PATH,
+                description="ID товара в формате integer",
+                type=OpenApiTypes.INT,
+                required=True,
+            )
+        ],
+        examples=[
+            OpenApiExample(
+                "Пример запроса",
+                value={"image": "файл.jpg"},
+                request_only=True,
+                media_type="multipart/form-data",
+            ),
+            OpenApiExample(
+                name="Успешная загрузка изображения",
+                value={
+                    "shop": 1,
+                    "external_id": "4216293",
+                    "description": "iPhone 14 Pro 256 ГБ в фиолетовом цвете — инновационный дизайн, мощный процессор A16 Bionic и камера с технологией Dynamic Island. Идеальный выбор для любителей технологий!",
+                    "quantity": 25,
+                    "price": "129999.00",
+                    "price_rrc": "139990.00",
+                    "product_parameters": [
+                        {"parameter": "Встроенная память (Гб)", "value": "256"}
+                    ],
+                    "image_thumbnail": "/media/CACHE/images/products/phone_6rL1rYR/f79d703169124aab8e9b32d0384047b5.jpg",
+                },
+                status_codes=["200"],
+                response_only=True,
+            ),
+            OpenApiExample(
+                name="Недопустимый формат файла",
+                value={
+                    "image": [
+                        "File extension “txt” is not allowed. Allowed extensions are: bmp, dib, gif, jfif, jpe, jpg, jpeg, pbm, pgm, ppm, pnm, pfm, png, apng, blp, bufr, cur, pcx, dcx, dds, ps, eps, fit, fits, fli, flc, ftc, ftu, gbr, grib, h5, hdf, jp2, j2k, jpc, jpf, jpx, j2c, icns, ico, im, iim, mpg, mpeg, tif, tiff, mpo, msp, palm, pcd, pdf, pxr, psd, qoi, bw, rgb, rgba, sgi, ras, tga, icb, vda, vst, webp, wmf, emf, xbm, xpm."
+                    ]
+                },
+                status_codes=["400"],
+                response_only=True,
+            ),
+            OpenApiExample(
+                name="Невалидный файл",
+                value={
+                    "image": [
+                        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+                    ]
+                },
+                status_codes=["400"],
+                response_only=True,
+            ),
+            *AUTH_ERROR_EXAMPLES,
+            NOT_FOUND_PRODUCT_EXAMPLE,
+        ],
+    ),
 }

@@ -36,6 +36,7 @@ TEST_SCHEMAS = {
     "run_pytest_schema": extend_schema(
         summary="Запуск pytest",
         description="Эндпоинт для запуска pytest. Доступен только для администраторов.",
+        tags=["Тесты"],
         responses={
             202: {
                 "description": "Задача на выполнение pytest успешно создана.",
@@ -55,6 +56,7 @@ TEST_SCHEMAS = {
     "check_pytest_task_schema": extend_schema(
         summary="Проверка статуса задачи pytest",
         description="Эндпоинт для проверки статуса задачи pytest. Возвращает результат выполнения тестов.",
+        tags=["Тесты"],
         parameters=[
             OpenApiParameter(
                 name="task_id",
@@ -109,6 +111,7 @@ TEST_SCHEMAS = {
     "test_force_sentry_error_schema": extend_schema(
         summary="Запуск принудительной ошибки для Sentry",
         description="Эндпоинт для принудительного запуска ошибки для отправки в Sentry. Доступен только для администраторов.",
+        tags=["Тесты"],
         responses={
             500: {
                 "description": "Тестовая ошибка успешно сгенерирована и отправлена в Sentry",

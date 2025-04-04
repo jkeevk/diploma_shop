@@ -100,6 +100,7 @@ PARAMETER_SCHEMAS = {
         list=extend_schema(
             summary="Список параметров",
             description="Получение списка всех параметров товаров. Требуются права администратора или поставщика.",
+            tags=["Параметры товаров"],
             responses={
                 200: {
                     "description": "Успешный ответ",
@@ -124,6 +125,7 @@ PARAMETER_SCHEMAS = {
         create=extend_schema(
             summary="Создать параметр",
             description="Создание нового параметра товара. Требуются права администратора или поставщика.",
+            tags=["Параметры товаров"],
             request=ParameterSerializer,
             responses={
                 201: {
@@ -154,6 +156,7 @@ PARAMETER_SCHEMAS = {
         retrieve=extend_schema(
             summary="Получить параметр",
             description="Получение информации о параметре по ID. Требуются права администратора или поставщика.",
+            tags=["Параметры товаров"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -186,6 +189,7 @@ PARAMETER_SCHEMAS = {
         update=extend_schema(
             summary="Обновить параметр",
             description="Полное обновление параметра. Требуются права администратора или поставщика.",
+            tags=["Параметры товаров"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -224,6 +228,7 @@ PARAMETER_SCHEMAS = {
         partial_update=extend_schema(
             summary="Частично обновить параметр",
             description="Частичное обновление параметра. Поля, которые не переданы в запросе, останутся прежними.",
+            tags=["Параметры товаров"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -262,6 +267,7 @@ PARAMETER_SCHEMAS = {
         destroy=extend_schema(
             summary="Удалить параметр",
             description="Удаление параметра. Требуются права администратора или поставщика.",
+            tags=["Параметры товаров"],
             parameters=[
                 OpenApiParameter(
                     name="id",

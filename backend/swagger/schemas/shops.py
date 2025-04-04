@@ -14,6 +14,7 @@ SHOP_SCHEMAS = {
         get=extend_schema(
             description="Получить список всех магазинов.",
             summary="Список магазинов",
+            tags=["Магазины"],
             responses={
                 200: {
                     "description": "Некорректные данные",
@@ -36,6 +37,7 @@ SHOP_SCHEMAS = {
         post=extend_schema(
             description="Создать новый магазин и связать его с текущим пользователем. Только пользователи с ролью admin или supplier могут выполнять этот запрос.",
             summary="Создание магазина",
+            tags=["Магазины"],
             request=ShopSerializer,
             responses={
                 201: ShopSerializer,

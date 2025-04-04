@@ -152,6 +152,7 @@ BASKET_SCHEMAS = {
         list=extend_schema(
             summary="Список активных корзин",
             description="Возвращает список активных корзин с заказами пользователя. Требуется авторизация и права покупателя.",
+            tags=["Корзины"],
             responses={
                 200: {
                     "description": "Список активных корзин пользователя",
@@ -164,6 +165,7 @@ BASKET_SCHEMAS = {
         create=extend_schema(
             summary="Создать новую корзину",
             description="Создает новую корзину для пользователя. Требуется авторизация и права покупателя.",
+            tags=["Корзины"],
             responses={
                 201: {
                     "description": "Корзина успешно создана",
@@ -184,6 +186,7 @@ BASKET_SCHEMAS = {
         retrieve=extend_schema(
             summary="Получить корзину",
             description="Возвращает корзину по указанному ID. Требуется авторизация и права покупателя.",
+            tags=["Корзины"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -204,6 +207,7 @@ BASKET_SCHEMAS = {
         update=extend_schema(
             summary="Обновить корзину",
             description="Обновляет корзину по указанному ID. Требуется авторизация.",
+            tags=["Корзины"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -232,6 +236,7 @@ BASKET_SCHEMAS = {
         partial_update=extend_schema(
             summary="Частичное обновление корзины",
             description="Частично обновляет корзину. Требуется авторизация.",
+            tags=["Корзины"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -266,6 +271,7 @@ BASKET_SCHEMAS = {
         destroy=extend_schema(
             summary="Удалить корзину",
             description="Удаляет корзину по указанному ID. Требуется авторизация.",
+            tags=["Корзины"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -295,6 +301,7 @@ BASKET_SCHEMAS = {
     "confirm_basket_schema": extend_schema(
         summary="Подтвердить корзину",
         description="Подтвердить заказ. Изменяет статус корзины на 'подтвержден'.",
+        tags=["Корзины"],
         parameters=[
             OpenApiParameter(
                 name="contact_id",

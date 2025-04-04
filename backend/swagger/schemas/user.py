@@ -13,12 +13,33 @@ from backend.serializers import (
     PasswordResetConfirmSerializer,
 )
 
+AUTH_ERROR_EXAMPLES = [
+    OpenApiExample(
+        name="Ошибка: пользователь не авторизован",
+        value={"detail": "Пожалуйста, войдите в систему."},
+        status_codes=["401"],
+        response_only=True,
+    ),
+    OpenApiExample(
+        name="Ошибка: доступ запрещен",
+        value={"detail": "У вас недостаточно прав для выполнения этого действия."},
+        status_codes=["403"],
+        response_only=True,
+    ),
+]
+
+USER_ERROR_RESPONSES = {
+    400: {"description": "Некорректные данные", "content": {"application/json": {}}},
+    401: {"description": "Не авторизован", "content": {"application/json": {}}},
+    403: {"description": "Доступ запрещен", "content": {"application/json": {}}},
+}
 
 USER_SCHEMAS = {
     "disable_toggle_user_activity_schema": extend_schema(
         summary="Переключить активность пользователя",
-        description="Позволяет администратору включить/отключить активность пользователя. "
+        description="Позволяет администратору активировать или деактивировать учетную запись пользователя. При отключенной активности владельца пользователю будет недоступна возможность совершать заказы в магазине."
         "Требуются права администратора. Нельзя изменять свой аккаунт.",
+        tags=["Администрирование"],
         parameters=[
             OpenApiParameter(
                 name="user_id",
@@ -92,6 +113,7 @@ USER_SCHEMAS = {
         summary="Авторизация",
         description="Эндпоинт для авторизации пользователя с помощью электронной почты и пароля. Пользователь получает JWT-токены для дальнейшего использования API.",
         request=LoginSerializer,
+        tags=["Авторизация"],
         responses={
             200: {
                 "description": "Успешная авторизация",
@@ -199,6 +221,7 @@ USER_SCHEMAS = {
         summary="Сброс пароля",
         description="Эндпоинт для сброса пароля пользователя с помощью отправленного токена. Пользователь получит инструкцию по сбросу пароля.",
         request=PasswordResetSerializer,
+        tags=["Пользователь"],
         responses={
             200: {
                 "description": "Успешный запрос",
@@ -267,6 +290,7 @@ USER_SCHEMAS = {
     "password_reset_confirm_schema": extend_schema(
         summary="Подтверждение нового пароля",
         description="Эндпоинт для установки нового пароля с использованием токена из письма. Требует uid и token из ссылки.",
+        tags=["Пользователь"],
         parameters=[
             OpenApiParameter(
                 name="uidb64",
@@ -359,8 +383,9 @@ USER_SCHEMAS = {
         ],
     ),
     "user_orders_schema": extend_schema(
-        summary="Получить подтвержденные заказы пользователя",
+        summary="Получить подтвержденные заказы",
         description="Возвращает список заказов со статусом 'confirmed' для текущего пользователя. Требуется авторизация и права покупателя.",
+        tags=["Пользователь"],
         responses={
             200: {
                 "description": "Успешный ответ.",
@@ -425,6 +450,7 @@ USER_SCHEMAS = {
     "register_schema": extend_schema(
         summary="Регистрация аккаунта",
         description="Регистрация нового пользователя с подтверждением email",
+        tags=["Регистрация"],
         request=UserRegistrationSerializer,
         responses={
             201: {
@@ -505,6 +531,7 @@ USER_SCHEMAS = {
     "confirm_registration_schema": extend_schema(
         summary="Активация аккаунта",
         description="Активация аккаунта пользователя с помощью подтверждения по токену, который был отправлен на email.",
+        tags=["Регистрация"],
         responses={
             200: {
                 "description": "Аккаунт успешно активирован",
@@ -533,7 +560,7 @@ USER_SCHEMAS = {
     ),
     "google_auth_schema": extend_schema(
         summary="Страница авторизации через Google",
-        description="Этот эндпоинт рендерит HTML-страницу для авторизации через Google. Для начала авторизации перейдите по следующей ссылке: [https://localhost/social/google/login](https://localhost/social/google/login).",
+        description="Этот эндпоинт рендерит HTML-страницу для авторизации через Google. Для начала авторизации перейдите по следующей ссылке: [https://localhost/api/social/google/login](https://localhost/api/social/google/login).",
         responses={
             200: {
                 "description": "Страница для авторизации через Google",
@@ -544,12 +571,12 @@ USER_SCHEMAS = {
                 },
             }
         },
-        tags=["auth"],
+        tags=["Авторизация"],
         operation_id="render_google_login",
     ),
     "vk_auth_schema": extend_schema(
         summary="Страница авторизации через VK",
-        description="Этот эндпоинт рендерит HTML-страницу для авторизации через VK. Для начала авторизации перейдите по следующей ссылке: [https://localhost/social/vk/login](https://localhost/social/vk/login).",
+        description="Этот эндпоинт рендерит HTML-страницу для авторизации через VK. Для начала авторизации перейдите по следующей ссылке: [https://localhost/api/social/vk/login](https://localhost/api/social/vk/login).",
         responses={
             200: {
                 "description": "Страница для авторизации через VK",
@@ -560,7 +587,75 @@ USER_SCHEMAS = {
                 },
             }
         },
-        tags=["auth"],
+        tags=["Авторизация"],
         operation_id="render_vk_login",
+    ),
+    "user_upload_image": extend_schema(
+        summary="Обновление аватара",
+        description="""## Загрузка/обновление аватара пользователя
+        * Поддерживаемые форматы: JPEG, PNG
+        * Максимальный размер файла: 5MB
+        * При повторной загрузке старое изображение заменяется
+        * Миниатюра генерируется автоматически""",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "avatar": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Файл изображения (обязательное поле)",
+                    }
+                },
+                "required": ["avatar"],
+            }
+        },
+        responses={
+            200: {"description": "Изображение загружено"},
+            **USER_ERROR_RESPONSES,
+        },
+        tags=["Пользователь"],
+        examples=[
+            OpenApiExample(
+                "Пример запроса",
+                value={"avatar": "файл.jpg"},
+                request_only=True,
+                media_type="multipart/form-data",
+            ),
+            OpenApiExample(
+                name="Успешная загрузка изображения",
+                value={
+                    "id": 1,
+                    "email": "admin@admin.com",
+                    "first_name": "Admin",
+                    "last_name": "Admin",
+                    "role": "admin",
+                    "avatar_thumbnail": "/media/CACHE/images/avatars/Boki-avatar/d3fdf2e63113bf2dfc19d8a92745f433.jpg",
+                },
+                status_codes=["200"],
+                response_only=True,
+            ),
+            OpenApiExample(
+                name="Недопустимый формат файла",
+                value={
+                    "image": [
+                        "File extension “txt” is not allowed. Allowed extensions are: bmp, dib, gif, jfif, jpe, jpg, jpeg, pbm, pgm, ppm, pnm, pfm, png, apng, blp, bufr, cur, pcx, dcx, dds, ps, eps, fit, fits, fli, flc, ftc, ftu, gbr, grib, h5, hdf, jp2, j2k, jpc, jpf, jpx, j2c, icns, ico, im, iim, mpg, mpeg, tif, tiff, mpo, msp, palm, pcd, pdf, pxr, psd, qoi, bw, rgb, rgba, sgi, ras, tga, icb, vda, vst, webp, wmf, emf, xbm, xpm."
+                    ]
+                },
+                status_codes=["400"],
+                response_only=True,
+            ),
+            OpenApiExample(
+                name="Невалидный файл",
+                value={
+                    "image": [
+                        "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+                    ]
+                },
+                status_codes=["400"],
+                response_only=True,
+            ),
+            *AUTH_ERROR_EXAMPLES,
+        ],
     ),
 }

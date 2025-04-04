@@ -112,6 +112,7 @@ CONTACT_SCHEMAS = {
         list=extend_schema(
             summary="Список контактов",
             description="Получение списка всех контактов. Администраторы видят все контакты.",
+            tags=["Контакты"],
             parameters=[
                 OpenApiParameter(
                     name="user",
@@ -158,6 +159,7 @@ CONTACT_SCHEMAS = {
         create=extend_schema(
             summary="Создать контакт",
             description="Добавление нового контактного адреса. Требуются права администратора.",
+            tags=["Контакты"],
             request=ContactSerializer,
             responses={
                 201: {
@@ -231,6 +233,7 @@ CONTACT_SCHEMAS = {
         retrieve=extend_schema(
             summary="Получить контакт",
             description="Получение информации о контакте по ID.",
+            tags=["Контакты"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -260,6 +263,7 @@ CONTACT_SCHEMAS = {
         update=extend_schema(
             summary="Обновить контакт",
             description="Полное обновление контактных данных. Требуются права администратора.",
+            tags=["Контакты"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -313,6 +317,7 @@ CONTACT_SCHEMAS = {
         partial_update=extend_schema(
             summary="Частично обновить контакт",
             description="Частичное обновление контактных данных.",
+            tags=["Контакты"],
             parameters=[
                 OpenApiParameter(
                     name="id",
@@ -366,6 +371,7 @@ CONTACT_SCHEMAS = {
         destroy=extend_schema(
             summary="Удалить контакт",
             description="Удаление контактного адреса. Требуются права администратора.",
+            tags=["Контакты"],
             parameters=[
                 OpenApiParameter(
                     name="id",
