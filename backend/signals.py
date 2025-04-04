@@ -13,8 +13,10 @@ from .tasks import (
     send_password_reset_email_async,
     send_email_to_host_async,
     send_email_to_customer_async,
+    generate_product_image_thumbnails_async,
+    generate_user_avatar_thumbnails_async,
 )
-from .models import User, Order
+from .models import User, Order, ProductInfo
 
 TESTING = os.getenv("DJANGO_TESTING", "False") == "True"
 
@@ -66,3 +68,15 @@ def send_email_to_customer(sender: Any, instance: Order, **kwargs: Any) -> None:
     if instance.status == "confirmed" and not kwargs.get("created") and not TESTING:
         contact = instance.user.contacts.first()
         send_email_to_customer_async.delay(instance.user.email, instance.id, contact.id)
+
+
+@receiver(post_save, sender=ProductInfo)
+def process_image(sender, instance, **kwargs):
+    if instance.image and not kwargs.get("raw"):
+        generate_product_image_thumbnails_async.delay(instance.id)
+
+
+@receiver(post_save, sender=User)
+def handle_avatar_update(sender, instance, **kwargs):
+    if instance.avatar:
+        generate_user_avatar_thumbnails_async.delay(instance.id)

@@ -10,6 +10,9 @@ from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.text import slugify
 
+from imagekit.models import ProcessedImageField, ImageSpecField
+from imagekit.processors import ResizeToFill
+
 
 class UserRole(Enum):
     """
@@ -70,6 +73,22 @@ class User(AbstractUser):
         verbose_name="Роль",
     )
     confirmation_token = models.CharField(max_length=255, blank=True, null=True)
+
+    avatar = ProcessedImageField(
+        upload_to="avatars/",
+        processors=[ResizeToFill(300, 300)],
+        format="JPEG",
+        options={"quality": 90},
+        blank=True,
+        null=True,
+        verbose_name="Аватарка пользователя",
+    )
+    avatar_thumbnail = ImageSpecField(
+        source="avatar",
+        processors=[ResizeToFill(100, 100)],
+        format="JPEG",
+        options={"quality": 70},
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -320,6 +339,21 @@ class ProductInfo(models.Model):
         null=True,
         verbose_name="Рекомендуемая розничная цена",
         validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    image = ProcessedImageField(
+        upload_to="products/",
+        processors=[ResizeToFill(800, 600)],
+        format="JPEG",
+        options={"quality": 90},
+        blank=True,
+        null=True,
+        verbose_name="Изображение товара",
+    )
+    image_thumbnail = ImageSpecField(
+        source="image",
+        processors=[ResizeToFill(300, 200)],
+        format="JPEG",
+        options={"quality": 80},
     )
 
     class Meta:

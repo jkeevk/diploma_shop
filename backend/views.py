@@ -12,7 +12,7 @@ from django.http import Http404
 # Rest Framework
 from rest_framework import status
 from rest_framework.filters import SearchFilter
-from rest_framework.generics import GenericAPIView, ListCreateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -26,7 +26,16 @@ from rest_framework.decorators import action
 
 # Local imports
 from .filters import BasketFilter, CategoryFilter, ContactFilter, ProductFilter
-from .models import Category, Contact, Order, Parameter, Product, Shop, User
+from .models import (
+    Category,
+    Contact,
+    Order,
+    Parameter,
+    Product,
+    Shop,
+    User,
+    ProductInfo,
+)
 from .permissions import check_role_permission
 from .serializers import (
     CategorySerializer,
@@ -38,6 +47,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     ProductSerializer,
+    ProductInfoSerializer,
     ShopSerializer,
     UserRegistrationSerializer,
     UserSerializer,
@@ -573,3 +583,38 @@ class UserOrdersView(APIView):
         orders = Order.objects.filter(user=request.user, status="confirmed").distinct()
         order_serializer = OrderSerializer(orders, many=True)
         return Response(order_serializer.data)
+
+
+@SWAGGER_CONFIGS["product_upload_image"]
+class ProductImageView(UpdateAPIView):
+    queryset = ProductInfo.objects.all()
+    serializer_class = ProductInfoSerializer
+    http_method_names = ["patch"]
+    permission_classes = [check_role_permission("admin")]
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if "image" in self.request.FILES:
+            instance.image_thumbnail = None
+            instance.save()
+
+
+@SWAGGER_CONFIGS["user_upload_image"]
+class UserAvatarUpdateView(UpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [check_role_permission("customer", "supplier", "admin")]
+    http_method_names = ["patch"]
+
+    def get_object(self):
+        return self.request.user
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        file = self.request.FILES.get("avatar")
+
+        if file:
+            if instance.avatar:
+                instance.avatar.delete()
+
+            instance.avatar = file
+            instance.save()

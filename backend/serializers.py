@@ -635,6 +635,9 @@ class ProductInfoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Количество не может быть отрицательным.")
         return value
 
+    image = serializers.ImageField(write_only=True, required=False)
+    image_thumbnail = serializers.SerializerMethodField()
+
     quantity = serializers.IntegerField(
         error_messages={
             "invalid": "Требуется целое число.",
@@ -653,7 +656,12 @@ class ProductInfoSerializer(serializers.ModelSerializer):
             "price_rrc",
             "parameters",
             "product_parameters",
+            "image",
+            "image_thumbnail",
         ]
+
+    def get_image_thumbnail(self, obj):
+        return obj.image_thumbnail.url if obj.image_thumbnail else None
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -913,6 +921,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для модели User."""
 
+    avatar = serializers.ImageField(write_only=True, required=False)
+    avatar_thumbnail = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -921,7 +932,12 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "avatar",
+            "avatar_thumbnail",
         ]
+
+    def get_avatar_thumbnail(self, obj):
+        return obj.avatar_thumbnail.url if obj.avatar_thumbnail else None
 
 
 class PasswordResetSerializer(serializers.Serializer):

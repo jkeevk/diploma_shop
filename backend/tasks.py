@@ -196,3 +196,21 @@ def send_password_reset_email_async(user_id: int, token: str, uid: str) -> None:
         logger.info(f"Password reset email sent to {user.email} for user ID {user_id}")
     except Exception as e:
         logger.error(f"Failed to send password reset email to user ID {user_id}: {e}")
+
+
+@shared_task
+def generate_product_image_thumbnails_async(instance_id):
+    from .models import ProductInfo
+
+    instance = ProductInfo.objects.get(id=instance_id)
+
+    instance.image_thumbnail.generate()
+
+
+@shared_task
+def generate_user_avatar_thumbnails_async(user_id):
+    from .models import User
+
+    user = User.objects.get(id=user_id)
+
+    user.avatar_thumbnail.generate()
