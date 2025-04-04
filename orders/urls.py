@@ -35,9 +35,6 @@ api_router.register(r"basket", views.BasketViewSet, basename="basket")
 api_router.register(r"categories", views.CategoryViewSet, basename="category")
 api_router.register(r"parameters", views.ParameterViewSet, basename="parameter")
 
-# Nested Routes
-user_router = NestedDefaultRouter(api_router, r"users", lookup="user")
-user_router.register(r"contacts", views.ContactViewSet, basename="user-contacts")
 
 urlpatterns = [
     path(
@@ -83,7 +80,7 @@ urlpatterns = [
     ),
     # Social Auth Endpoints
     path(
-        "social/",
+        "api/social/",
         include(
             [
                 path(
@@ -131,6 +128,9 @@ urlpatterns = [
                     name="toggle-user-activity",
                 ),
                 path("orders", views.UserOrdersView.as_view(), name="user-orders"),
+                path(
+                    "avatar", views.UserAvatarUpdateView.as_view(), name="user-avatar"
+                ),
             ]
         ),
     ),
@@ -140,6 +140,11 @@ urlpatterns = [
         "api/basket/confirm/<int:contact_id>",
         views.ConfirmBasketView.as_view(),
         name="confirm-basket",
+    ),
+    path(
+        "api/products/<int:pk>/image/",
+        views.ProductImageView.as_view(),
+        name="product-image",
     ),
     # Testing Endpoints
     path(
@@ -168,7 +173,6 @@ urlpatterns = [
     path("silk/", include("silk.urls", "silk")),
     # Main API Routes
     path("api/", include(api_router.urls)),
-    path("api/", include(user_router.urls)),
 ]
 
 # Static and media files (development only)
