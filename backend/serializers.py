@@ -781,30 +781,75 @@ class ProductSerializer(serializers.ModelSerializer):
 class ShopSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Shop."""
 
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        write_only=True,
+        error_messages={
+            "does_not_exist": "Пользователь с таким ID не существует",
+            "incorrect_type": "Некорректный тип данных для пользователя",
+        },
+    )
+
     class Meta:
         model = Shop
         fields = ["id", "name", "url", "user"]
+        extra_kwargs = {
+            "name": {
+                "error_messages": {
+                    "blank": "Название магазина не может быть пустым",
+                    "required": "Обязательное поле",
+                    "invalid": "Некорректное название магазина",
+                }
+            },
+            "url": {
+                "required": False,
+                "allow_blank": True,
+                "error_messages": {"invalid": "Введите корректный URL-адрес"},
+            },
+        }
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """Валидация данных с учетом ролей"""
+        request = self.context.get("request")
+
+        if attrs.get("user") and request.user.role != "admin":
+            raise serializers.ValidationError(
+                {"user": "Указание пользователя доступно только администраторам"}
+            )
+
+        if request.user.role != "admin" and "user" not in attrs:
+            attrs["user"] = request.user
+
+        return attrs
 
     def create(self, validated_data: Dict[str, Any]) -> Shop:
-        """
-        Создает магазин, если он не существует.
-        Если магазин с таким именем или URL уже существует, возвращает его.
-        """
-        name = validated_data.get("name")
+        """Создание магазина с обработкой URL"""
+        request_user = self.context["request"].user
+        name = validated_data["name"]
         url = validated_data.get("url")
-        user = validated_data.get("user")
 
-        shop, created = Shop.objects.get_or_create(
-            name=name,
-            defaults={"url": url, "user": user},
-        )
+        # Для администраторов
+        if request_user.role == "admin":
+            user = validated_data.get("user", request_user)
 
-        if not created:
-            shop.url = url
-            shop.user = user
-            shop.save()
+            if Shop.objects.filter(name=name, user=user).exists():
+                raise serializers.ValidationError(
+                    {"name": "Магазин с таким названием уже существует"}
+                )
+            return Shop.objects.create(name=name, url=url, user=user)
 
-        return shop
+        # Для продавцов
+        if Shop.objects.filter(name=name, user=request_user).exists():
+            raise serializers.ValidationError(
+                {"name": "Магазин с таким названием уже существует"}
+            )
+        if Shop.objects.filter(name=name).exclude(user=request_user).exists():
+            raise serializers.ValidationError(
+                {"name": "Магазин с таким названием уже существует у другого продавца"}
+            )
+
+        return Shop.objects.create(name=name, url=url, user=request_user)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

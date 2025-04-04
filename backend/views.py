@@ -532,18 +532,16 @@ class RegisterView(APIView):
 class ShopView(ListCreateAPIView):
     """
     Представление для получения списка магазинов и создания нового магазина.
-    Пользователи с ролью admin или supplier могут создавать магазины.
+    Любой пользователь может просматривать магазины. Создавать могут только администраторы и продавцы.
     """
 
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
-    permission_classes = [check_role_permission("admin", "supplier")]
 
-    def perform_create(self, serializer: ShopSerializer) -> None:
-        """
-        При создании магазина автоматически связывает его с текущим пользователем.
-        """
-        serializer.save(user=self.request.user)
+    def get_permissions(self) -> list:
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [check_role_permission("supplier", "admin")()]
 
 
 @SWAGGER_CONFIGS["user_viewset_schema"]
