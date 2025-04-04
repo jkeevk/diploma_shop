@@ -6,6 +6,31 @@ from drf_spectacular.utils import (
     extend_schema,
 )
 
+AUTH_ERROR_RESPONSES = {
+    401: {
+        "description": "Пользователь не авторизован",
+        "content": {"application/json": {}},
+    },
+    403: {
+        "description": "Доступ запрещен",
+        "content": {"application/json": {}},
+    },
+}
+
+AUTH_ERROR_EXAMPLES = [
+    OpenApiExample(
+        name="Ошибка: пользователь не авторизован",
+        value={"detail": "Пожалуйста, войдите в систему."},
+        status_codes=["401"],
+        response_only=True,
+    ),
+    OpenApiExample(
+        name="Ошибка: доступ запрещен",
+        value={"detail": "У вас недостаточно прав для выполнения этого действия."},
+        status_codes=["403"],
+        response_only=True,
+    ),
+]
 
 TEST_SCHEMAS = {
     "run_pytest_schema": extend_schema(
@@ -16,10 +41,7 @@ TEST_SCHEMAS = {
                 "description": "Задача на выполнение pytest успешно создана.",
                 "content": {"application/json": {}},
             },
-            403: {
-                "description": "Доступ запрещен. Требуются права администратора.",
-                "content": {"application/json": {}},
-            },
+            **AUTH_ERROR_RESPONSES,
         },
         examples=[
             OpenApiExample(
@@ -27,11 +49,7 @@ TEST_SCHEMAS = {
                 value={"task_id": "550e8400-e29b-41d4-a716-446655440000"},
                 status_codes=["202"],
             ),
-            OpenApiExample(
-                name="Доступ запрещен",
-                value={"detail": "You do not have permission to perform this action."},
-                status_codes=["403"],
-            ),
+            *AUTH_ERROR_EXAMPLES,
         ],
     ),
     "check_pytest_task_schema": extend_schema(
@@ -58,6 +76,7 @@ TEST_SCHEMAS = {
                 "description": "Ошибка при выполнении задачи.",
                 "content": {"application/json": {}},
             },
+            **AUTH_ERROR_RESPONSES,
         },
         examples=[
             OpenApiExample(
@@ -84,6 +103,7 @@ TEST_SCHEMAS = {
                 value={"status": "FAILURE", "message": "Задача завершилась с ошибкой."},
                 status_codes=["500"],
             ),
+            *AUTH_ERROR_EXAMPLES,
         ],
     ),
     "test_force_sentry_error_schema": extend_schema(
@@ -94,14 +114,7 @@ TEST_SCHEMAS = {
                 "description": "Тестовая ошибка успешно сгенерирована и отправлена в Sentry",
                 "content": {"application/json": {}},
             },
-            401: {
-                "description": "Пользователь не авторизован",
-                "content": {"application/json": {}},
-            },
-            403: {
-                "description": "Доступ запрещен. Требуются права администратора.",
-                "content": {"application/json": {}},
-            },
+            **AUTH_ERROR_RESPONSES,
         },
         examples=[
             OpenApiExample(
@@ -110,20 +123,7 @@ TEST_SCHEMAS = {
                 status_codes=["500"],
                 description="Пример ответа при успешной генерации тестовой ошибки",
             ),
-            OpenApiExample(
-                name="Пользователь не авторизован",
-                value={"detail": "Пожалуйста, войдите в систему."},
-                status_codes=["401"],
-                description="Пример ответа для неавторизованного пользователя",
-            ),
-            OpenApiExample(
-                name="Доступ запрещен",
-                value={
-                    "detail": "У вас недостаточно прав для выполнения этого действия."
-                },
-                status_codes=["403"],
-                description="Пример ответа при отсутствии прав администратора",
-            ),
+            *AUTH_ERROR_EXAMPLES,
         ],
     ),
 }
