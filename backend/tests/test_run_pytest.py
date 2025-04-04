@@ -7,79 +7,93 @@ from django.contrib.auth.models import User
 
 
 @pytest.mark.django_db
-class TestRunPytestView:
-    """
-    Тесты для представления запуска тестов с использованием Celery.
-    """
+class TestRunPytestAPI:
+    """Тесты API для запуска и проверки задач pytest."""
 
-    def test_admin_access(self, api_client: APIClient, admin: User) -> None:
-        """
-        Проверяем, что только администратор может запускать тесты.
+    def test_admin_user_can_trigger_pytest_run(
+        self, api_client: APIClient, admin: User
+    ) -> None:
+        """Тест: Запуск тестов администратором.
+
+        Ожидаемый результат:
+        - Статус ответа 202 (Accepted).
+        - Ответ содержит идентификатор задачи.
         """
         api_client.force_authenticate(user=admin)
         url = reverse("run-pytest")
-        with patch("backend.tasks.run_pytest.delay") as mock_run_pytest:
-            mock_run_pytest.return_value.id = "test-task-id"
-            response = api_client.get(url)
-            assert response.status_code == status.HTTP_202_ACCEPTED
-            assert "task_id" in response.data
-
-    def test_non_admin_access(self, api_client: APIClient, customer: User) -> None:
-        """
-        Проверяем, что обычный пользователь не может запускать тесты.
-        """
-        api_client.force_authenticate(user=customer)
-        url = reverse("run-pytest")
-        with patch("backend.tasks.run_pytest.delay") as mock_run_pytest:
-            mock_run_pytest.return_value.id = "test-task-id"
-            response = api_client.get(url)
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_run_pytest_task_creation(self, api_client: APIClient, admin: User) -> None:
-        """
-        Проверяем, что задача run_pytest создается и возвращается task_id.
-        """
-        api_client.force_authenticate(user=admin)
-        url = reverse("run-pytest")
-
-        with patch("backend.tasks.run_pytest.delay") as mock_run_pytest:
-            mock_run_pytest.return_value.id = "test-task-id"
+        with patch("backend.tasks.run_pytest.delay") as mock_task:
+            mock_task.return_value.id = "test-task-id"
             response = api_client.get(url)
 
             assert response.status_code == status.HTTP_202_ACCEPTED
             assert response.data == {"task_id": "test-task-id"}
-            mock_run_pytest.assert_called_once_with(enable_coverage=True)
 
-    def test_check_pytest_task_view_authorization(self, api_client: APIClient) -> None:
+    def test_non_admin_user_forbidden_to_run_pytest(
+        self, api_client: APIClient, customer: User
+    ) -> None:
+        """Тест: Попытка запуска тестов обычным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 403 (Forbidden).
         """
-        Проверяем, что неавторизованный пользователь не может получить доступ
-        к представлению проверки задачи.
+        api_client.force_authenticate(user=customer)
+        response = api_client.get(reverse("run-pytest"))
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_pytest_task_returns_correct_task_id(
+        self, api_client: APIClient, admin: User
+    ) -> None:
+        """Тест: Корректное создание задачи запуска тестов.
+
+        Ожидаемый результат:
+        - Статус ответа 202 (Accepted).
+        - Идентификатор задачи соответствует ожидаемому.
+        - Задача вызывается с параметром enable_coverage=True.
         """
-        url = reverse("check-pytest", kwargs={"task_id": "some-task-id"})
+        api_client.force_authenticate(user=admin)
+        with patch("backend.tasks.run_pytest.delay") as mock_task:
+            mock_task.return_value.id = "test-123"
+            response = api_client.get(reverse("run-pytest"))
+
+            assert response.data["task_id"] == "test-123"
+            mock_task.assert_called_once_with(enable_coverage=True)
+
+    def test_unauthenticated_user_access_denied_for_task_check(
+        self, api_client: APIClient
+    ) -> None:
+        """Тест: Проверка статуса задачи без аутентификации.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
+        - Сообщение о необходимости авторизации.
+        """
+        url = reverse("check-pytest", kwargs={"task_id": "dummy-task"})
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data["detail"] == "Пожалуйста, войдите в систему."
 
-    def test_check_pytest_task_view_pending(
+    def test_check_task_returns_pending_status(
         self, api_client: APIClient, admin: User
     ) -> None:
-        """
-        Проверяем ответ для задачи, которая ещё выполняется.
+        """Тест: Проверка статуса выполняющейся задачи.
+
+        Ожидаемый результат:
+        - Статус ответа 202 (Accepted).
+        - Сообщение о выполнении задачи.
         """
         api_client.force_authenticate(user=admin)
+        task_id = "pending-task-123"
 
-        task_id = "pending-task-id"
+        with patch("celery.result.AsyncResult") as mock_result:
+            mock_result.return_value.ready.return_value = False
+            mock_result.return_value.failed.return_value = False
 
-        with patch("celery.result.AsyncResult") as mock_async_result:
-            mock_task = mock_async_result.return_value
-            mock_task.ready.return_value = False
-            mock_task.failed.return_value = False
             url = reverse("check-pytest", kwargs={"task_id": task_id})
             response = api_client.get(url)
 
-        assert response.status_code == status.HTTP_202_ACCEPTED
-        assert response.data == {
-            "status": "PENDING",
-            "message": "Задача ещё выполняется.",
-        }
+            assert response.status_code == status.HTTP_202_ACCEPTED
+            assert response.data == {
+                "status": "PENDING",
+                "message": "Задача ещё выполняется.",
+            }

@@ -9,22 +9,25 @@ from rest_framework.exceptions import ErrorDetail
 
 
 @pytest.mark.django_db
-class TestBasketAPI_GET:
-    """
-    Тесты для GET запросов API корзины (/basket)
-    """
+class TestBasketAPIGetRequests:
+    """Тесты GET-запросов к API корзины."""
 
-    def test_get_basket_unauthenticated(self, api_client):
-        """
-        Неавторизованный доступ к корзине
+    def test_unauthenticated_user_access_to_basket(self, api_client):
+        """Тест: Доступ к корзине без аутентификации.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
         """
         url = reverse("basket-list")
         response = api_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_basket_authenticated(self, api_client, customer, order):
-        """
-        Получение корзины для авторизованного пользователя
+    def test_authenticated_user_retrieves_basket(self, api_client, customer, order):
+        """Тест: Получение корзины аутентифицированным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Ответ содержит структуру корзины с элементами заказа.
         """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
@@ -36,9 +39,12 @@ class TestBasketAPI_GET:
         assert "order_items" in response.data[0]
         assert isinstance(response.data[0]["order_items"], list)
 
-    def test_order_with_invalid_status(self, api_client, customer, order):
-        """
-        Тест получения заказа с некорректным статусом
+    def test_retrieve_order_with_invalid_status(self, api_client, customer, order):
+        """Тест: Получение заказа с некорректным статусом.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке валидации статуса.
         """
         order.status = "invalid_status"
         order.save()
@@ -48,9 +54,12 @@ class TestBasketAPI_GET:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert any("Некорректный статус" in str(error) for error in response.data)
 
-    def test_retrieve_basket_with_valid_status(self, api_client, customer, order):
-        """
-        Проверяем успешное получение корзины с валидным статусом (например, "new").
+    def test_retrieve_order_with_valid_status(self, api_client, customer, order):
+        """Тест: Успешное получение заказа с допустимым статусом.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Данные ответа соответствуют ожидаемой структуре.
         """
 
         api_client.force_authenticate(user=customer)
@@ -63,14 +72,17 @@ class TestBasketAPI_GET:
 
 
 @pytest.mark.django_db
-class TestBasketAPI_POST:
-    """
-    Тесты для POST запросов API корзины.
-    """
+class TestBasketAPIPostRequests:
+    """Тесты POST-запросов к API корзины."""
 
-    def test_create_basket_item_as_customer(self, api_client, customer, product, shop):
-        """
-        Создание элемента корзины с валидными данными
+    def test_create_basket_item_with_valid_data(
+        self, api_client, customer, product, shop
+    ):
+        """Тест: Создание элемента корзины с валидными данными.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Элемент корзины создан с указанным количеством.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -89,9 +101,12 @@ class TestBasketAPI_POST:
         assert OrderItem.objects.count() == 1
         assert OrderItem.objects.first().quantity == 2
 
-    def test_create_basket_with_no_items(self, api_client, customer, product, shop):
-        """
-        Создание пустой корзины без товаров
+    def test_create_empty_basket(self, api_client, customer, product, shop):
+        """Тест: Создание пустой корзины без элементов заказа.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Корзина создана с пустым списком элементов.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -109,11 +124,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_201_CREATED
         assert [] == response.data["order_items"]
 
-    def test_create_basket_item_as_customer_empty_fields(
+    def test_create_basket_item_missing_required_fields(
         self, api_client, customer, product, shop
     ):
-        """
-        Создание элемента корзины c незаполненными полями
+        """Тест: Попытка создания элемента корзины с отсутствующими обязательными полями.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщения об ошибках для каждого отсутствующего поля.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -154,11 +172,14 @@ class TestBasketAPI_POST:
             assert response.status_code == status.HTTP_400_BAD_REQUEST
             assert case["expected_error"] in response.content.decode("utf-8")
 
-    def test_create_basket_item_as_customer_shop_inactive(
+    def test_create_basket_item_with_inactive_shop(
         self, api_client, supplier, customer, product, shop
     ):
-        """
-        Создание элемента корзины с отключенным магазином
+        """Тест: Создание элемента корзины с неактивным магазином.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке неактивности магазина.
         """
         supplier.is_active = False
         supplier.save()
@@ -179,11 +200,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "неактивен" in response.data[0]
 
-    def test_create_basket_item_shop_without_owner(
+    def test_create_basket_item_for_shop_without_owner(
         self, api_client, customer, product, shop
     ):
-        """
-        Создание элемента корзины из магазина к которому не привязан поставщик
+        """Тест: Создание элемента корзины для магазина без владельца.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке отсутствия владельца магазина.
         """
         shop.user = None
         shop.save()
@@ -204,11 +228,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "не привязан к пользователю" in response.data[0]
 
-    def test_create_basket_item_no_product_info(
+    def test_create_basket_item_without_product_info(
         self, api_client, customer, product, shop
     ):
-        """
-        Создание элемента корзины без информации о продукте
+        """Тест: Создание элемента корзины без информации о продукте.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке отсутствия информации о продукте.
         """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
@@ -222,9 +249,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "отсутствует в магазине" in response.data[0]
 
-    def test_add_to_basket_invalid_quantity(self, api_client, customer, product, shop):
-        """
-        Попытка добавить товар в количестве, превышающем доступное
+    def test_create_basket_item_exceeding_available_quantity(
+        self, api_client, customer, product, shop
+    ):
+        """Тест: Попытка добавления товара в количестве превышающем доступное.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке недостаточного количества.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=5, price=100, price_rrc=120
@@ -245,11 +277,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Недостаточно товара" in response.content.decode("utf-8")
 
-    def test_create_order_with_existing_item_exceeding_quantity(
+    def test_update_existing_item_exceeding_quantity(
         self, api_client, customer, product, shop
     ):
-        """
-        Тест на создание заказа с обновлением существующего элемента и превышением количества.
+        """Тест: Обновление элемента корзины с превышением доступного количества.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке превышения лимита.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -282,11 +317,14 @@ class TestBasketAPI_POST:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Превышение доступного количества" in str(response.data[0])
 
-    def test_post_update_basket_item_as_customer(
+    def test_post_request_updates_existing_basket_item(
         self, api_client, customer, product, shop
     ):
-        """
-        Обновление элемента корзины POST запросом с валидными данными
+        """Тест: Обновление существующего элемента корзины через POST.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Количество товара в элементе корзины обновлено.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -318,16 +356,15 @@ class TestBasketAPI_POST:
 
 
 @pytest.mark.django_db
-class TestBasketAPI_PUT:
-    """
-    Тесты для PUT запросов API корзины.
-    """
+class TestBasketAPIPutRequests:
+    """Тесты PUT-запросов к API корзины."""
 
-    def test_put_update_basket_item_as_customer(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Обновление элемента корзины с валидными данными
+    def test_full_update_basket_item(self, api_client, customer, product, shop):
+        """Тест: Полное обновление элемента корзины.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Количество товара полностью обновлено.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -376,11 +413,14 @@ class TestBasketAPI_PUT:
             },
         ],
     )
-    def test_update_basket_validation(
+    def test_put_request_validation_errors(
         self, api_client, shop, customer, product, test_case
     ):
-        """
-        Проверка валидации при обновлении корзины через PUT
+        """Тест: Обработка ошибок валидации при PUT-запросе.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщения об ошибках соответствуют тест-кейсам.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=20, price=100, price_rrc=120
@@ -420,16 +460,15 @@ class TestBasketAPI_PUT:
 
 
 @pytest.mark.django_db
-class TestBasketAPI_PATCH:
-    """
-    Тесты для PATCH запросов API корзины.
-    """
+class TestBasketAPIPatchRequests:
+    """Тесты PATCH-запросов к API корзины."""
 
-    def test_patch_update_basket_item_quantity_all_fields(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Частичное обновление элемента корзины (изменение только количества)
+    def test_partial_update_item_quantity(self, api_client, customer, product, shop):
+        """Тест: Частичное обновление количества товара.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Количество товара успешно изменено.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -457,11 +496,14 @@ class TestBasketAPI_PATCH:
         updated_order = response.data
         assert updated_order["order_items"][0]["quantity"] == 5
 
-    def test_patch_update_basket_item_product(
+    def test_partial_update_with_invalid_product(
         self, api_client, customer, product, shop, another_product
     ):
-        """
-        Проверка, что при попытке обновить товар, который не существует, возвращается ошибка с кодом 400.
+        """Тест: Попытка обновления несуществующего товара.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке отсутствия элемента.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -494,11 +536,14 @@ class TestBasketAPI_PATCH:
         assert isinstance(response.data[0], ErrorDetail)
         assert response.data[0] == "Элемент заказа не найден для обновления"
 
-    def test_patch_update_basket_item_invalid_quantity(
+    def test_partial_update_with_invalid_quantity(
         self, api_client, customer, product, shop
     ):
-        """
-        Частичное обновление элемента корзины с некорректным количеством
+        """Тест: Обновление с недопустимым количеством товара.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке недостаточного количества.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -524,11 +569,12 @@ class TestBasketAPI_PATCH:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Недостаточно товара" in response.content.decode("utf-8")
 
-    def test_patch_update_basket_item_missing_shop(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Частичное обновление элемента корзины без указания магазина
+    def test_partial_update_missing_shop(self, api_client, customer, product, shop):
+        """Тест: Частичное обновление без указания магазина.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Остальные данные сохраняются.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -555,11 +601,12 @@ class TestBasketAPI_PATCH:
         assert response.data["order_items"][0]["shop"] == shop.id
         assert response.data["order_items"][0]["product"] == product.id
 
-    def test_patch_update_basket_item_missing_product(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Частичное обновление элемента корзины без указания товара
+    def test_partial_update_missing_product(self, api_client, customer, product, shop):
+        """Тест: Частичное обновление без указания товара.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Остальные данные сохраняются.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -586,11 +633,14 @@ class TestBasketAPI_PATCH:
         assert response.data["order_items"][0]["product"] == product.id
         assert response.data["order_items"][0]["shop"] == shop.id
 
-    def test_patch_update_basket_item_missing_shop_and_product(
+    def test_partial_update_missing_shop_and_product(
         self, api_client, customer, product, shop
     ):
-        """
-        Частичное обновление элемента корзины без указания магазина и товара
+        """Тест: Частичное обновление без магазина и товара.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Изменяется только указанное поле.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -617,11 +667,12 @@ class TestBasketAPI_PATCH:
         assert response.data["order_items"][0]["product"] == product.id
         assert response.data["order_items"][0]["shop"] == shop.id
 
-    def test_patch_update_basket_item_missing_order_items(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Частичное обновление элемента корзины без указания всех данных
+    def test_partial_update_with_empty_data(self, api_client, customer, product, shop):
+        """Тест: Частичное обновление с пустыми данными.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Данные остаются без изменений.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -648,11 +699,12 @@ class TestBasketAPI_PATCH:
         assert response.data["order_items"][0]["product"] == product.id
         assert response.data["order_items"][0]["shop"] == shop.id
 
-    def test_patch_update_basket_item_no_changes(
-        self, api_client, customer, product, shop
-    ):
-        """
-        Частичное обновление элемента корзины без изменений
+    def test_partial_update_without_changes(self, api_client, customer, product, shop):
+        """Тест: Частичное обновление без изменений данных.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Данные остаются идентичными.
         """
         ProductInfo.objects.create(
             product=product, shop=shop, quantity=10, price=100, price_rrc=120
@@ -680,14 +732,14 @@ class TestBasketAPI_PATCH:
 
 
 @pytest.mark.django_db
-class TestBasketAPI_DELETE:
-    """
-    Тесты для DELETE запросов API корзины.
-    """
+class TestBasketAPIDeleteRequests:
+    """Тесты DELETE-запросов к API корзины."""
 
-    def test_clear_basket(self, api_client, customer, order):
-        """
-        Очистка корзины через DELETE запрос
+    def test_delete_basket(self, api_client, customer, order):
+        """Тест: Удаление корзины.
+
+        Ожидаемый результат:
+        - Статус ответа 204 (No Content).
         """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-detail", args=[order.id])
@@ -695,9 +747,12 @@ class TestBasketAPI_DELETE:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    def test_delete_someone_elses_basket(self, api_client, customer_login, order):
-        """
-        Попытка удалить чужую корзину
+    def test_delete_another_users_basket(self, api_client, customer_login, order):
+        """Тест: Попытка удаления чужой корзины.
+
+        Ожидаемый результат:
+        - Статус ответа 404 (Not Found).
+        - Сообщение об ошибке отсутствия корзины.
         """
         api_client.force_authenticate(user=customer_login)
         url = reverse("basket-detail", args=[order.id])
@@ -708,25 +763,32 @@ class TestBasketAPI_DELETE:
 
 
 @pytest.mark.django_db
-class TestCustomCheck:
-    """
-    Тесты вне категорий.
-    """
+class TestBasketAdditionalFunctionality:
+    """Тесты дополнительной функциональности корзины."""
 
-    def test_order_str_method(self, order):
-        """
-        Тестирование строкового представления заказа
+    def test_order_string_representation(self, order):
+        """Тест: Строковое представление заказа.
+
+        Ожидаемый результат:
+        - Строка содержит ID заказа.
         """
         assert f"Заказ номер {order.id} - " in str(order)
 
-    def test_order_item_str_method(self, order_item):
-        """
-        Тестирование строкового представления элемента заказа
+    def test_order_item_string_representation(self, order_item):
+        """Тест: Строковое представление элемента заказа.
+
+        Ожидаемый результат:
+        - Строка содержит название товара и количество.
         """
         assert f"{order_item.product.name} : {order_item.quantity}" in str(order_item)
 
-    def test_order_clean_with_invalid_status(self):
-        """Проверяет, что метод clean() вызывает ValidationError при невалидном статусе."""
+    def test_order_validation_with_invalid_status(self):
+        """Тест: Валидация заказа с недопустимым статусом.
+
+        Ожидаемый результат:
+        - Вызывается ValidationError.
+        - Сообщение об ошибке содержит невалидный статус.
+        """
         order = Order(status="invalid_status")
 
         with pytest.raises(ValidationError) as excinfo:
@@ -735,16 +797,20 @@ class TestCustomCheck:
         assert "Некорректный статус" in str(excinfo.value)
         assert "invalid_status" in str(excinfo.value)
 
-    def test_order_clean_with_valid_status(self, order):
-        """
-        Проверяет, что метод clean() не вызывает ошибку при валидном статусе.
+    def test_order_validation_with_valid_status(self, order):
+        """Тест: Успешная валидация заказа с допустимым статусом.
+
+        Ожидаемый результат:
+        - Валидация проходит без ошибок.
         """
         order.full_clean()
         assert order.status == "new"
 
-    def test_order_item_cost_without_price(self, shop, product, order):
-        """
-        Проверяет, что cost() возвращает 0, когда нет информации о цене товара.
+    def test_order_item_cost_calculation_without_price(self, shop, product, order):
+        """Тест: Расчет стоимости элемента заказа без цены.
+
+        Ожидаемый результат:
+        - Возвращается нулевая стоимость.
         """
         ProductInfo.objects.filter(product=product, shop=shop).delete()
         order_item = OrderItem.objects.create(
@@ -753,9 +819,11 @@ class TestCustomCheck:
 
         assert order_item.cost() == 0
 
-    def test_send_email_no_shops(self, customer):
-        """
-        Проверяем случай, когда в заказе нет товаров.
+    def test_order_confirmation_without_items(self, customer):
+        """Тест: Подтверждение заказа без товаров.
+
+        Ожидаемый результат:
+        - Письмо поставщику не отправляется.
         """
         order = Order.objects.create(user=customer, status="new")
 
@@ -764,8 +832,12 @@ class TestCustomCheck:
             order.save()
             mock_send_email.assert_not_called()
 
-    def test_customer_update_allowed_status(self, api_client, product_info, customer):
-        """Покупатель может менять статусы new и canceled"""
+    def test_customer_allowed_status_changes(self, api_client, product_info, customer):
+        """Тест: Изменение статуса заказа покупателем.
+
+        Ожидаемый результат:
+        - Успешное изменение разрешенных статусов.
+        """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
         data = {
@@ -801,8 +873,15 @@ class TestCustomCheck:
         assert response.data["status"] == "canceled"
         assert response.data["order_items"][0]["quantity"] == 7
 
-    def test_user_update_forbidden_status(self, api_client, product_info, customer):
-        """Пользователь не может ставить статусы кроме валидных"""
+    def test_customer_forbidden_status_changes(
+        self, api_client, product_info, customer
+    ):
+        """Тест: Попытка изменения запрещенных статусов покупателем.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке прав доступа.
+        """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
         data = {
@@ -839,8 +918,12 @@ class TestCustomCheck:
             in response.data[0]
         )
 
-    def test_admin_update_any_status(self, api_client, product_info, admin, customer):
-        """Админ может менять любой статус"""
+    def test_admin_status_changes(self, api_client, product_info, admin, customer):
+        """Тест: Изменение статуса заказа администратором.
+
+        Ожидаемый результат:
+        - Успешное изменение любого статуса.
+        """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
         data = {
@@ -877,10 +960,14 @@ class TestCustomCheck:
         assert response.data["status"] == "assembled"
         assert response.data["order_items"][0]["quantity"] == 5
 
-    def test_supplier_update_any_status(
+    def test_supplier_status_changes(
         self, api_client, product_info, supplier, customer
     ):
-        """Продавец может менять любой статус"""
+        """Тест: Изменение статуса заказа поставщиком.
+
+        Ожидаемый результат:
+        - Успешное изменение любого статуса.
+        """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
         data = {
@@ -917,8 +1004,13 @@ class TestCustomCheck:
         assert response.data["status"] == "sent"
         assert response.data["order_items"][0]["quantity"] == 2
 
-    def test_update_invalid_status(self, api_client, product_info, admin, customer):
-        """Проверка невалидного статуса"""
+    def test_invalid_status_update(self, api_client, product_info, admin, customer):
+        """Тест: Попытка установки невалидного статуса.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке валидации.
+        """
         api_client.force_authenticate(user=customer)
         url = reverse("basket-list")
         data = {
@@ -954,8 +1046,12 @@ class TestCustomCheck:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Некорректный статус" in response.data[0]
 
-    def test_unauthorized_update(self, api_client, order):
-        """Неавторизованный пользователь не может менять статус"""
+    def test_unauthorized_status_update(self, api_client, order):
+        """Тест: Попытка изменения статуса без аутентификации.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
+        """
         url = reverse("basket-detail", args=[order.id])
         data = {"status": "canceled"}
         response = api_client.patch(url, data)

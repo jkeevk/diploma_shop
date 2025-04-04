@@ -9,9 +9,12 @@ from rest_framework.exceptions import ValidationError
 
 @pytest.mark.django_db
 class TestProductAPI:
-    def test_read_product(self, api_client, supplier, shop):
-        """
-        Тест получения информации о товаре через API.
+    def test_retrieve_product_details(self, api_client, supplier, shop):
+        """Тест: Получение деталей продукта.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Данные продукта содержат корректную информацию.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -41,9 +44,14 @@ class TestProductAPI:
         assert response.data["product_infos"][0]["shop"] == shop.id
         assert response.data["product_infos"][0]["quantity"] == 10
 
-    def test_create_product_with_infos(self, api_client, supplier, shop):
-        """
-        Тест на создание продукта с вложенными данными через API.
+    def test_create_product_with_associated_product_infos(
+        self, api_client, supplier, shop
+    ):
+        """Тест: Создание продукта с привязанными информационными блоками.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Созданный продукт содержит переданные данные.
         """
         api_client.force_authenticate(user=supplier)
         product_data = {
@@ -71,9 +79,13 @@ class TestProductAPI:
         assert response.data["product_infos"][0]["shop"] == shop.id
         assert response.data["product_infos"][0]["quantity"] == 10
 
-    def test_create_product_all_fields(self, api_client, supplier, shop):
-        """
-        Тест на создание продукта с изменением информации о продукте через API.
+    def test_create_product_with_all_fields_including_parameters(
+        self, api_client, supplier, shop
+    ):
+        """Тест: Создание продукта с полным набором полей и параметрами.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
         """
         api_client.force_authenticate(user=supplier)
         product_data = {
@@ -103,9 +115,12 @@ class TestProductAPI:
 
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_update_product_with_differnt_shop(self, api_client, supplier, shop):
-        """
-        Тест на обновление продукта с разными магазинами через API.
+    def test_update_product_with_different_shop(self, api_client, supplier, shop):
+        """Тест: Обновление продукта с указанием магазина не связанного с продуктом.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке 'Товар не связан с магазином'.
         """
         api_client.force_authenticate(user=supplier)
         category = Category.objects.create(name="Test Category")
@@ -141,9 +156,14 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data["shop"] == "Товар не связан с магазином"
 
-    def test_filter_by_shop(self, api_client, product, supplier, shop, category):
-        """
-        Тест фильтрации продуктов по магазину через API.
+    def test_filter_products_by_shop_id(
+        self, api_client, product, supplier, shop, category
+    ):
+        """Тест: Фильтрация продуктов по ID магазина.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются только продукты из указанного магазина.
         """
         api_client.force_authenticate(user=supplier)
         product_info = ProductInfo.objects.create(
@@ -167,9 +187,12 @@ class TestProductAPI:
         assert len(response.data[0]["product_infos"]) == 1
         assert response.data[0]["product_infos"][0]["shop"] == shop.id
 
-    def test_create_product_without_required_fields(self, api_client, supplier):
-        """
-        Тест на создание продукта без обязательных полей через API.
+    def test_create_product_missing_required_fields(self, api_client, supplier):
+        """Тест: Попытка создания продукта без обязательных полей.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщения об ошибках для отсутствующих полей.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -190,9 +213,11 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data
 
-    def test_update_non_existent_product(self, api_client, supplier):
-        """
-        Тест на обновление несуществующего продукта через API.
+    def test_update_nonexistent_product_returns_404(self, api_client, supplier):
+        """Тест: Обновление несуществующего продукта.
+
+        Ожидаемый результат:
+        - Статус ответа 404 (Not Found).
         """
         api_client.force_authenticate(user=supplier)
 
@@ -212,9 +237,11 @@ class TestProductAPI:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_patch_all_fields(self, api_client, supplier, shop):
-        """
-        Тест на обновление продукта с изменением информации о продукте через API.
+    def test_partial_update_product_with_all_fields(self, api_client, supplier, shop):
+        """Тест: Частичное обновление продукта с изменением всех полей.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
         """
         api_client.force_authenticate(user=supplier)
         category = Category.objects.create(name="Test Category")
@@ -257,9 +284,14 @@ class TestProductAPI:
         response = api_client.patch(url, update_data, format="json")
         assert response.status_code == status.HTTP_200_OK
 
-    def test_update_invalid_price_quantity(self, api_client, supplier, shop):
-        """
-        Тест на обновление продукта с невалидными значениями цены и количества через API.
+    def test_create_product_with_negative_price_and_quantity(
+        self, api_client, supplier, shop
+    ):
+        """Тест: Создание продукта с отрицательными значениями цены и количества.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщения об ошибках валидации.
         """
         api_client.force_authenticate(user=supplier)
         product_data = {
@@ -290,9 +322,12 @@ class TestProductAPI:
             response.data["product_infos"][0]["quantity"][0]
         )
 
-    def test_delete_product(self, api_client, supplier, shop):
-        """
-        Тест на удаление продукта через API.
+    def test_delete_existing_product(self, api_client, supplier, shop):
+        """Тест: Удаление существующего продукта.
+
+        Ожидаемый результат:
+        - Статус ответа 204 (No Content).
+        - Продукт удален из базы данных.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -317,9 +352,11 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Product.objects.filter(id=product.id).count() == 0
 
-    def test_get_non_existent_product(self, api_client, supplier):
-        """
-        Тест на получение несуществующего продукта через API.
+    def test_retrieve_nonexistent_product_returns_404(self, api_client, supplier):
+        """Тест: Получение несуществующего продукта.
+
+        Ожидаемый результат:
+        - Статус ответа 404 (Not Found).
         """
         api_client.force_authenticate(user=supplier)
 
@@ -328,10 +365,12 @@ class TestProductAPI:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_filter_by_shop_without_shop_param(self, api_client, supplier, shop):
-        """
-        Тест фильтрации продуктов без указания магазина.
-        Должен вернуть все продукты.
+    def test_filter_products_without_shop_returns_all(self, api_client, supplier, shop):
+        """Тест: Фильтрация продуктов без указания магазина.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются все доступные продукты.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -361,10 +400,14 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
-    def test_filter_by_non_existent_shop(self, api_client, supplier):
-        """
-        Тест фильтрации по несуществующему магазину.
-        Должен вернуть пустой список.
+    def test_filter_products_by_nonexistent_shop_returns_empty(
+        self, api_client, supplier
+    ):
+        """Тест: Фильтрация по несуществующему магазину.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращается пустой список продуктов.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -381,9 +424,12 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 0
 
-    def test_filter_by_category(self, api_client, supplier):
-        """
-        Тест фильтрации продуктов по категории.
+    def test_filter_products_by_category_id(self, api_client, supplier):
+        """Тест: Фильтрация продуктов по ID категории.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются только продукты из указанной категории.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -408,9 +454,12 @@ class TestProductAPI:
         assert len(response.data) == 1
         assert response.data[0]["name"] == "Product 1"
 
-    def test_filter_by_existing_shop(self, api_client, supplier):
-        """
-        Тест фильтрации по существующему магазину.
+    def test_filter_products_by_existing_shop_id(self, api_client, supplier):
+        """Тест: Фильтрация по существующему ID магазина.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются только продукты из указанного магазина.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -436,9 +485,14 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
 
-    def test_filter_shop_empty_value(self, api_client, supplier, shop):
-        """
-        Тест фильтрации с пустым значением shop, должен вернуть все продукты.
+    def test_filter_products_with_empty_shop_param_returns_all(
+        self, api_client, supplier, shop
+    ):
+        """Тест: Фильтрация с пустым параметром shop.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются все доступные продукты.
         """
         api_client.force_authenticate(user=supplier)
         category = Category.objects.create(name="Test Category")
@@ -458,10 +512,14 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
-    def test_filter_shop_invalid_value(self, api_client, supplier, shop):
-        """
-        Тест фильтрации с невалидным shop (не число).
-        Проверяет, что возвращается исходный queryset.
+    def test_filter_products_with_invalid_shop_param_returns_all(
+        self, api_client, supplier, shop
+    ):
+        """Тест: Фильтрация с невалидным параметром shop.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Возвращаются все доступные продукты.
         """
         api_client.force_authenticate(user=supplier)
 
@@ -481,9 +539,11 @@ class TestProductAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
 
-    def test_product_str_method(self, product):
-        """
-        Тестирование строкового представления объекта Product
+    def test_product_model_string_representation(self, product):
+        """Тест: Строковое представление модели Product.
+
+        Ожидаемый результат:
+        - Строковое представление соответствует названию продукта.
         """
         assert str(product) == "Test Product"
 
@@ -508,6 +568,12 @@ class TestProductSerializer(TestCase):
         }
 
     def test_create_product_with_new_category(self):
+        """Тест: Создание продукта с новой категорией через сериализатор.
+
+        Ожидаемый результат:
+        - Создана новая категория.
+        - Продукт успешно создан и связан с категорией.
+        """
         data = self.valid_data.copy()
         data["category"] = "New Category"
 
@@ -520,6 +586,12 @@ class TestProductSerializer(TestCase):
         assert product.product_infos.count() == 1
 
     def test_create_product_with_existing_category(self):
+        """Тест: Создание продукта с существующей категорией через сериализатор.
+
+        Ожидаемый результат:
+        - Использована существующая категория.
+        - Продукт успешно создан.
+        """
         serializer = ProductSerializer(data=self.valid_data)
         serializer.is_valid(raise_exception=True)
         product = serializer.save()
@@ -527,7 +599,12 @@ class TestProductSerializer(TestCase):
         assert Category.objects.count() == 1
         assert product.category == self.category
 
-    def test_parameters_creation(self):
+    def test_parameters_are_created_for_product_info(self):
+        """Тест: Создание параметров для информационного блока продукта.
+
+        Ожидаемый результат:
+        - Параметры успешно созданы и связаны с ProductInfo.
+        """
         serializer = ProductSerializer(data=self.valid_data)
         serializer.is_valid(raise_exception=True)
         product = serializer.save()
@@ -536,7 +613,13 @@ class TestProductSerializer(TestCase):
         assert product_info.product_parameters.count() == 2
         assert Parameter.objects.filter(name="Color").exists()
 
-    def test_missing_required_fields(self):
+    def test_serializer_with_missing_required_fields_raises_error(self):
+        """Тест: Валидация сериализатора с отсутствующими обязательными полями.
+
+        Ожидаемый результат:
+        - Вызывается ValidationError.
+        - Сообщения об ошибках для отсутствующих полей.
+        """
         invalid_data = self.valid_data.copy()
         del invalid_data["name"]
         del invalid_data["category"]
@@ -550,7 +633,13 @@ class TestProductSerializer(TestCase):
         assert "category" in errors
         assert "product_infos" not in errors
 
-    def test_product_info_validation(self):
+    def test_serializer_with_invalid_product_info_raises_error(self):
+        """Тест: Валидация невалидных данных ProductInfo через сериализатор.
+
+        Ожидаемый результат:
+        - Вызывается ValidationError.
+        - Сообщение об ошибке для невалидного поля цены.
+        """
         invalid_data = self.valid_data.copy()
         invalid_data["product_infos"][0]["price"] = "-100"
 
@@ -561,7 +650,13 @@ class TestProductSerializer(TestCase):
         errors = exc.value.detail["product_infos"][0]
         assert "price" in errors
 
-    def test_partial_product_info_data(self):
+    def test_serializer_with_partial_product_info_uses_defaults(self):
+        """Тест: Обработка частичных данных ProductInfo через сериализатор.
+
+        Ожидаемый результат:
+        - Отсутствующие поля заполняются значениями по умолчанию.
+        - Продукт успешно создан.
+        """
         data = self.valid_data.copy()
         data["product_infos"][0] = {"shop": self.shop.id, "price": "499.99"}
 

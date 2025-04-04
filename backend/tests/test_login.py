@@ -6,12 +6,16 @@ from backend.serializers import LoginSerializer
 
 @pytest.mark.django_db
 class TestUserLogin:
-    """
-    Тесты для авторизации пользователя.
-    """
+    """Набор тестов для авторизации пользователя."""
 
     def test_successful_login(self, api_client, customer_login):
-        """Тест успешной авторизации пользователя."""
+        """
+        Тест: Проверка успешной авторизации пользователя.
+        Ожидаемый результат:
+        - Статус 200 OK
+        - Присутствие access_token и refresh_token в ответе
+        - user_id и email в ответе соответствуют данным пользователя
+        """
         url = reverse("login")
         data = {"email": "customer@example.com", "password": "strongpassword123"}
 
@@ -24,7 +28,12 @@ class TestUserLogin:
         assert response.data["email"] == customer_login.email
 
     def test_invalid_password(self, api_client, customer_login):
-        """Тест авторизации с неправильным паролем."""
+        """
+        Тест: Проверка авторизации с неправильным паролем.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о неправильных учетных данных
+        """
         url = reverse("login")
         data = {"email": "customer@example.com", "password": "wrongpassword123"}
 
@@ -37,7 +46,12 @@ class TestUserLogin:
         ]
 
     def test_user_not_found(self, api_client):
-        """Тест авторизации для несуществующего пользователя."""
+        """
+        Тест: Проверка авторизации для несуществующего пользователя.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о неправильных учетных данных
+        """
         url = reverse("login")
         data = {"email": "nonexistent@example.com", "password": "strongpassword123"}
 
@@ -50,7 +64,12 @@ class TestUserLogin:
         ]
 
     def test_inactive_user(self, api_client, customer_login):
-        """Тест попытки авторизации для неактивного пользователя."""
+        """
+        Тест: Проверка попытки авторизации для неактивного пользователя.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о неправильных учетных данных
+        """
         url = reverse("login")
         customer_login.is_active = False
         customer_login.save()
@@ -66,7 +85,12 @@ class TestUserLogin:
         ]
 
     def test_user_without_email_or_password(self, api_client):
-        """Тест авторизации без указания почты."""
+        """
+        Тест: Проверка авторизации без указания почты.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение об отсутствии email
+        """
         url = reverse("login")
         data = {"email": "", "password": "123456"}
 
@@ -76,7 +100,12 @@ class TestUserLogin:
         assert response.data["email"][0] == "This field may not be blank."
 
     def test_user_with_empty_fields(self, api_client):
-        """Тест авторизации без указания почты и пароля."""
+        """
+        Тест: Проверка авторизации с пустыми полями email и пароля.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о том, что поля не могут быть null
+        """
         url = reverse("login")
         data = {"email": None, "password": None}
 
@@ -87,7 +116,11 @@ class TestUserLogin:
         assert response.data["password"][0] == "This field may not be null."
 
     def test_force_validate_method(self):
-        """Тест: Прямой вызов validate() с неполными данными."""
+        """
+        Тест: Прямой вызов метода validate() с неполными данными.
+        Ожидаемый результат:
+        - Метод validate() возвращает user=None, так как данные неполные.
+        """
         serializer = LoginSerializer()
 
         data = {"email": "", "password": "pass"}

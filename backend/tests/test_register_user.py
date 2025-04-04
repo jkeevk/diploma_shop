@@ -9,10 +9,11 @@ from unittest.mock import patch
 
 @pytest.mark.django_db
 class TestUserRegistration:
-    """Тесты для процесса регистрации пользователей."""
+    """Набор тестов для процесса регистрации пользователей."""
 
     @pytest.fixture(autouse=True)
     def setup(self, api_client):
+        """Настройка тестового клиента и базовых данных для регистрации."""
         self.client = api_client
         self.base_data = {
             "email": "test2@example.com",
@@ -24,7 +25,13 @@ class TestUserRegistration:
         current_app.conf.task_always_eager = True
 
     def test_successful_registration(self):
-        """Проверка успешной регистрации с корректными данными."""
+        """Тест: Успешная регистрация с корректными данными.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Статус в ответе 'success'.
+        - Пользователь создан, но не активен.
+        """
         url = reverse("register")
         response = self.client.post(url, self.base_data)
 
@@ -35,7 +42,12 @@ class TestUserRegistration:
         assert not user.is_active
 
     def test_registration_with_invalid_role(self):
-        """Проверка обработки невалидной роли."""
+        """Тест: Обработка невалидной роли при регистрации.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке 'Неверная роль'.
+        """
         data = {**self.base_data, "role": "invalid_role"}
         url = reverse("register")
 
@@ -45,7 +57,12 @@ class TestUserRegistration:
         assert "Неверная роль" in str(response.data["errors"]["role"][0])
 
     def test_registration_with_existing_email(self):
-        """Проверка регистрации с уже существующим email."""
+        """Тест: Регистрация с уже существующим email.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке 'уже существует' для email.
+        """
         User.objects.create_user(**self.base_data)
         url = reverse("register")
 
@@ -55,19 +72,30 @@ class TestUserRegistration:
         assert "уже существует" in str(response.data["errors"]["email"][0]).lower()
 
     def test_registration_with_missing_fields(self):
-        """Проверка валидации отсутствия обязательных полей."""
+        """Тест: Валидация отсутствия обязательных полей при регистрации.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщения об ошибках для полей 'email', 'password' и 'role'.
+        """
         url = reverse("register")
         response = self.client.post(url, {})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         errors = response.data["errors"]
+
         assert all(field in errors for field in ["email", "password", "role"])
         assert "обязателен для заполнения" in str(errors["email"][0])
         assert "обязателен для заполнения" in str(errors["password"][0])
         assert "Роль обязательна для заполнения" in str(errors["role"][0])
 
     def test_password_validation(self):
-        """Проверка валидации слабого пароля."""
+        """Тест: Валидация слабого пароля при регистрации.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке о том, что пароль слишком короткий.
+        """
         data = {**self.base_data, "password": "123"}
         url = reverse("register")
 
@@ -78,7 +106,13 @@ class TestUserRegistration:
 
     @patch("backend.signals.TESTING", False)
     def test_email_sending_after_registration(self):
-        """Проверка отправки письма с подтверждением."""
+        """Тест: Отправка письма с подтверждением после регистрации.
+
+        Ожидаемый результат:
+        - Письмо отправлено (должно быть одно в outbox).
+        - Тема письма 'Confirm Your Registration'.
+        - Email получателя соответствует зарегистрированному пользователю.
+        """
         url = reverse("register")
         self.client.post(url, self.base_data)
 
@@ -91,7 +125,12 @@ class TestUserRegistration:
 
     @patch("backend.signals.TESTING", False)
     def test_successful_email_confirmation(self):
-        """Проверка успешного подтверждения email."""
+        """Тест: Успешное подтверждение email после регистрации.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Пользователь активирован после подтверждения.
+        """
         self.client.post(reverse("register"), self.base_data)
         user = User.objects.get(email=self.base_data["email"])
 
@@ -103,7 +142,11 @@ class TestUserRegistration:
         assert user.is_active
 
     def test_invalid_confirmation_token(self):
-        """Проверка обработки невалидного токена подтверждения."""
+        """Тест: Обработка невалидного токена подтверждения.
+
+        Ожидаемый результат:
+        - Статус ответа 404 (Not Found).
+        """
         url = reverse("register-confirm", kwargs={"token": "invalid_token"})
         response = self.client.get(url)
 

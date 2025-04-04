@@ -11,11 +11,20 @@ from unittest.mock import Mock
 class TestCategoryViewSet:
     """
     Тесты для CategoryViewSet.
+    Проверка различных сценариев работы с категориями:
+    - Получение списка категорий.
+    - Создание, обновление и удаление категорий.
+    - Проверка прав доступа пользователей с разными ролями.
+    - Валидация данных.
     """
 
     def test_list_categories_unauthenticated(self, api_client, category):
         """
-        Тест получения списка категорий неавторизованным пользователем.
+        Тест: Получение списка категорий неавторизованным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Один элемент в списке категорий с именем 'Test Category'.
         """
         url = reverse("category-list")
         response = api_client.get(url)
@@ -26,7 +35,11 @@ class TestCategoryViewSet:
 
     def test_create_category_as_admin(self, api_client, admin):
         """
-        Тест создания категории администратором.
+        Тест: Создание категории администратором.
+
+        Ожидаемый результат:
+        - Статус ответа 201 (Created).
+        - Новая категория создана в базе данных.
         """
         api_client.force_authenticate(user=admin)
 
@@ -37,9 +50,13 @@ class TestCategoryViewSet:
         assert response.status_code == status.HTTP_201_CREATED
         assert Category.objects.filter(name="New Category").exists()
 
-    def test_create_dublicate_category_as_admin(self, api_client, admin):
+    def test_create_duplicate_category_as_admin(self, api_client, admin):
         """
-        Тест создания категории администратором.
+        Тест: Попытка создания категории с дублирующимся именем администратором.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'Категория с таким именем уже существует'.
         """
         api_client.force_authenticate(user=admin)
 
@@ -56,8 +73,11 @@ class TestCategoryViewSet:
 
     def test_create_category_as_customer(self, api_client, customer):
         """
-        Тест создания категории пользователем с ролью customer.
-        Должен вернуть ошибку 403.
+        Тест: Попытка создания категории пользователем с ролью 'customer'.
+
+        Ожидаемый результат:
+        - Статус ответа 403 (Forbidden).
+        - Сообщение об ошибке: 'У вас недостаточно прав для выполнения этого действия.'.
         """
         api_client.force_authenticate(user=customer)
 
@@ -72,8 +92,10 @@ class TestCategoryViewSet:
 
     def test_create_category_unauthenticated(self, api_client):
         """
-        Тест создания категории неавторизованным пользователем.
-        Должен вернуть ошибку 401.
+        Тест: Попытка создания категории неавторизованным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
         """
         data = {"name": "New Category"}
         url = reverse("category-list")
@@ -83,8 +105,11 @@ class TestCategoryViewSet:
 
     def test_create_category_invalid_data(self, api_client, admin):
         """
-        Тест создания категории с некорректными данными (пустое название).
-        Должен вернуть ошибку 400.
+        Тест: Попытка создания категории с некорректными данными (пустое название).
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'name' не может быть пустым.
         """
         api_client.force_authenticate(user=admin)
 
@@ -97,7 +122,11 @@ class TestCategoryViewSet:
 
     def test_update_category_as_admin(self, api_client, admin, category):
         """
-        Тест обновления категории администратором.
+        Тест: Обновление категории администратором.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Имя категории обновляется на 'Updated Category'.
         """
         api_client.force_authenticate(user=admin)
 
@@ -111,8 +140,11 @@ class TestCategoryViewSet:
 
     def test_update_category_as_customer(self, api_client, customer, category):
         """
-        Тест обновления категории пользователем с ролью customer.
-        Должен вернуть ошибку 403.
+        Тест: Попытка обновления категории пользователем с ролью 'customer'.
+
+        Ожидаемый результат:
+        - Статус ответа 403 (Forbidden).
+        - Сообщение об ошибке: 'У вас недостаточно прав для выполнения этого действия.'.
         """
         api_client.force_authenticate(user=customer)
 
@@ -127,8 +159,10 @@ class TestCategoryViewSet:
 
     def test_update_category_unauthenticated(self, api_client, category):
         """
-        Тест обновления категории неавторизованным пользователем.
-        Должен вернуть ошибку 401.
+        Тест: Попытка обновления категории неавторизованным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
         """
         data = {"name": "Updated Category"}
         url = reverse("category-detail", args=[category.id])
@@ -138,7 +172,11 @@ class TestCategoryViewSet:
 
     def test_delete_category_as_admin(self, api_client, admin, category):
         """
-        Тест удаления категории администратором.
+        Тест: Удаление категории администратором.
+
+        Ожидаемый результат:
+        - Статус ответа 204 (No Content).
+        - Категория удалена из базы данных.
         """
         api_client.force_authenticate(user=admin)
 
@@ -150,8 +188,11 @@ class TestCategoryViewSet:
 
     def test_delete_category_as_customer(self, api_client, customer, category):
         """
-        Тест удаления категории пользователем с ролью customer.
-        Должен вернуть ошибку 403.
+        Тест: Попытка удаления категории пользователем с ролью 'customer'.
+
+        Ожидаемый результат:
+        - Статус ответа 403 (Forbidden).
+        - Сообщение об ошибке: 'У вас недостаточно прав для выполнения этого действия.'.
         """
         api_client.force_authenticate(user=customer)
 
@@ -165,8 +206,10 @@ class TestCategoryViewSet:
 
     def test_delete_category_unauthenticated(self, api_client, category):
         """
-        Тест удаления категории неавторизованным пользователем.
-        Должен вернуть ошибку 401.
+        Тест: Попытка удаления категории неавторизованным пользователем.
+
+        Ожидаемый результат:
+        - Статус ответа 401 (Unauthorized).
         """
         url = reverse("category-detail", args=[category.id])
         response = api_client.delete(url)
@@ -176,12 +219,19 @@ class TestCategoryViewSet:
     def test_category_str_method(self, category):
         """
         Тест метода __str__ модели Category.
+
+        Ожидаемый результат:
+        - Метод __str__ возвращает название категории.
         """
         assert str(category) == "Test Category"
 
     def test_category_unique_name(self, api_client, admin):
         """
-        Тест на уникальность названия категории.
+        Тест: Проверка уникальности названия категории.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'Категория с таким именем уже существует'.
         """
         api_client.force_authenticate(user=admin)
 
@@ -197,7 +247,11 @@ class TestCategoryViewSet:
 
     def test_category_search(self, api_client, category):
         """
-        Тест поиска категорий.
+        Тест: Поиск категорий по имени.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Один элемент в списке категорий, название 'Test Category'.
         """
         url = reverse("category-list") + "?search=Test"
         response = api_client.get(url)
@@ -206,9 +260,12 @@ class TestCategoryViewSet:
         assert len(response.data) == 1
         assert response.data[0]["name"] == "Test Category"
 
-    def test_categoty_permission_for_non_action(self):
+    def test_category_permission_for_non_action(self):
         """
-        Тест проверки прав доступа для действия с категориями.
+        Тест: Проверка прав доступа для действия, не определенного в CategoryViewSet.
+
+        Ожидаемый результат:
+        - Получение пустого списка прав доступа (для несуществующего действия).
         """
         view = CategoryViewSet()
         view.action = "non_action"
@@ -218,7 +275,11 @@ class TestCategoryViewSet:
 
     def test_get_nonexistent_category(self, api_client, admin):
         """
-        Попытка получения несуществующей категории
+        Тест: Попытка получения несуществующей категории.
+
+        Ожидаемый результат:
+        - Статус ответа 404 (Not Found).
+        - Сообщение: 'Категория не найдена'.
         """
         api_client.force_authenticate(user=admin)
 

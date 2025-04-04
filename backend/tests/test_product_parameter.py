@@ -9,9 +9,11 @@ class TestProductParameter:
     Тесты для модели ProductParameter.
     """
 
-    def test_create_product_parameter(self, product_info, parameter):
+    def test_create_product_parameter_success(self, product_info, parameter):
         """
-        Тест создания параметра товара.
+        Тест успешного создания параметра товара.
+
+        Ожидаемый результат: параметр товара создается с заданными значениями.
         """
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
@@ -23,11 +25,12 @@ class TestProductParameter:
         assert product_parameter.parameter == parameter
         assert product_parameter.value == "Test Value"
 
-    def test_update_product_parameter(self, product_info, parameter):
+    def test_update_product_parameter_value(self, product_info, parameter):
         """
-        Тест обновления параметра товара.
-        """
+        Тест обновления значения существующего параметра товара.
 
+        Ожидаемый результат: значение параметра обновляется на новое значение.
+        """
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
             parameter=parameter,
@@ -39,11 +42,12 @@ class TestProductParameter:
 
         assert product_parameter.value == "Updated Value"
 
-    def test_delete_product_parameter(self, product_info, parameter):
+    def test_delete_product_parameter_success(self, product_info, parameter):
         """
-        Тест удаления параметра товара.
-        """
+        Тест успешного удаления параметра товара.
 
+        Ожидаемый результат: параметр товара удаляется из базы данных.
+        """
         product_parameter = ProductParameter.objects.create(
             product_info=product_info,
             parameter=parameter,
@@ -55,24 +59,26 @@ class TestProductParameter:
 
         assert not ProductParameter.objects.filter(id=product_parameter_id).exists()
 
-    def test_create_product_parameter_without_required_fields(
-        self, product_info, parameter
-    ):
+    def test_create_product_parameter_missing_required_fields(self, parameter):
         """
-        Тест создания параметра товара без обязательных полей.
-        """
+        Тест создания параметра товара без обязательных полей вызывает ошибку.
 
+        Ожидаемый результат: возникает исключение при попытке создания.
+        """
         with pytest.raises(Exception):
             ProductParameter.objects.create(
                 parameter=parameter,
                 value="Test Value",
             )
 
-    def test_create_duplicate_product_parameter(self, product_info, parameter):
+    def test_create_duplicate_product_parameter_raises_integrity_error(
+        self, product_info, parameter
+    ):
         """
-        Тест создания дубликата параметра товара.
-        """
+        Тест, что создание дубликата параметра товара вызывает IntegrityError.
 
+        Ожидаемый результат: возникает исключение IntegrityError при попытке создания дубликата.
+        """
         ProductParameter.objects.create(
             product_info=product_info,
             parameter=parameter,
@@ -86,11 +92,16 @@ class TestProductParameter:
                 value="Test Value",
             )
 
-    def test_product_parameter_str_method(self, product_parameter):
+    def test_product_parameter_str_method_returns_expected_string(
+        self, product_parameter
+    ):
         """
-        Проверяет, что метод __str__ у параметра возвращает ожидаемую строку.
-        Ожидается, что строковое представление параметра равно "Test Parameter".
+        Проверяет, что метод __str__ возвращает ожидаемую строку представления
+        экземпляра ProductParameter.
+
+        Ожидаемый формат: "<имя_параметра>: <значение>"
         """
+
         assert (
             str(product_parameter)
             == f"{product_parameter.parameter.name}: {product_parameter.value}"

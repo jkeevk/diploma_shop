@@ -8,83 +8,116 @@ from rest_framework import status
 
 @pytest.mark.django_db
 class TestPartnerUpdateView:
-    """
-    Тесты для представления PartnerUpdateView.
-    """
+    """Набор тестов для обновления данных партнера через загрузку файлов."""
 
     @pytest.fixture
-    def url(self):
-        """Фикстура для получения URL представления."""
+    def partner_update_url(self):
+        """URL для обновления данных партнера."""
         return reverse("partner-update")
 
-    def load_json_file(self, filename):
-        """Загружает JSON-файл."""
-        with open(filename, "r", encoding="utf-8") as f:
-            return json.load(f)
+    def load_test_json(self, filename):
+        """Загружает тестовый JSON файл из директории data."""
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
 
-    def test_upload_json_file(self, api_client, url, supplier):
+    def test_supplier_can_upload_valid_json_file(
+        self, api_client, partner_update_url, supplier
+    ):
         """
-        Тест успешной загрузки JSON-файла.
+        Тест: Продавец может загрузить валидный JSON файл.
+        Проверки:
+        - Статус 200 OK
+        - Корректное сообщение об успешной постановке задачи
+        - Файл передается в правильном формате
         """
-        api_client.force_authenticate(user=supplier)
+        # Подготовка тестовых данных
+        test_file_path = os.path.join("data", "shop1.json")
+        json_data = self.load_test_json(test_file_path)
 
-        json_file_path = os.path.join("data", "shop1.json")
-        test_data = self.load_json_file(json_file_path)
-
-        json_file = SimpleUploadedFile(
-            "shop1.json",
-            json.dumps(test_data, ensure_ascii=False).encode("utf-8"),
+        test_file = SimpleUploadedFile(
+            name="shop1.json",
+            content=json.dumps(json_data, ensure_ascii=False).encode("utf-8"),
             content_type="application/json",
         )
 
-        response = api_client.post(url, {"file": json_file}, format="multipart")
+        # Выполнение запроса
+        api_client.force_authenticate(user=supplier)
+        response = api_client.post(
+            partner_update_url, {"file": test_file}, format="multipart"
+        )
 
+        # Проверки
         assert response.status_code == status.HTTP_200_OK
         assert (
             "Задача на загрузку данных поставлена в очередь" in response.data["message"]
         )
 
-    def test_upload_invalid_file_format(self, api_client, url, supplier):
+    def test_upload_rejects_non_json_files(
+        self, api_client, partner_update_url, supplier
+    ):
         """
-        Тест загрузки файла с неверным форматом.
+        Тест: Система отклоняет файлы с неправильным форматом.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о неверном формате файла
         """
-        api_client.force_authenticate(user=supplier)
-
-        text_file = SimpleUploadedFile(
-            "shop1.txt", b"Some text data", content_type="text/plain"
+        # Подготовка тестовых данных
+        invalid_file = SimpleUploadedFile(
+            name="invalid.txt", content=b"Plain text content", content_type="text/plain"
         )
 
-        response = api_client.post(url, {"file": text_file}, format="multipart")
+        # Выполнение запроса
+        api_client.force_authenticate(user=supplier)
+        response = api_client.post(
+            partner_update_url, {"file": invalid_file}, format="multipart"
+        )
 
+        # Проверки
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Неверный формат файла. Ожидается JSON." in response.data["error"]
 
-    def test_upload_no_file(self, api_client, url, supplier):
+    def test_upload_without_file_returns_error(
+        self, api_client, partner_update_url, supplier
+    ):
         """
-        Тест загрузки без файла.
+        Тест: Попытка загрузки без файла возвращает ошибку.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение об отсутствии файла
         """
+        # Выполнение запроса
         api_client.force_authenticate(user=supplier)
+        response = api_client.post(partner_update_url, {}, format="multipart")
 
-        response = api_client.post(url, {}, format="multipart")
-
+        # Проверки
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "No file was submitted." in response.data["file"]
+        assert "No file was submitted" in str(response.data["file"])
 
-    def test_upload_file_processing_error(self, api_client, url, supplier, mocker):
+    def test_server_error_handling_during_upload(
+        self, api_client, partner_update_url, supplier, mocker
+    ):
         """
-        Проверяем обработку внутренней ошибки сервера при загрузке файла.
+        Тест: Обработка внутренней ошибки сервера при загрузке.
+        Ожидаемый результат:
+        - Статус 500 Internal Server Error
+        - Сообщение об ошибке с деталями
         """
-        api_client.force_authenticate(user=supplier)
+        # Мокирование ошибки
+        mocker.patch("builtins.open", side_effect=Exception("Test error"))
 
-        json_file = SimpleUploadedFile(
-            "test.json",
-            b'{"key": "value"}',
+        # Подготовка тестовых данных
+        test_file = SimpleUploadedFile(
+            name="test.json",
+            content=b'{"key": "value"}',
             content_type="application/json",
         )
 
-        mocker.patch("builtins.open", side_effect=Exception("Test error"))
+        # Выполнение запроса
+        api_client.force_authenticate(user=supplier)
+        response = api_client.post(
+            partner_update_url, {"file": test_file}, format="multipart"
+        )
 
-        response = api_client.post(url, {"file": json_file}, format="multipart")
-
+        # Проверки
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert "Ошибка при загрузке файла: Test error" in response.data["error"]

@@ -10,35 +10,45 @@ from celery import current_app
 class TestOrderConfirmation:
     """
     Тестирование подтверждения заказа.
+    Проверка успешных сценариев и обработки ошибок при подтверждении корзины.
     """
 
     @pytest.fixture(autouse=True)
     def setup(self, api_client):
+        """
+        Настройка тестового клиента и конфигурации Celery для выполнения задач.
+        """
         current_app.conf.task_always_eager = True
         self.client = api_client
 
-    def test_confirm_basket_success(
+    def test_successful_order_confirmation_with_multiple_shops(
         self, customer, order_with_multiple_shops, contact, shops
     ):
         """
-        Проверяем успешное подтверждение заказа.
-        Подтверждаем заказ с несколькими магазинами.
-        Покупателю и поставщикам отправляется письмо.
+        Тест: Успешное подтверждение заказа с несколькими магазинами.
+
+        Ожидаемый результат:
+        - Статус ответа 200 (OK).
+        - Статус заказа обновлен на 'confirmed'.
+        - Отправлено несколько писем:
+            - Покупателю: с подтверждением заказа и деталями.
+            - Поставщикам: с уведомлением о новом заказе.
         """
         mail.outbox = []
-        # Отключаем TESTING режим для этого теста
+
+        # Отключаем режим тестирования для отправки реальных писем
         with patch("backend.signals.TESTING", False):
             self.client.force_authenticate(user=customer)
             url = reverse("confirm-basket", args=[contact.id])
 
-            # Отправляем запрос на подтверждение заказа
+            # Отправка запроса на подтверждение заказа
             response = self.client.post(url, format="json")
 
-            # Проверка базового сценария
+            # Проверка базового успешного сценария
             assert response.status_code == status.HTTP_200_OK
             assert response.data == {"detail": "Заказ успешно подтвержден."}
 
-            # Обновляем данные заказа
+            # Обновление и проверка статуса заказа
             order_with_multiple_shops.refresh_from_db()
             assert order_with_multiple_shops.status == "confirmed"
 
@@ -67,11 +77,11 @@ class TestOrderConfirmation:
             # Проверка писем поставщикам
             assert len(host_emails) == len(shops)
 
-            # Сортируем магазины и письма по email поставщика для корректного сопоставления
+            # Сортировка магазинов и писем по email для корректного сопоставления
             shops_sorted = sorted(shops, key=lambda s: s.user.email)
             host_emails_sorted = sorted(host_emails, key=lambda e: e.to[0])
 
-            # Проверяем каждое письмо с соответствующим магазином
+            # Проверка содержимого каждого письма с соответствующим магазином
             for shop, email in zip(shops_sorted, host_emails_sorted):
                 assert email.to == [
                     shop.user.email
@@ -79,15 +89,19 @@ class TestOrderConfirmation:
                 assert "Поступил новый заказ" in email.subject
                 assert str(order_with_multiple_shops.id) in email.body
 
-            # Проверка контактных данных во всех письмах
+            # Проверка контактных данных в письмах
             for email in mail.outbox:
                 assert contact.phone in email.body
                 assert contact.city in email.body
                 assert contact.street in email.body
 
-    def test_confirm_basket_empty(self, api_client, customer, contact):
+    def test_empty_basket_confirmation(self, api_client, customer, contact):
         """
-        Проверяем ошибку при попытке подтвердить пустую корзину.
+        Тест: Ошибка при попытке подтвердить пустую корзину.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'Корзина пуста.'
         """
         api_client.force_authenticate(user=customer)
         url = reverse("confirm-basket", args=[contact.id])
@@ -96,9 +110,13 @@ class TestOrderConfirmation:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"non_field_errors": ["Корзина пуста."]}
 
-    def test_confirm_basket_invalid_contact_id(self, api_client, customer, order):
+    def test_invalid_contact_id_confirmation(self, api_client, customer, order):
         """
-        Проверяем ошибку при передаче несуществующего contact_id.
+        Тест: Ошибка при передаче несуществующего contact_id.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'Неверный ID контакта.'
         """
         api_client.force_authenticate(user=customer)
         url = reverse("confirm-basket", args=[999])
@@ -107,11 +125,15 @@ class TestOrderConfirmation:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data == {"contact_id": ["Неверный ID контакта."]}
 
-    def test_confirm_basket_contact_not_found(
+    def test_contact_not_found_error_on_confirmation(
         self, api_client, customer, order, another_user_contact
     ):
         """
-        Проверяем ошибку при передаче несуществующего contact_id.
+        Тест: Ошибка при попытке подтвердить заказ с несуществующим контактным ID.
+
+        Ожидаемый результат:
+        - Статус ответа 400 (Bad Request).
+        - Сообщение об ошибке: 'Контакт не найден.'
         """
         api_client.force_authenticate(user=customer)
         url = reverse("confirm-basket", args=[another_user_contact.id])

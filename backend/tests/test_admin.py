@@ -21,11 +21,16 @@ User = get_user_model()
 @pytest.mark.django_db
 class TestUserAdminSaveModel:
     """
-    Класс для тестирования метода save_model в UserAdmin.
+    Тестирование метода save_model в UserAdmin для создания и обновления пользователей.
     """
 
-    def test_create_new_user(self, user_admin):
-        """Тест создания нового пользователя с паролем"""
+    def test_create_user_with_valid_password(self, user_admin):
+        """Тест: создание нового пользователя с паролем.
+
+        Ожидаемый результат:
+        - Пароль пользователя правильно зашифрован.
+        - Данные пользователя сохранены корректно.
+        """
         form = forms.Form()
         form.cleaned_data = {
             "password1": "new_secure_password",
@@ -42,8 +47,13 @@ class TestUserAdminSaveModel:
         assert user.check_password("new_secure_password")
         assert user.email == "new@example.com"
 
-    def test_update_user_with_password_change(self, user_admin, sample_user):
-        """Тест обновления пользователя с изменением пароля"""
+    def test_update_user_password_with_change(self, user_admin, sample_user):
+        """Тест: обновление пользователя с изменением пароля.
+
+        Ожидаемый результат:
+        - Пароль пользователя обновляется.
+        - Другие данные остаются неизменными.
+        """
         form = forms.Form()
         form.cleaned_data = {
             "password": "changed_password",
@@ -60,7 +70,11 @@ class TestUserAdminSaveModel:
         assert sample_user.first_name == "John"
 
     def test_update_user_without_password_change(self, user_admin, sample_user):
-        """Тест обновления пользователя без изменения пароля"""
+        """Тест: обновление пользователя без изменения пароля.
+
+        Ожидаемый результат:
+        - Данные пользователя обновляются, но пароль остается прежним.
+        """
         hashed_password = sample_user.password
         form = forms.Form()
         form.cleaned_data = {
@@ -78,8 +92,13 @@ class TestUserAdminSaveModel:
         assert sample_user.first_name == "Martin"
         assert sample_user.password == hashed_password
 
-    def test_create_user_with_empty_password(self, user_admin):
-        """Тест создания пользователя без пароля"""
+    def test_create_user_without_password(self, user_admin):
+        """Тест: создание пользователя без пароля.
+
+        Ожидаемый результат:
+        - Пароль остается пустым.
+        - Данные пользователя сохраняются корректно.
+        """
         form = forms.Form()
         form.cleaned_data = {
             "email": "new@example.com",
@@ -95,8 +114,14 @@ class TestUserAdminSaveModel:
         assert user.email == "new@example.com"
         assert user.password == ""
 
-    def test_super_method_called(self, user_admin, sample_user, mocker):
-        """Тест вызова родительского метода save_model"""
+    def test_super_method_is_called_on_user_update(
+        self, user_admin, sample_user, mocker
+    ):
+        """Тест: вызов родительского метода save_model при обновлении пользователя.
+
+        Ожидаемый результат:
+        - Родительский метод save_model должен быть вызван.
+        """
         form = forms.Form()
         form.cleaned_data = {"email": sample_user.email, "first_name": "Test"}
 
@@ -111,12 +136,15 @@ class TestUserAdminSaveModel:
 @pytest.mark.django_db
 class TestProductParameterAdmin:
     """
-    Тесты для ProductParameterAdmin
+    Тестирование методов в ProductParameterAdmin для работы с параметрами продуктов.
     """
 
-    def test_product_info(self, product_parameter_admin, product_parameter):
-        """Тестирует метод product_info для правильного форматирования строки."""
+    def test_product_info_formatting(self, product_parameter_admin, product_parameter):
+        """Тест: корректное форматирование информации о продукте.
 
+        Ожидаемый результат:
+        - Метод product_info корректно форматирует строку.
+        """
         actual_output = product_parameter_admin.product_info(product_parameter)
         assert actual_output == "Test Product (Supplier Shop)"
 
@@ -124,12 +152,15 @@ class TestProductParameterAdmin:
 @pytest.mark.django_db
 class TestOrderAdmin:
     """
-    Тесты для OrderAdmin
+    Тестирование методов в OrderAdmin для работы с заказами.
     """
 
-    def test_order_total_cost(self, order_admin, order):
-        """Тестирует метод total_cost для правильного вычисления общей стоимости."""
+    def test_order_total_cost_calculation(self, order_admin, order):
+        """Тест: правильное вычисление общей стоимости заказа.
 
+        Ожидаемый результат:
+        - Метод total_cost корректно вычисляет общую стоимость заказа.
+        """
         actual_output = order_admin.total_cost(order)
         assert actual_output == 100 * 2
 
@@ -137,20 +168,23 @@ class TestOrderAdmin:
 @pytest.mark.django_db
 class TestOrderItemAdmin:
     """
-    Тесты для OrderItemAdmin
+    Тестирование методов в OrderItemAdmin для работы с элементами заказов.
     """
 
-    def test_item_cost(self, order_item_admin, order_item):
-        """
-        Тестирует метод cost для правильного вычисления стоимости элемента заказа.
+    def test_item_cost_calculation(self, order_item_admin, order_item):
+        """Тест: правильное вычисление стоимости элемента заказа.
+
+        Ожидаемый результат:
+        - Метод cost корректно вычисляет стоимость элемента заказа.
         """
         actual_output = order_item_admin.cost(order_item)
         assert actual_output == 100 * 3
 
-    def test_check_role_allow_safe_methods_for_all(self):
-        """
-        Проверяет, что при allow_safe_methods_for_all=True и безопасном методе запроса
-        разрешение возвращает True независимо от роли пользователя.
+    def test_check_role_permission_for_safe_methods(self):
+        """Тест: разрешение для безопасных методов при allow_safe_methods_for_all=True.
+
+        Ожидаемый результат:
+        - Разрешение возвращает True для безопасных методов, независимо от роли пользователя.
         """
         user = User.objects.create_user(
             email="test@example.com",
@@ -173,7 +207,7 @@ class TestOrderItemAdmin:
 @pytest.mark.django_db
 class TestPriceUpdateAdmin(TestCase):
     """
-    Тесты для PriceUpdateAdmin (админка для обновления товаров от поставщиков)
+    Тестирование методов в PriceUpdateAdmin для обновления цен товаров.
     """
 
     @classmethod
@@ -184,7 +218,6 @@ class TestPriceUpdateAdmin(TestCase):
 
     def setUp(self):
         """Инициализация тестового окружения перед каждым тестом."""
-
         self._clear_caches()
         self.admin_user = User.objects.create_superuser(
             email="admin_test@example.com", password="password21", is_staff=True
@@ -194,33 +227,41 @@ class TestPriceUpdateAdmin(TestCase):
 
     def tearDown(self):
         """Очистка тестового окружения после каждого теста."""
-
         self._clear_caches()
 
     def _clear_caches(self):
-        """Полная очистка всех кэшей и хранилищ"""
-
+        """Полная очистка всех кэшей и хранилищ."""
         cache.clear()
         self.redis_conn.flushdb()
 
-    def test_get_request_renders_template(self):
-        """Тестирует, что GET-запрос отображает шаблон."""
+    def test_get_request_renders_correct_template(self):
+        """Тест: GET-запрос должен отображать правильный шаблон.
 
+        Ожидаемый результат:
+        - Статус ответа 200.
+        - Используется шаблон 'admin/price_update.html'.
+        """
         response = self.client.get(reverse("admin:price_update"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "admin/price_update.html")
         self.assertContains(response, "Обновление прайс-листа")
 
-    def test_post_without_file_shows_error(self):
-        """Тестирует, что POST-запрос без файла отображает ошибку."""
+    def test_post_request_without_file_shows_error_message(self):
+        """Тест: POST-запрос без файла должен вывести ошибку.
 
+        Ожидаемый результат:
+        - Появляется сообщение об ошибке "Файл не выбран!".
+        """
         response = self.client.post(reverse("admin:price_update"))
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(str(messages[0]), "Файл не выбран!")
 
-    def test_post_with_non_json_file_shows_error(self):
-        """Тестирует, что POST-запрос с файлом неверного формата отображает ошибку."""
+    def test_post_request_with_invalid_file_shows_error_message(self):
+        """Тест: POST-запрос с файлом неправильного формата должен вывести ошибку.
 
+        Ожидаемый результат:
+        - Появляется сообщение об ошибке "Требуется JSON-файл!".
+        """
         file = SimpleUploadedFile("test.txt", b"content", content_type="text/plain")
         response = self.client.post(reverse("admin:price_update"), {"file": file})
         messages = list(get_messages(response.wsgi_request))
@@ -228,9 +269,13 @@ class TestPriceUpdateAdmin(TestCase):
 
     @patch("backend.admin.default_storage.save")
     @patch("backend.admin.export_products_task.delay")
-    def test_valid_file_triggers_processing(self, mock_task, mock_save):
-        """Тестирует, что POST-запрос с правильным файлом запускает обработку данных."""
+    def test_valid_file_triggers_data_processing(self, mock_task, mock_save):
+        """Тест: POST-запрос с правильным файлом должен запускать обработку данных.
 
+        Ожидаемый результат:
+        - Файл сохраняется в хранилище.
+        - Задача на обработку данных запускается.
+        """
         file = SimpleUploadedFile("test.json", b"{}", content_type="application/json")
         response = self.client.post(reverse("admin:price_update"), {"file": file})
 
@@ -243,8 +288,11 @@ class TestPriceUpdateAdmin(TestCase):
 
     @patch("backend.admin.default_storage.save", side_effect=Exception("Test error"))
     def test_file_save_error_handling(self, mock_save):
-        """Тестирует обработку ошибок при сохранении файла."""
+        """Тест: обработка ошибок при сохранении файла.
 
+        Ожидаемый результат:
+        - Появляется сообщение об ошибке при сохранении файла.
+        """
         file = SimpleUploadedFile("test.json", b"{}", content_type="application/json")
         response = self.client.post(reverse("admin:price_update"), {"file": file})
 

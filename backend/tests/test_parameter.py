@@ -2,20 +2,18 @@ import pytest
 from rest_framework import status
 from django.urls import reverse
 from backend.models import Parameter
-from backend.serializers import ProductInfoSerializer
 import json
 
 
 @pytest.mark.django_db
 class TestParameterViewSet:
-    """
-    Тесты для представления параметров.
-    """
+    """Набор тестов для работы с параметрами."""
 
     def test_list_parameters_unauthenticated(self, api_client):
         """
-        Проверяет, что неаутентифицированный пользователь не может получить список параметров.
-        Ожидается статус 401 Forbidden.
+        Тест: Проверка, что неаутентифицированный пользователь не может получить список параметров.
+        Ожидаемый результат:
+        - Статус 401 Unauthorized
         """
         url = reverse("parameter-list")
         response = api_client.get(url)
@@ -23,8 +21,10 @@ class TestParameterViewSet:
 
     def test_update_parameter_as_admin(self, api_client, admin, old_parameter):
         """
-        Проверяет, что администратор может обновить параметр.
-        Ожидается статус 200 OK и обновление имени параметра в базе данных.
+        Тест: Проверка, что администратор может обновить параметр.
+        Ожидаемый результат:
+        - Статус 200 OK
+        - Имя параметра обновлено в базе данных
         """
         url = reverse("parameter-detail", args=[old_parameter.id])
         data = {"name": "New Parameter"}
@@ -37,8 +37,9 @@ class TestParameterViewSet:
 
     def test_update_parameter_as_customer(self, api_client, customer, old_parameter):
         """
-        Проверяет, что обычный пользователь (клиент) не может обновить параметр.
-        Ожидается статус 403 Forbidden.
+        Тест: Проверка, что обычный пользователь (клиент) не может обновить параметр.
+        Ожидаемый результат:
+        - Статус 403 Forbidden
         """
         url = reverse("parameter-detail", args=[old_parameter.id])
         data = {"name": "New Parameter"}
@@ -48,8 +49,10 @@ class TestParameterViewSet:
 
     def test_delete_parameter_as_admin(self, api_client, admin, deletable_parameter):
         """
-        Проверяет, что администратор может удалить параметр.
-        Ожидается статус 204 No Content и отсутствие параметра в базе данных.
+        Тест: Проверка, что администратор может удалить параметр.
+        Ожидаемый результат:
+        - Статус 204 No Content
+        - Параметр удален из базы данных
         """
         url = reverse("parameter-detail", args=[deletable_parameter.id])
         api_client.force_authenticate(user=admin)
@@ -62,8 +65,10 @@ class TestParameterViewSet:
         self, api_client, admin, old_parameter
     ):
         """
-        Проверяет, что нельзя создать параметр с уже существующим именем (без учета регистра).
-        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        Тест: Проверка, что нельзя создать параметр с уже существующим именем (без учета регистра).
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о дублирующемся имени параметра
         """
         url = reverse("parameter-list")
         data = {"name": old_parameter.name.upper()}
@@ -75,9 +80,10 @@ class TestParameterViewSet:
 
     def test_create_parameter_with_empty_name(self, api_client, admin):
         """
-        Проверяет, что нельзя создать параметр с пустым именем.
-        Для дополнительной проверки сериализатора заполним пробелами.
-        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        Тест: Проверка, что нельзя создать параметр с пустым именем.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о том, что имя параметра не может быть пустым
         """
         url = reverse("parameter-list")
         data = {"name": "  "}
@@ -89,8 +95,10 @@ class TestParameterViewSet:
 
     def test_create_parameter_with_non_string_name(self, api_client, admin):
         """
-        Проверяет, что нельзя создать параметр с именем не строкового типа.
-        Ожидается статус 400 Bad Request и сообщение об ошибке.
+        Тест: Проверка, что нельзя создать параметр с именем не строкового типа.
+        Ожидаемый результат:
+        - Статус 400 Bad Request
+        - Сообщение о неверном типе имени
         """
         url = reverse("parameter-list")
         data = json.dumps({"name": [1, 5, "Цвет"]})
@@ -103,8 +111,10 @@ class TestParameterViewSet:
 
     def test_get_nonexistent_parameter_returns_error(self, api_client, admin):
         """
-        Проверяет, что при запросе несуществующего параметра
-        возвращается сообщение об ошибке.
+        Тест: Проверка, что запрос несуществующего параметра возвращает ошибку.
+        Ожидаемый результат:
+        - Статус 404 Not Found
+        - Сообщение об ошибке "Параметр не найден"
         """
         url = reverse("parameter-detail", kwargs={"pk": 9999})
         api_client.force_authenticate(user=admin)
@@ -118,8 +128,9 @@ class TestParameterViewSet:
         self, api_client, customer, deletable_parameter
     ):
         """
-        Проверяет, что обычный пользователь (клиент) не может удалить параметр.
-        Ожидается статус 403 Forbidden.
+        Тест: Проверка, что обычный пользователь (клиент) не может удалить параметр.
+        Ожидаемый результат:
+        - Статус 403 Forbidden
         """
         url = reverse("parameter-detail", args=[deletable_parameter.id])
         api_client.force_authenticate(user=customer)
@@ -128,7 +139,8 @@ class TestParameterViewSet:
 
     def test_parameter_str_method(self, parameter):
         """
-        Проверяет, что метод __str__ у параметра возвращает ожидаемую строку.
-        Ожидается, что строковое представление параметра равно "Test Parameter".
+        Тест: Проверка, что метод __str__ у параметра возвращает правильное строковое представление.
+        Ожидаемый результат:
+        - Строковое представление параметра равно "Test Parameter"
         """
         assert str(parameter) == "Test Parameter"

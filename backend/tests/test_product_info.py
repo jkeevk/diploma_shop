@@ -13,6 +13,8 @@ class TestProductInfo:
     def test_create_product_info(self, shop, product):
         """
         Тест создания информации о товаре.
+
+        Ожидаемый результат: информация о товаре создается с заданными значениями.
         """
         product_info = ProductInfo.objects.create(
             product=product,
@@ -33,6 +35,8 @@ class TestProductInfo:
     def test_product_info_unique_together(self, shop, product):
         """
         Тест, проверяющий уникальность сочетания продукта и магазина в ProductInfo.
+
+        Ожидаемый результат: возникает исключение при попытке создать дубликат.
         """
         product_info1 = ProductInfo.objects.create(
             product=product,
@@ -56,6 +60,8 @@ class TestProductInfo:
     def test_product_info_price_validation(self, shop, product):
         """
         Тест для проверки валидации цены.
+
+        Ожидаемый результат: возникает исключение ValidationError при отрицательной цене.
         """
         with pytest.raises(ValidationError):
             product_info = ProductInfo(
@@ -71,6 +77,8 @@ class TestProductInfo:
     def test_product_info_quantity_validation(self, shop, product):
         """
         Тест для проверки валидации количества.
+
+        Ожидаемый результат: возникает исключение ValidationError при отрицательном количестве.
         """
         with pytest.raises(ValidationError):
             product_info = ProductInfo(
@@ -86,6 +94,8 @@ class TestProductInfo:
     def test_product_info_str_method(self, shop, product):
         """
         Тест метода __str__ модели ProductInfo.
+
+        Ожидаемый результат: метод возвращает строку "Test Description (Supplier Shop)".
         """
         product_info = ProductInfo.objects.create(
             product=product,
@@ -103,7 +113,10 @@ class TestProductInfo:
         """
         Проверяет, что вызов super().clean() выполняется корректно
         и не вызывает ошибок при валидных данных.
+
+        Ожидаемый результат: метод full_clean() выполняется без ошибок.
         """
+
         product_info = ProductInfo(
             product=product,
             shop=shop,
