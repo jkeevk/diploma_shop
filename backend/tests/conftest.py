@@ -18,8 +18,17 @@ from backend.models import (
 from backend.admin import UserAdmin, ProductParameterAdmin, OrderAdmin, OrderItemAdmin
 from django.contrib.admin.sites import AdminSite
 import uuid
+from django.test import override_settings
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def testing_mode():
+    """Переключение на режим тестирования.
+    Отключает срабатывания сигналов."""
+    with override_settings(TESTING=True):
+        yield
 
 
 @pytest.fixture

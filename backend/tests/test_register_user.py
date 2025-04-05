@@ -4,7 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from celery import current_app
 from backend.models import User
-from unittest.mock import patch
+from django.conf import settings
+from django.test import override_settings
 
 
 @pytest.mark.django_db
@@ -104,7 +105,6 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "too short" in str(response.data["errors"]["password"][0]).lower()
 
-    @patch("backend.signals.TESTING", False)
     def test_email_sending_after_registration(self):
         """Тест: Отправка письма с подтверждением после регистрации.
 
@@ -113,17 +113,19 @@ class TestUserRegistration:
         - Тема письма 'Confirm Your Registration'.
         - Email получателя соответствует зарегистрированному пользователю.
         """
-        url = reverse("register")
-        self.client.post(url, self.base_data)
+        with override_settings(
+            TESTING=False, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
+            url = reverse("register")
+            self.client.post(url, self.base_data)
 
-        assert len(mail.outbox) == 1
-        email = mail.outbox[0]
+            assert len(mail.outbox) == 1
+            email = mail.outbox[0]
 
-        assert email.subject == "Confirm Your Registration"
-        assert self.base_data["email"] in email.to
-        assert "confirm" in email.body.lower()
+            assert email.subject == "Confirm Your Registration"
+            assert self.base_data["email"] in email.to
+            assert "confirm" in email.body.lower()
 
-    @patch("backend.signals.TESTING", False)
     def test_successful_email_confirmation(self):
         """Тест: Успешное подтверждение email после регистрации.
 
@@ -131,15 +133,18 @@ class TestUserRegistration:
         - Статус ответа 200 (OK).
         - Пользователь активирован после подтверждения.
         """
-        self.client.post(reverse("register"), self.base_data)
-        user = User.objects.get(email=self.base_data["email"])
+        with override_settings(
+            TESTING=False, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
+            self.client.post(reverse("register"), self.base_data)
+            user = User.objects.get(email=self.base_data["email"])
 
-        url = reverse("register-confirm", kwargs={"token": user.confirmation_token})
-        response = self.client.get(url)
+            url = reverse("register-confirm", kwargs={"token": user.confirmation_token})
+            response = self.client.get(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        user.refresh_from_db()
-        assert user.is_active
+            assert response.status_code == status.HTTP_200_OK
+            user.refresh_from_db()
+            assert user.is_active
 
     def test_invalid_confirmation_token(self):
         """Тест: Обработка невалидного токена подтверждения.

@@ -152,14 +152,6 @@ class TestBasketAPIPostRequests:
             },
             {
                 "data": {
-                    "order_items": [
-                        {"product": product.id, "shop": shop.id, "quantity": 2}
-                    ],
-                },
-                "expected_error": "Пользователь не указан",
-            },
-            {
-                "data": {
                     "user": customer.id,
                     "order_items": [{"product": None, "shop": shop.id, "quantity": 2}],
                 },

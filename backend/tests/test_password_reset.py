@@ -9,6 +9,8 @@ from backend.serializers import PasswordResetConfirmSerializer
 from unittest.mock import patch
 from django.core import mail
 from celery import current_app
+from django.conf import settings
+from django.test import override_settings
 
 
 @pytest.mark.django_db
@@ -21,7 +23,6 @@ class TestPasswordResetView:
         self.client = api_client
         current_app.conf.task_always_eager = True
 
-    @patch("backend.signals.TESTING", False)
     def test_password_reset_success(self, api_client, customer):
         """
         Проверка успешного запроса на сброс пароля.
@@ -29,20 +30,24 @@ class TestPasswordResetView:
         Ожидаемый результат: возвращается статус 200 и сообщение о том,
         что ссылка для сброса пароля отправлена на email.
         """
-        url = reverse("password-reset")
-        response = api_client.post(url, {"email": customer.email})
+        with override_settings(
+            TESTING=False, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
+            url = reverse("password-reset")
+            response = api_client.post(url, {"email": customer.email})
 
-        assert response.status_code == status.HTTP_200_OK
-        assert (
-            response.data["detail"] == "Ссылка для сброса пароля отправлена на email."
-        )
+            assert response.status_code == status.HTTP_200_OK
+            assert (
+                response.data["detail"]
+                == "Ссылка для сброса пароля отправлена на email."
+            )
 
-        assert len(mail.outbox) == 1, "Письмо не было отправлено!"
-        email = mail.outbox[0]
+            assert len(mail.outbox) == 1, "Письмо не было отправлено!"
+            email = mail.outbox[0]
 
-        assert email.subject == "Password Reset"
-        assert customer.email in email.to
-        assert "reset" in email.body.lower()
+            assert email.subject == "Password Reset"
+            assert customer.email in email.to
+            assert "reset" in email.body.lower()
 
     def test_password_reset_user_not_found(self, api_client):
         """

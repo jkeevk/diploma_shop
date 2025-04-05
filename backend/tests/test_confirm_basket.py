@@ -2,8 +2,9 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 from django.core import mail
-from unittest.mock import patch
 from celery import current_app
+from django.test import override_settings
+from django.conf import settings
 
 
 @pytest.mark.django_db
@@ -37,7 +38,9 @@ class TestOrderConfirmation:
         mail.outbox = []
 
         # Отключаем режим тестирования для отправки реальных писем
-        with patch("backend.signals.TESTING", False):
+        with override_settings(
+            TESTING=False, EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
             self.client.force_authenticate(user=customer)
             url = reverse("confirm-basket", args=[contact.id])
 

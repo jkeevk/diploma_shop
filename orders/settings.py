@@ -239,14 +239,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # Email
 # ==============================================================================
 
-EMAIL_HOST = os.getenv("EMAIL_HOST", "user@user.user")
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "smtp.yandex.ru")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "123")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
-EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+TESTING = os.getenv("DJANGO_TESTING", "False").lower() == "true"
 
 # ==============================================================================
 # Celery
