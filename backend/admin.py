@@ -171,7 +171,7 @@ class UserAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("first_name", "last_name", "role")}),
+        ("Personal info", {"fields": ("first_name", "last_name", "role", "avatar")}),
         (
             "Permissions",
             {

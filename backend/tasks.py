@@ -200,6 +200,9 @@ def send_password_reset_email_async(user_id: int, token: str, uid: str) -> None:
 
 @shared_task
 def generate_product_image_thumbnails_async(instance_id):
+    """
+    Асинхронно генерирует миниатюры изображений продуктов
+    """
     from .models import ProductInfo
 
     instance = ProductInfo.objects.get(id=instance_id)
@@ -209,6 +212,9 @@ def generate_product_image_thumbnails_async(instance_id):
 
 @shared_task
 def generate_user_avatar_thumbnails_async(user_id):
+    """
+    Асинхронно генерирует миниатюры аватара пользователя
+    """
     from .models import User
 
     user = User.objects.get(id=user_id)

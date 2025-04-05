@@ -228,6 +228,15 @@ BASKET_SCHEMAS = {
                 **COMMON_ERROR_RESPONSES,
             },
             examples=[
+                OpenApiExample(
+                    name="Успешное обновление",
+                    value={
+                        "order_items": [{"product": 2, "shop": 1, "quantity": 5}],
+                        "status": "new",
+                    },
+                    request_only=True,
+                    status_codes=["200"],
+                ),
                 *BASKET_SUCCESS_EXAMPLES[:1],
                 *VALIDATION_ERROR_EXAMPLES,
                 *COMMON_ERROR_EXAMPLES,
@@ -262,6 +271,18 @@ BASKET_SCHEMAS = {
                     value={"order_items": [{"product": 1, "quantity": 2}]},
                     request_only=True,
                     status_codes=["200"],
+                ),
+                OpenApiExample(
+                    name="Успешное удаление элемента заказа",
+                    value={"order_items": [{"product": 3, "quantity": 0}]},
+                    request_only=True,
+                    status_codes=["200"],
+                ),
+                OpenApiExample(
+                    name="Несуществующий элемент в корзине",
+                    value=["Элемент заказа не найден для обновления"],
+                    response_only=True,
+                    status_codes=["400"],
                 ),
                 *BASKET_SUCCESS_EXAMPLES[:1],
                 *VALIDATION_ERROR_EXAMPLES,

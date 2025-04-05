@@ -233,16 +233,32 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """Сериализатор для модели OrderItem."""
 
     product = serializers.PrimaryKeyRelatedField(
-        queryset=Product.objects.all(), error_messages={"null": "Не указан товар"}
+        queryset=Product.objects.all(),
+        error_messages={
+            "null": "Не указан товар",
+            "does_not_exist": "Указанный товар не существует",
+            "invalid": "Некорректный ID товара",
+            "required": "Товар обязателен для заполнения",
+        },
     )
     shop = serializers.PrimaryKeyRelatedField(
-        queryset=Shop.objects.all(), error_messages={"null": "Не указан магазин"}
+        queryset=Shop.objects.all(),
+        error_messages={
+            "null": "Не указан магазин",
+            "does_not_exist": "Указанный магазин не существует",
+            "invalid": "Некорректный ID магазина",
+            "required": "Магазин обязателен для заполнения",
+        },
     )
     quantity = serializers.IntegerField(
+        min_value=0,
         error_messages={
+            "blank": "Количество не может быть пустым",
+            "null": "Количество не может быть пустым",
             "required": "Обязательное поле не указано",
             "invalid": "Некорректное количество",
-        }
+            "min_value": "Количество не может быть отрицательным",
+        },
     )
 
     class Meta:
@@ -281,6 +297,23 @@ class OrderSerializer(serializers.ModelSerializer):
                 "error_messages": {"required": "Список товаров обязателен"}
             },
         }
+
+    def get_fields(self):
+        """
+        Получение полей сериализатора.
+        Покупатели не могут изменять свой идентификатор пользователя в заказе.
+        """
+        fields = super().get_fields()
+        request = self.context.get("request")
+        if (
+            request
+            and request.user.is_authenticated
+            and request.user.role == "customer"
+        ):
+            fields["user"].read_only = True
+        else:
+            fields["user"].read_only = False
+        return fields
 
     def _validate_shop(self, shop: Shop) -> None:
         """Валидация данных магазина."""
@@ -365,18 +398,20 @@ class OrderSerializer(serializers.ModelSerializer):
         order_items_data = validated_data.get("order_items")
 
         if method == "PUT":
-            instance.order_items.all().delete()
-            for item_data in order_items_data:
-                self._validate_and_create_item(instance, item_data)
+            if order_items_data:
+                instance.order_items.all().delete()
+                for item_data in order_items_data:
+                    self._validate_and_create_item(instance, item_data)
 
         elif method == "PATCH":
-            for item_data in order_items_data:
-                self._update_item_partially(instance, item_data)
+            if order_items_data:
+                for item_data in order_items_data:
+                    self._update_item_partially(instance, item_data)
 
         return instance
 
     def _update_item_partially(self, order: Order, item_data: dict):
-        """Частичное обновление элемента заказа с валидацией"""
+        """Частичное обновление элемента заказа с возможностью удаления"""
         item_filter = {}
         if "product" in item_data:
             item_filter["product"] = item_data["product"]
@@ -393,14 +428,14 @@ class OrderSerializer(serializers.ModelSerializer):
         if not existing_item:
             raise serializers.ValidationError("Элемент заказа не найден для обновления")
 
-        new_product = item_data.get("product", existing_item.product)
-        new_shop = item_data.get("shop", existing_item.shop)
         new_quantity = item_data.get("quantity", existing_item.quantity)
 
-        if "product" in item_data or "shop" in item_data:
-            product_info = ProductInfo.objects.filter(
-                product=new_product, shop=new_shop
-            ).first()
+        if new_quantity <= 0:
+            existing_item.delete()
+            return
+
+        new_product = item_data.get("product", existing_item.product)
+        new_shop = item_data.get("shop", existing_item.shop)
 
         product_info = ProductInfo.objects.filter(
             product=new_product, shop=new_shop
@@ -428,6 +463,17 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {str(e): "Обязательное поле не указано"}
             ) from e
+        product_info = ProductInfo.objects.filter(product=product, shop=shop).first()
+
+        if not product_info:
+            raise serializers.ValidationError(
+                f"Товар {product.name} (ID={product.id}) отсутствует в магазине {shop.name}"
+            )
+        if product_info.quantity < quantity:
+            raise serializers.ValidationError(
+                f"Недостаточно товара {product.name} в магазине {shop.name}. "
+                f"Доступно: {product_info.quantity}, запрошено: {quantity}."
+            )
 
         OrderItem.objects.create(
             order=order, product=product, shop=shop, quantity=quantity
