@@ -247,6 +247,7 @@ EMAIL_USE_TLS = False
 EMAIL_USE_SSL = True
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Отключает отправку Email уведомлений во время запуска тестов
 TESTING = os.getenv("DJANGO_TESTING", "False").lower() == "true"
 
 # ==============================================================================
